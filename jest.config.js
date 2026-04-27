@@ -5,8 +5,9 @@ module.exports = {
     "^.+\\.(j|t)sx?$": "babel-jest",
   },
   moduleNameMapper: {
-    "\\.(css)$": "identity-obj-proxy",
+    "\\.(css|scss)$": "identity-obj-proxy",
     "single-spa-react/parcel": "single-spa-react/lib/cjs/parcel.cjs",
+    "^@madie/madie-util$": "<rootDir>/__mocks__/@madie/madie-util.tsx",
   },
   setupFilesAfterEnv: ["@testing-library/jest-dom"],
 };

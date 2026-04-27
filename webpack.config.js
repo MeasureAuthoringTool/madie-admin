@@ -8,11 +8,16 @@ const path = require("path");
 module.exports = (webpackConfigEnv, argv) => {
   const defaultConfig = singleSpaDefaults({
     orgName: "madie",
-    projectName: "madie-frontend-template",
+    projectName: "madie-admin",
     webpackConfigEnv,
     argv,
     disableHtmlGeneration: true,
+    orgPackagesAsExternal: false,
   });
+
+  const externalsConfig = {
+    externals: ["@madie/madie-util", "@madie/madie-auth"],
+  };
 
   // We need to override the css loading rule from the parent configuration
   // so that we can add postcss-loader to the chain
@@ -24,9 +29,20 @@ module.exports = (webpackConfigEnv, argv) => {
           include: [/node_modules/, /src/],
           use: [
             "style-loader",
-            "css-loader", // uses modules: true, which I think we want. Parent does not
+            "css-loader",
             "postcss-loader",
           ],
+        },
+        {
+          test: /\.scss$/,
+          resolve: { extensions: [".scss", ".sass"] },
+          use: [
+            "style-loader",
+            { loader: "css-loader", options: { sourceMap: true, importLoaders: 2 } },
+            { loader: "postcss-loader", options: { sourceMap: true } },
+            "sass-loader",
+          ],
+          exclude: /node_modules/,
         },
       ],
     },
@@ -70,5 +86,5 @@ module.exports = (webpackConfigEnv, argv) => {
       },
     },
     plugins: "append",
-  })(defaultConfig, newCssRule);
+  })(defaultConfig, externalsConfig, newCssRule);
 };
