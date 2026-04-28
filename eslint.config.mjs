@@ -15,10 +15,7 @@ export default [
   {
     ignores: ["dist/**", "coverage/**", "node_modules/**"],
   },
-  ...compat.extends(
-    "ts-react-important-stuff",
-    "plugin:prettier/recommended"
-  ),
+  ...compat.extends("ts-react-important-stuff", "plugin:prettier/recommended"),
   {
     languageOptions: {
       parser: (await import("@babel/eslint-parser")).default,
@@ -28,4 +25,3 @@ export default [
     },
   },
 ];
-
