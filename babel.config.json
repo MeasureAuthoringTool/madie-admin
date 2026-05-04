@@ -28,7 +28,14 @@
           {
             "targets": "current node"
           }
-        ]
+        ],
+        [
+          "@babel/preset-react",
+          {
+            "runtime": "automatic"
+          }
+        ],
+        "@babel/preset-typescript"
       ]
     }
   }
