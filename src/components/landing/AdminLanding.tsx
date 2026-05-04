@@ -1,6 +1,7 @@
 import React from "react";
 import { Tabs, Tab } from "@madie/madie-design-system/dist/react";
 import { useDocumentTitle, useUserRoles } from "@madie/madie-util";
+import UserManagement from "./userManagement/UserManagement";
 import "./AdminLanding.scss";
 
 const AdminLanding = () => {
@@ -24,6 +25,8 @@ const AdminLanding = () => {
           />
         </Tabs>
       </div>
+
+      <UserManagement />
     </div>
   );
 };

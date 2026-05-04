@@ -13,7 +13,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ["dist/**", "coverage/**", "node_modules/**"],
+    ignores: ["dist/**", "coverage/**", "node_modules/**", "src/types/**", "src/coverage/**"],
   },
   ...compat.extends("ts-react-important-stuff", "plugin:prettier/recommended"),
   {
