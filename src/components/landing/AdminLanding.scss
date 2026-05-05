@@ -21,15 +21,19 @@
       background: #001f3d;
     }
 
+    > .MuiTab-root {
+      color: #000 !important;
+    }
+
     > .MuiTab-root.Mui-selected {
       background: #fff !important;
-      color: #036 !important;
+      color: #000 !important;
     }
 
     > .MuiTab-root.Mui-selected a:hover,
     > .MuiTab-root.Mui-selected:hover {
       background: #fff !important;
-      color: #036 !important;
+      color: #000 !important;
       text-decoration: none !important;
     }
   }
