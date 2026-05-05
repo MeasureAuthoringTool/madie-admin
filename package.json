@@ -75,6 +75,7 @@
   },
   "dependencies": {
     "@madie/madie-design-system": "^1.2.88",
+    "@madie/madie-models": "^1.4.64",
     "@mui/icons-material": "^6.5.0",
     "@mui/material": "^6.5.0",
     "@tanstack/react-table": "^8.21.3",
