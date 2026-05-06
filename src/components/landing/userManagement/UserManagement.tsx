@@ -15,6 +15,7 @@ import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { UserDetails, UserStatus } from "@madie/madie-models";
+// @ts-ignore
 import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 
@@ -40,7 +41,7 @@ const UserManagement = () => {
     setLoading(true);
     userServiceApi
       .fetchUsers(controller.signal)
-      .then((data) => {
+      .then((data: UserDetails[]) => {
         setUsers(data);
         setError("");
       })

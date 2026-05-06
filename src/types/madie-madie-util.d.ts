@@ -1,4 +1,6 @@
 declare module "@madie/madie-util" {
+  import { UserDetails } from "@madie/madie-models";
+
   export function useDocumentTitle(title: string): void;
   export function useUserRoles(): { roles: string[]; isAdmin: boolean } | null;
   export function useOktaTokens(): {
@@ -9,7 +11,7 @@ declare module "@madie/madie-util" {
 
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
-    fetchUsers(signal?: AbortSignal): Promise<any[]>;
+    fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
