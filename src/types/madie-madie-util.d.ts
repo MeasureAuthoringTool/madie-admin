@@ -1,6 +1,15 @@
 declare module "@madie/madie-util" {
   import { UserDetails } from "@madie/madie-models";
 
+  export interface FeatureFlags {
+    AdminShareMeasures: boolean;
+    AdminTransferMeasure: boolean;
+    AdminTransferLibrary: boolean;
+    AdminShareLibrary: boolean;
+    AdminUserList: boolean;
+  }
+
+  export function useFeatureFlags(): FeatureFlags;
   export function useDocumentTitle(title: string): void;
   export function useUserRoles(): { roles: string[]; isAdmin: boolean } | null;
   export function useOktaTokens(): {

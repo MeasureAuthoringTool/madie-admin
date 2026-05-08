@@ -3,7 +3,6 @@ import { Tabs, Tab } from "@madie/madie-design-system/dist/react";
 import {
   useDocumentTitle,
   useUserRoles,
-  // @ts-ignore
   useFeatureFlags,
 } from "@madie/madie-util";
 import UserManagement from "./userManagement/UserManagement";
