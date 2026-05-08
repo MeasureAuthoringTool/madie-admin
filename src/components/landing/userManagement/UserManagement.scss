@@ -93,14 +93,23 @@
         max-width: 0;
       }
 
-      .status-active {
-        color: #2e7d32;
+      .status-chip {
+        height: 24px;
+        font-size: 12px;
         font-weight: 500;
-      }
+        color: #000;
 
-      .status-deactivated {
-        color: #d32f2f;
-        font-weight: 500;
+        &--active {
+          background-color: #e3f2fd;
+        }
+
+        &--deactivated {
+          background-color: #ffebee;
+        }
+
+        &--suspended {
+          background-color: #fff8e1;
+        }
       }
     }
   }
