@@ -53,7 +53,7 @@ const UserManagement = () => {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [userServiceApi]);
 
   // Counts
   const totalCount = users.length;
