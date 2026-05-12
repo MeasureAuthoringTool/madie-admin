@@ -298,14 +298,18 @@ describe("UserManagement", () => {
     });
 
     const nameHeader = screen.getByText("Name").closest("th");
-    fireEvent.mouseEnter(nameHeader!);
+    if (!nameHeader) {
+      throw new Error("Name header not found");
+    }
+
+    fireEvent.mouseEnter(nameHeader);
 
     // UnfoldMoreIcon should appear (via SVG)
     await waitFor(() => {
-      expect(nameHeader!.querySelector("svg")).toBeInTheDocument();
+      expect(nameHeader.querySelector("svg")).toBeInTheDocument();
     });
 
-    fireEvent.mouseLeave(nameHeader!);
+    fireEvent.mouseLeave(nameHeader);
   });
 
   it("handles Enter key in search without submitting", async () => {
