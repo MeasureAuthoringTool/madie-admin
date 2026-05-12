@@ -88,7 +88,9 @@ const UserManagement = () => {
         "Email Address": (u) => u.email || "",
         Status: (u) => getStatusLabel(u.status),
       };
-      const getter = fieldMap[filterBy];
+      const getter = filterByOptions.includes(filterBy)
+        ? fieldMap[filterBy]
+        : undefined;
       return getter ? getter(u).toLowerCase().includes(lowerSearch) : true;
     });
   }, [users, searchText, filterBy]);
