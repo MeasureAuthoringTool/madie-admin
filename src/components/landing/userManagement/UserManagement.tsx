@@ -53,7 +53,6 @@ const UserManagement = () => {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Counts
@@ -90,8 +89,7 @@ const UserManagement = () => {
         Status: (u) => getStatusLabel(u.status),
       };
       const getter = fieldMap[filterBy];
-      if (!getter) return true;
-      return getter(u).toLowerCase().includes(lowerSearch);
+      return getter ? getter(u).toLowerCase().includes(lowerSearch) : true;
     });
   }, [users, searchText, filterBy]);
 
