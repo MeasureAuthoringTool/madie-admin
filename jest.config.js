@@ -4,6 +4,9 @@ module.exports = {
   transform: {
     "^.+\\.(j|t)sx?$": ["babel-jest", { rootMode: "upward" }],
   },
+  transformIgnorePatterns: [
+    "node_modules/(?!(@babel/runtime|@madie/madie-design-system|formik)/)",
+  ],
   moduleNameMapper: {
     "\\.(css|scss)$": "identity-obj-proxy",
     "single-spa-react/parcel": "single-spa-react/lib/cjs/parcel.cjs",
