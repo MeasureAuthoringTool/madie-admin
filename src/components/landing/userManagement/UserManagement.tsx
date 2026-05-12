@@ -82,16 +82,26 @@ const UserManagement = () => {
         );
       }
 
-      const fieldMap: Record<string, (u: UserDetails) => string> = {
-        Name: (u) => `${u.firstName} ${u.lastName}`,
-        "Harp ID": (u) => u.harpId || "",
-        "Email Address": (u) => u.email || "",
-        Status: (u) => getStatusLabel(u.status),
-      };
-      const getter = filterByOptions.includes(filterBy)
-        ? fieldMap[filterBy]
-        : undefined;
-      return getter ? getter(u).toLowerCase().includes(lowerSearch) : true;
+      let valueToSearch = "";
+      switch (filterBy) {
+        case "Name":
+          valueToSearch = `${u.firstName} ${u.lastName}`;
+          break;
+        case "Harp ID":
+          valueToSearch = u.harpId || "";
+          break;
+        case "Email Address":
+          valueToSearch = u.email || "";
+          break;
+        case "Status":
+          valueToSearch = getStatusLabel(u.status);
+          break;
+        default:
+          // Unknown filter values should not exclude rows.
+          return true;
+      }
+
+      return valueToSearch.toLowerCase().includes(lowerSearch);
     });
   }, [users, searchText, filterBy]);
 
