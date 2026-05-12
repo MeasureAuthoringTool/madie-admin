@@ -1,5 +1,6 @@
 declare module "@madie/madie-util" {
   import { UserDetails } from "@madie/madie-models";
+  import { AxiosError } from "axios";
 
   export function useDocumentTitle(title: string): void;
   export function useUserRoles(): { roles: string[]; isAdmin: boolean } | null;
@@ -7,7 +8,7 @@ declare module "@madie/madie-util" {
     getAccessToken: () => string;
     getUserName: () => string;
   };
-  export const wafIntercept: (error: any) => Promise<any>;
+  export function wafIntercept(error: AxiosError): Promise<never>;
 
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
