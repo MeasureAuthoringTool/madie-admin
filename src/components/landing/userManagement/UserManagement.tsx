@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -34,7 +34,7 @@ const UserManagement = () => {
   const [searchText, setSearchText] = useState<string>("");
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
-  const userServiceApi = useUserServiceApi();
+  const userServiceApi = useRef(useUserServiceApi()).current;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,7 +53,8 @@ const UserManagement = () => {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [userServiceApi]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Counts
   const totalCount = users.length;
