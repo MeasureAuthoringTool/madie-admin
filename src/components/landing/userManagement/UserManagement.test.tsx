@@ -274,7 +274,11 @@ describe("UserManagement", () => {
 
     // Click Name header to sort ascending
     const nameHeader = screen.getByText("Name").closest("th");
-    fireEvent.click(nameHeader!);
+    if (!nameHeader) {
+      throw new Error("Name header not found");
+    }
+
+    fireEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -282,7 +286,7 @@ describe("UserManagement", () => {
     });
 
     // Click again for descending
-    fireEvent.click(nameHeader!);
+    fireEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
