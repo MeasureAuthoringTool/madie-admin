@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -47,7 +47,7 @@ const UserManagement = () => {
   const [searchText, setSearchText] = useState<string>("");
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
-  const userServiceApi = useUserServiceApi();
+  const userServiceApi = useRef(useUserServiceApi()).current;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,7 +66,7 @@ const UserManagement = () => {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [userServiceApi]);
 
   // Counts
   const totalCount = users.length;
@@ -95,15 +95,26 @@ const UserManagement = () => {
         );
       }
 
-      const fieldMap: Record<string, (u: UserDetails) => string> = {
-        Name: (u) => `${u.firstName} ${u.lastName}`,
-        "Harp ID": (u) => u.harpId || "",
-        "Email Address": (u) => u.email || "",
-        Status: (u) => getStatusLabel(u.status),
-      };
-      const getter = fieldMap[filterBy];
-      if (!getter) return true;
-      return getter(u).toLowerCase().includes(lowerSearch);
+      let valueToSearch = "";
+      switch (filterBy) {
+        case "Name":
+          valueToSearch = `${u.firstName} ${u.lastName}`;
+          break;
+        case "Harp ID":
+          valueToSearch = u.harpId || "";
+          break;
+        case "Email Address":
+          valueToSearch = u.email || "";
+          break;
+        case "Status":
+          valueToSearch = getStatusLabel(u.status);
+          break;
+        default:
+          // Unknown filter values should not exclude rows.
+          return true;
+      }
+
+      return valueToSearch.toLowerCase().includes(lowerSearch);
     });
   }, [users, searchText, filterBy]);
 

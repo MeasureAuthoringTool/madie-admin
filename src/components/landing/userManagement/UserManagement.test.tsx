@@ -289,17 +289,19 @@ describe("UserManagement", () => {
 
     // Default is ascending by Name (Bob Brown first)
     const nameHeader = screen.getByText("Name").closest("th");
+    if (!nameHeader) {
+      throw new Error("Name header not found");
+    }
 
-    // Click Name header to toggle to descending
-    fireEvent.click(nameHeader!);
+    fireEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
       expect(rows[0]).toHaveTextContent("John Doe");
     });
 
-    // Click again to remove sort (back to ascending)
-    fireEvent.click(nameHeader!);
+    // Click again for descending
+    fireEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -315,14 +317,18 @@ describe("UserManagement", () => {
     });
 
     const nameHeader = screen.getByText("Name").closest("th");
-    fireEvent.mouseEnter(nameHeader!);
+    if (!nameHeader) {
+      throw new Error("Name header not found");
+    }
+
+    fireEvent.mouseEnter(nameHeader);
 
     // UnfoldMoreIcon should appear (via SVG)
     await waitFor(() => {
-      expect(nameHeader!.querySelector("svg")).toBeInTheDocument();
+      expect(nameHeader.querySelector("svg")).toBeInTheDocument();
     });
 
-    fireEvent.mouseLeave(nameHeader!);
+    fireEvent.mouseLeave(nameHeader);
   });
 
   it("handles Enter key in search without submitting", async () => {
