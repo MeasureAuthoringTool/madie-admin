@@ -5,7 +5,8 @@
     "declarationDir": "dist",
     "declarationMap": true,
     "jsx": "react-jsx",
-    "sourceMap": true
+    "sourceMap": true,
+    "moduleResolution": "bundler"
   },
   "files": ["src/madie-madie-admin.tsx"],
   "include": ["src/**/*"],

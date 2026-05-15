@@ -121,9 +121,11 @@ describe("UserManagement", () => {
     // Check email
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
 
-    // Check status labels
-    expect(screen.getAllByText("ACTIVE")).toHaveLength(2);
-    expect(screen.getByText("DEACTIVATED")).toBeInTheDocument();
+    // Check status chips
+    expect(screen.getAllByTestId("status-chip-ACTIVE")).toHaveLength(2);
+    expect(screen.getAllByText("Active")).toHaveLength(2);
+    expect(screen.getByTestId("status-chip-DEACTIVATED")).toBeInTheDocument();
+    expect(screen.getByText("Deactivated")).toBeInTheDocument();
 
     // Check last login - formatted date or dash
     expect(screen.getByText("-")).toBeInTheDocument(); // Jane has no lastLoginAt
@@ -265,6 +267,19 @@ describe("UserManagement", () => {
     });
   });
 
+  it("displays users sorted alphabetically by name by default", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    const rows = screen.getAllByTestId("user-row-item");
+    expect(rows[0]).toHaveTextContent("Bob Brown");
+    expect(rows[1]).toHaveTextContent("Jane Smith");
+    expect(rows[2]).toHaveTextContent("John Doe");
+  });
+
   it("sorts columns when header is clicked", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
     render(<UserManagement />);
@@ -272,7 +287,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    // Click Name header to sort ascending
+    // Default is ascending by Name (Bob Brown first)
     const nameHeader = screen.getByText("Name").closest("th");
     if (!nameHeader) {
       throw new Error("Name header not found");
@@ -282,7 +297,7 @@ describe("UserManagement", () => {
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
-      expect(rows[0]).toHaveTextContent("Bob Brown");
+      expect(rows[0]).toHaveTextContent("John Doe");
     });
 
     // Click again for descending
@@ -290,7 +305,7 @@ describe("UserManagement", () => {
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
-      expect(rows[0]).toHaveTextContent("John Doe");
+      expect(rows[0]).toHaveTextContent("Bob Brown");
     });
   });
 

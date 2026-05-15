@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
 } from "@tanstack/react-table";
 import { Select, TextField } from "@madie/madie-design-system/dist/react";
-import { InputAdornment, IconButton, MenuItem } from "@mui/material";
+import { InputAdornment, IconButton, MenuItem, Chip } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
@@ -21,15 +21,28 @@ import "./UserManagement.scss";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
 
-const getStatusLabel = (status: UserStatus): string => {
-  return status || "";
+const STATUS_CHIP_CLASS: Record<string, string> = {
+  [UserStatus.ACTIVE]: "status-chip status-chip--active",
+  [UserStatus.DEACTIVATED]: "status-chip status-chip--deactivated",
+  [UserStatus.ERROR_SUSPENDED]: "status-chip status-chip--suspended",
 };
+
+const STATUS_LABEL: Record<string, string> = {
+  [UserStatus.ACTIVE]: "Active",
+  [UserStatus.DEACTIVATED]: "Deactivated",
+  [UserStatus.ERROR_SUSPENDED]: "Suspended",
+};
+
+const getStatusLabel = (status: UserStatus): string =>
+  STATUS_LABEL[status] ?? status ?? "";
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserDetails[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
   const [filterBy, setFilterBy] = useState<string>("");
   const [searchText, setSearchText] = useState<string>("");
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
@@ -137,15 +150,12 @@ const UserManagement = () => {
           const status = info.getValue() as UserStatus;
           const label = getStatusLabel(status);
           return (
-            <span
-              className={
-                status === UserStatus.ACTIVE
-                  ? "status-active"
-                  : "status-deactivated"
-              }
-            >
-              {label}
-            </span>
+            <Chip
+              label={label}
+              className={STATUS_CHIP_CLASS[status] ?? "status-chip"}
+              size="small"
+              data-testid={`status-chip-${status}`}
+            />
           );
         },
       },
@@ -169,6 +179,7 @@ const UserManagement = () => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
+    enableSortingRemoval: false,
     state: { sorting },
   });
 

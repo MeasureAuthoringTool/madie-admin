@@ -2,13 +2,14 @@ import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import AdminLanding from "./AdminLanding";
-import { useUserRoles } from "@madie/madie-util";
+import { useUserRoles, useFeatureFlags } from "@madie/madie-util";
 
 jest.mock("@madie/madie-util", () => ({
   useDocumentTitle: jest.fn(),
   useUserRoles: jest
     .fn()
     .mockReturnValue({ roles: ["MADiE-Admin"], isAdmin: true }),
+  useFeatureFlags: jest.fn().mockReturnValue({ AdminUserList: true }),
   useOktaTokens: jest.fn().mockReturnValue({
     getAccessToken: () => "test-token",
     getUserName: () => "testUser",
@@ -19,7 +20,7 @@ jest.mock("@madie/madie-util", () => ({
 }));
 
 describe("AdminLanding Component", () => {
-  test("renders the User Management tab for admin users", async () => {
+  test("renders the User Management tab for admin users when flag is enabled", async () => {
     render(<AdminLanding />);
 
     expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
@@ -46,5 +47,17 @@ describe("AdminLanding Component", () => {
     const { container } = render(<AdminLanding />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  test("does not render User Management when AdminUserList flag is disabled", async () => {
+    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
+      AdminUserList: false,
+    });
+
+    render(<AdminLanding />);
+
+    expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });
 });
