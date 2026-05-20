@@ -364,6 +364,10 @@ const UserManagement = () => {
             </tbody>
           </table>
         </div>
+      ) : searchText.trim() ? (
+        <p data-testid="no-results-message" className="no-users-message">
+          No results were found.
+        </p>
       ) : (
         <p data-testid="no-users-message" className="no-users-message">
           No users found.
