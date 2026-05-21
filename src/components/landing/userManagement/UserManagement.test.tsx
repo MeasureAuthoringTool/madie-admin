@@ -286,7 +286,7 @@ describe("UserManagement", () => {
 
   it("shows 'No users found.' (not the search message) when users list is empty with no search", async () => {
     mockFetchUsers.mockResolvedValue([]);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("no-users-message")).toBeInTheDocument();
     });
@@ -379,7 +379,7 @@ describe("UserManagement", () => {
   // ─── AC: No filter selected — search across ALL columns ───────────────────
   it("searches across all columns when no filter is selected — matches by harpId", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -396,7 +396,7 @@ describe("UserManagement", () => {
 
   it("searches across all columns when no filter is selected — matches by email", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -413,7 +413,7 @@ describe("UserManagement", () => {
 
   it("searches across all columns when no filter is selected — matches by status label", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -430,7 +430,7 @@ describe("UserManagement", () => {
 
   it("searches across all columns when no filter is selected — matches multiple rows", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -450,7 +450,7 @@ describe("UserManagement", () => {
   // ─── AC: Filter selected — search only in that column ─────────────────────
   it("searching by Name filter only matches name column, not email", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -470,7 +470,7 @@ describe("UserManagement", () => {
 
   it("searching by Harp ID filter only matches harpId column, not name", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -490,7 +490,7 @@ describe("UserManagement", () => {
 
   it("searching by Email Address filter only matches email column, not name", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -510,7 +510,7 @@ describe("UserManagement", () => {
 
   it("searching by Status filter only matches status label, not name", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -532,7 +532,7 @@ describe("UserManagement", () => {
   // ─── AC: Click X clears both Search AND Filter By ─────────────────────────
   it("clicking clear X resets both search text and Filter By to defaults", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -569,7 +569,7 @@ describe("UserManagement", () => {
   // ─── AC: Whitespace-only search should not filter ─────────────────────────
   it("whitespace-only search text does not filter results", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -587,7 +587,7 @@ describe("UserManagement", () => {
   // ─── AC: Search is case-insensitive ───────────────────────────────────────
   it("search is case-insensitive across all columns", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
@@ -604,7 +604,7 @@ describe("UserManagement", () => {
 
   it("filter-by search is case-insensitive", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() =>
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
