@@ -93,7 +93,6 @@ describe("UserManagement", () => {
     abortError.name = "AbortError";
     mockFetchUsers.mockRejectedValue(abortError);
     renderRouter();
-    // Should not show error message, just stay loading or empty
     await waitFor(() => {
       expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
     });
@@ -169,35 +168,25 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    // Check user count
     expect(screen.getByTestId("user-count-total")).toHaveTextContent("3 users");
     expect(screen.getByTestId("user-count-breakdown")).toHaveTextContent(
       "(2 active, 1 deactivated)"
     );
 
-    // Check rows rendered
     const rows = screen.getAllByTestId("user-row-item");
     expect(rows).toHaveLength(3);
 
-    // Check name column
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("Bob Brown")).toBeInTheDocument();
-
-    // Check harpId
     expect(screen.getByText("harp1")).toBeInTheDocument();
-
-    // Check email
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
 
-    // Check status chips
     expect(screen.getAllByTestId("status-chip-ACTIVE")).toHaveLength(2);
     expect(screen.getAllByText("Active")).toHaveLength(2);
     expect(screen.getByTestId("status-chip-DEACTIVATED")).toBeInTheDocument();
     expect(screen.getByText("Deactivated")).toBeInTheDocument();
-
-    // Check last login - formatted date or dash
-    expect(screen.getByText("-")).toBeInTheDocument(); // Jane has no lastLoginAt
+    expect(screen.getByText("-")).toBeInTheDocument();
   });
 
   it("filters users by search text across all fields", async () => {
@@ -311,8 +300,6 @@ describe("UserManagement", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
     });
-
-    // Click clear
     const clearBtn = screen.getByTestId("user-clear-search");
     fireEvent.click(clearBtn);
 
@@ -335,7 +322,6 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
     });
     expect(screen.getByText("No results were found.")).toBeInTheDocument();
-    // original "no users" message should NOT appear
     expect(screen.queryByTestId("no-users-message")).not.toBeInTheDocument();
   });
 
@@ -382,7 +368,6 @@ describe("UserManagement", () => {
       expect(rows[0]).toHaveTextContent("John Doe");
     });
 
-    // Click again for descending
     fireEvent.click(nameHeader);
 
     await waitFor(() => {
@@ -404,8 +389,6 @@ describe("UserManagement", () => {
     }
 
     fireEvent.mouseEnter(nameHeader);
-
-    // UnfoldMoreIcon should appear (via SVG)
     await waitFor(() => {
       expect(nameHeader.querySelector("svg")).toBeInTheDocument();
     });
@@ -428,7 +411,6 @@ describe("UserManagement", () => {
       charCode: 13,
       preventDefault: preventDefaultMock,
     });
-    // No crash, test passes
   });
 
   // ─── AC: No filter selected — search across ALL columns ───────────────────
@@ -514,7 +496,7 @@ describe("UserManagement", () => {
       target: { value: "Name" },
     });
     fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "example.com" }, // exists in emails but NOT names
+      target: { value: "example.com" },
     });
 
     await waitFor(() => {
@@ -534,7 +516,7 @@ describe("UserManagement", () => {
       target: { value: "Harp ID" },
     });
     fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "John" }, // exists in name but NOT harpId
+      target: { value: "John" },
     });
 
     await waitFor(() => {
@@ -554,7 +536,7 @@ describe("UserManagement", () => {
       target: { value: "Email Address" },
     });
     fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "Brown" }, // name only
+      target: { value: "Brown" },
     });
 
     await waitFor(() => {
