@@ -17,9 +17,17 @@ jest.mock("@madie/madie-util", () => ({
   useUserServiceApi: jest.fn().mockReturnValue({
     fetchUsers: jest.fn().mockResolvedValue([]),
   }),
+  adminUserStore: {
+    state: null,
+    updateUser: jest.fn(),
+    subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
+  },
 }));
 
 describe("AdminLanding Component", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/admin");
+  });
   test("renders the User Management tab for admin users when flag is enabled", async () => {
     render(<AdminLanding />);
 

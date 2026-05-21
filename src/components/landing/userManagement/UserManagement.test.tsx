@@ -1,9 +1,17 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
 // @ts-ignore
 import { useUserServiceApi } from "@madie/madie-util";
+
+const renderRouter = () =>
+  render(
+    <MemoryRouter initialEntries={["/admin"]}>
+      <UserManagement />
+    </MemoryRouter>
+  );
 
 const mockFetchUsers = jest.fn();
 
@@ -17,6 +25,11 @@ jest.mock("@madie/madie-util", () => ({
     getUserName: () => "testUser",
   }),
   useUserServiceApi: jest.fn(),
+  adminUserStore: {
+    state: null,
+    updateUser: jest.fn(),
+    subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
+  },
 }));
 
 const mockUsers = [
@@ -51,6 +64,7 @@ const mockUsers = [
 
 describe("UserManagement", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/admin");
     mockFetchUsers.mockReset();
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
@@ -59,14 +73,14 @@ describe("UserManagement", () => {
 
   it("shows loading state initially", () => {
     mockFetchUsers.mockReturnValue(new Promise(() => {})); // never resolves
-    render(<UserManagement />);
+    renderRouter();
     expect(screen.getByTestId("loading-message")).toBeInTheDocument();
     expect(screen.getByText("Loading users...")).toBeInTheDocument();
   });
 
   it("shows error message when fetch fails", async () => {
     mockFetchUsers.mockRejectedValue(new Error("Server error"));
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
     });
@@ -77,7 +91,7 @@ describe("UserManagement", () => {
     const abortError = new Error("Aborted");
     abortError.name = "AbortError";
     mockFetchUsers.mockRejectedValue(abortError);
-    render(<UserManagement />);
+    renderRouter();
     // Should not show error message, just stay loading or empty
     await waitFor(() => {
       expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
@@ -86,7 +100,7 @@ describe("UserManagement", () => {
 
   it("shows no users message when fetch returns empty", async () => {
     mockFetchUsers.mockResolvedValue([]);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("no-users-message")).toBeInTheDocument();
     });
@@ -95,7 +109,7 @@ describe("UserManagement", () => {
 
   it("renders user table with data", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -133,7 +147,7 @@ describe("UserManagement", () => {
 
   it("filters users by search text across all fields", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -150,7 +164,7 @@ describe("UserManagement", () => {
 
   it("filters by harp ID when filter is set", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -171,7 +185,7 @@ describe("UserManagement", () => {
 
   it("filters by Name", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -191,7 +205,7 @@ describe("UserManagement", () => {
 
   it("filters by Email Address", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -211,7 +225,7 @@ describe("UserManagement", () => {
 
   it("filters by Status", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -231,7 +245,7 @@ describe("UserManagement", () => {
 
   it("clears search and filter when clear button is clicked", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -254,7 +268,7 @@ describe("UserManagement", () => {
 
   it("shows no users message when search has no results", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -269,7 +283,7 @@ describe("UserManagement", () => {
 
   it("displays users sorted alphabetically by name by default", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -282,7 +296,7 @@ describe("UserManagement", () => {
 
   it("sorts columns when header is clicked", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -311,7 +325,7 @@ describe("UserManagement", () => {
 
   it("shows sort icon on hover", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
@@ -333,7 +347,7 @@ describe("UserManagement", () => {
 
   it("handles Enter key in search without submitting", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
-    render(<UserManagement />);
+    renderRouter();
     await waitFor(() => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });

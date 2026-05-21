@@ -1,17 +1,13 @@
 import React from "react";
-import { Tabs, Tab } from "@madie/madie-design-system/dist/react";
-import {
-  useDocumentTitle,
-  useUserRoles,
-  useFeatureFlags,
-} from "@madie/madie-util";
-import UserManagement from "./userManagement/UserManagement";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useDocumentTitle, useUserRoles } from "@madie/madie-util";
+import AdminHomePage from "./AdminHomePage";
+import UserProfile from "./userManagement/userProfile/UserProfile";
 import "./AdminLanding.scss";
 
 const AdminLanding = () => {
   useDocumentTitle("MADiE Admin");
   const userRoles = useUserRoles();
-  const featureFlags = useFeatureFlags();
 
   if (!userRoles?.isAdmin) {
     return null;
@@ -19,21 +15,12 @@ const AdminLanding = () => {
 
   return (
     <div data-testid="admin-landing">
-      <div id="admin-nav" style={{ marginTop: "-48px", marginLeft: "32px" }}>
-        <Tabs value="user-management" type="A" size="standard">
-          {featureFlags?.AdminUserList && (
-            <Tab
-              type="A"
-              size="standard"
-              value="user-management"
-              label="User Management"
-              data-testid="user-management-tab"
-            />
-          )}
-        </Tabs>
-      </div>
-
-      {featureFlags?.AdminUserList && <UserManagement />}
+      <BrowserRouter>
+        <Routes>
+          <Route path="/admin" element={<AdminHomePage />} />
+          <Route path="/admin/userProfile" element={<UserProfile />} />
+        </Routes>
+      </BrowserRouter>
     </div>
   );
 };
