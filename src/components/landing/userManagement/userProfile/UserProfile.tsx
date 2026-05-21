@@ -19,12 +19,22 @@ const UserProfile = () => {
       .then((user) => {
         adminUserStore.updateUser(user);
       })
-      .catch((err) => {
-        if (err?.name !== "AbortError" && err?.code !== "ERR_CANCELED") {
+      .catch((err: unknown) => {
+        const name =
+          err && typeof err === "object" && "name" in err
+            ? (err as { name?: string }).name
+            : undefined;
+        const code =
+          err && typeof err === "object" && "code" in err
+            ? (err as { code?: string }).code
+            : undefined;
+        if (name !== "AbortError" && code !== "ERR_CANCELED") {
           adminUserStore.updateUser(null);
         }
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   }, [harpId, userServiceApi]);
 
   return (
