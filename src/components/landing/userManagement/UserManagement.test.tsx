@@ -6,6 +6,12 @@ import UserManagement from "./UserManagement";
 // @ts-ignore
 import { useUserServiceApi } from "@madie/madie-util";
 
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
+
 const renderRouter = () =>
   render(
     <MemoryRouter initialEntries={["/admin"]}>
@@ -61,6 +67,7 @@ describe("UserManagement", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/admin");
     mockFetchUsers.mockReset();
+    mockNavigate.mockReset();
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
     });
@@ -100,6 +107,60 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("no-users-message")).toBeInTheDocument();
     });
     expect(screen.getByText("No users found.")).toBeInTheDocument();
+  });
+
+  it("navigates to the user profile with harpId when a user name is clicked", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    renderRouter();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("user-name-link-1"));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/admin/userProfile?harpId=harp1"
+    );
+  });
+
+  it("URL-encodes the harpId when navigating to the user profile", async () => {
+    mockFetchUsers.mockResolvedValue([
+      {
+        id: "9",
+        harpId: "harp with spaces&special",
+        firstName: "Edge",
+        lastName: "Case",
+        email: "edge@example.com",
+        status: "ACTIVE",
+      },
+    ]);
+    renderRouter();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("user-name-link-9"));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/admin/userProfile?harpId=harp%20with%20spaces%26special"
+    );
+  });
+
+  it("does not navigate when the user has no harpId", async () => {
+    mockFetchUsers.mockResolvedValue([
+      {
+        id: "10",
+        firstName: "No",
+        lastName: "HarpId",
+        email: "nohid@example.com",
+        status: "ACTIVE",
+      },
+    ]);
+    renderRouter();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("user-name-link-10"));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("renders user table with data", async () => {
