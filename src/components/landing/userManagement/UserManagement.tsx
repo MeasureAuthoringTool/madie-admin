@@ -17,7 +17,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { UserDetails, UserStatus } from "@madie/madie-models";
 // @ts-ignore
-import { useUserServiceApi, adminUserStore } from "@madie/madie-util";
+import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
@@ -71,9 +71,8 @@ const UserManagement = () => {
   }, [userServiceApi]);
 
   const openUserProfile = (user: UserDetails) => {
-    adminUserStore.updateUser(user);
-    const name = `${user.firstName} ${user.lastName}`;
-    navigate(`/admin/userProfile?name=${encodeURIComponent(name)}`);
+    if (!user.harpId) return;
+    navigate(`/admin/userProfile?harpId=${encodeURIComponent(user.harpId)}`);
   };
 
   const totalCount = users.length;

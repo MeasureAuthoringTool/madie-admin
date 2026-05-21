@@ -25,11 +25,6 @@ jest.mock("@madie/madie-util", () => ({
     getUserName: () => "testUser",
   }),
   useUserServiceApi: jest.fn(),
-  adminUserStore: {
-    state: null,
-    updateUser: jest.fn(),
-    subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
-  },
 }));
 
 const mockUsers = [

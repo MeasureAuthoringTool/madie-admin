@@ -17,11 +17,6 @@ jest.mock("@madie/madie-util", () => ({
   useUserServiceApi: jest.fn().mockReturnValue({
     fetchUsers: jest.fn().mockResolvedValue([]),
   }),
-  adminUserStore: {
-    state: null,
-    updateUser: jest.fn(),
-    subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
-  },
 }));
 
 describe("AdminLanding Component", () => {

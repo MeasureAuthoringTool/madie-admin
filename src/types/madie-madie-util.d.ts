@@ -22,16 +22,8 @@ declare module "@madie/madie-util" {
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
+    getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
-
-  export const adminUserStore: {
-    subscribe: (setUserState: (user: UserDetails | null) => void) => {
-      unsubscribe: () => void;
-    };
-    updateUser: (user: UserDetails | null) => void;
-    initialState: null;
-    state: UserDetails | null;
-  };
 }
