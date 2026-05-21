@@ -7,7 +7,7 @@ import UserManagement from "./userManagement/UserManagement";
 export default function AdminHomePage() {
   const featureFlags = useFeatureFlags();
 
-  return featureFlags?.AdminUserList ? (
+  return featureFlags.AdminUserList ? (
     <>
       <div id="admin-nav" style={{ marginTop: "-48px", marginLeft: "32px" }}>
         <Tabs value="user-management" type="A" size="standard">

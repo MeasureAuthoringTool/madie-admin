@@ -16,7 +16,9 @@ const UserProfile = () => {
     const controller = new AbortController();
     userServiceApi
       .getUser(harpId, controller.signal)
-      .then((user) => adminUserStore.updateUser(user))
+      .then((user) => {
+        adminUserStore.updateUser(user);
+      })
       .catch((err) => {
         if (err?.name !== "AbortError" && err?.code !== "ERR_CANCELED") {
           adminUserStore.updateUser(null);

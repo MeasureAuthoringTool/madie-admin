@@ -145,7 +145,9 @@ const UserManagement = () => {
               type="button"
               className="user-name-link"
               data-testid={`user-name-link-${user.id}`}
-              onClick={() => openUserProfile(user)}
+              onClick={() => {
+                openUserProfile(user);
+              }}
             >
               {name}
             </button>

@@ -1,6 +1,6 @@
 declare module "@madie/madie-util" {
-  import { UserDetails } from "@madie/madie-models";
-  import { AxiosError } from "axios";
+  import type { UserDetails } from "@madie/madie-models";
+  import type { AxiosError } from "axios";
 
   export interface FeatureFlags {
     AdminShareMeasures: boolean;
@@ -22,16 +22,16 @@ declare module "@madie/madie-util" {
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
-    getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
+    getUser(_harpId: string, signal?: AbortSignal): Promise<UserDetails>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
 
   export const adminUserStore: {
-    subscribe: (setUserState: (user: UserDetails | null) => void) => {
+    subscribe: (_setUserState: (_user: UserDetails | null) => void) => {
       unsubscribe: () => void;
     };
-    updateUser: (user: UserDetails | null) => void;
+    updateUser: (_user: UserDetails | null) => void;
     initialState: null;
     state: UserDetails | null;
   };
