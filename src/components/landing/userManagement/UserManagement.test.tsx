@@ -266,7 +266,7 @@ describe("UserManagement", () => {
     });
   });
 
-  it("shows no users message when search has no results", async () => {
+  it("shows 'No results were found.' when search yields no results", async () => {
     mockFetchUsers.mockResolvedValue(mockUsers);
     renderRouter();
     await waitFor(() => {
@@ -274,11 +274,24 @@ describe("UserManagement", () => {
     });
 
     const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "nonexistent" } });
+    fireEvent.change(searchInput, { target: { value: "nonexistent_xyz" } });
 
+    await waitFor(() => {
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No results were found.")).toBeInTheDocument();
+    // original "no users" message should NOT appear
+    expect(screen.queryByTestId("no-users-message")).not.toBeInTheDocument();
+  });
+
+  it("shows 'No users found.' (not the search message) when users list is empty with no search", async () => {
+    mockFetchUsers.mockResolvedValue([]);
+    render(<UserManagement />);
     await waitFor(() => {
       expect(screen.getByTestId("no-users-message")).toBeInTheDocument();
     });
+    expect(screen.getByText("No users found.")).toBeInTheDocument();
+    expect(screen.queryByTestId("no-results-message")).not.toBeInTheDocument();
   });
 
   it("displays users sorted alphabetically by name by default", async () => {
@@ -361,5 +374,251 @@ describe("UserManagement", () => {
       preventDefault: preventDefaultMock,
     });
     // No crash, test passes
+  });
+
+  // ─── AC: No filter selected — search across ALL columns ───────────────────
+  it("searches across all columns when no filter is selected — matches by harpId", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "harp2" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+  });
+
+  it("searches across all columns when no filter is selected — matches by email", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "bob@example" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+    expect(screen.getByText("Bob Brown")).toBeInTheDocument();
+  });
+
+  it("searches across all columns when no filter is selected — matches by status label", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "Deactivated" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+  });
+
+  it("searches across all columns when no filter is selected — matches multiple rows", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    // "Active" status label matches two users
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "Active" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(2);
+    });
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("Bob Brown")).toBeInTheDocument();
+  });
+
+  // ─── AC: Filter selected — search only in that column ─────────────────────
+  it("searching by Name filter only matches name column, not email", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Name" },
+    });
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "example.com" }, // exists in emails but NOT names
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No results were found.")).toBeInTheDocument();
+  });
+
+  it("searching by Harp ID filter only matches harpId column, not name", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Harp ID" },
+    });
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "John" }, // exists in name but NOT harpId
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No results were found.")).toBeInTheDocument();
+  });
+
+  it("searching by Email Address filter only matches email column, not name", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Email Address" },
+    });
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "Brown" }, // name only
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No results were found.")).toBeInTheDocument();
+  });
+
+  it("searching by Status filter only matches status label, not name", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Status" },
+    });
+    // "harp" only appears in harpId, not status
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "harp" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No results were found.")).toBeInTheDocument();
+  });
+
+  // ─── AC: Click X clears both Search AND Filter By ─────────────────────────
+  it("clicking clear X resets both search text and Filter By to defaults", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    // Set filter
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Name" },
+    });
+    // Set search
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "doe" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+
+    // Click clear
+    fireEvent.click(screen.getByTestId("user-clear-search"));
+
+    await waitFor(() => {
+      // All users restored
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(3);
+    });
+
+    // Search input is empty
+    expect(screen.getByTestId("user-search-input")).toHaveValue("");
+    // Filter By is empty/default (no results message gone)
+    expect(screen.queryByTestId("no-results-message")).not.toBeInTheDocument();
+    // Clear button should no longer be visible
+    expect(screen.queryByTestId("user-clear-search")).not.toBeInTheDocument();
+  });
+
+  // ─── AC: Whitespace-only search should not filter ─────────────────────────
+  it("whitespace-only search text does not filter results", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "   " },
+    });
+
+    await waitFor(() => {
+      // All 3 users still shown
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(3);
+    });
+  });
+
+  // ─── AC: Search is case-insensitive ───────────────────────────────────────
+  it("search is case-insensitive across all columns", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "JOHN" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+  });
+
+  it("filter-by search is case-insensitive", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    render(<UserManagement />);
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Email Address" },
+    });
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "JANE@EXAMPLE" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
   });
 });
