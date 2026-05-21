@@ -1,6 +1,7 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
 // @ts-ignore
@@ -63,6 +64,19 @@ const mockUsers = [
   },
 ];
 
+const typeSearch = (value: string) => {
+  const input = screen.getByTestId("user-search-input");
+  userEvent.clear(input);
+  userEvent.type(input, value);
+};
+
+const selectFilter = async (label: string) => {
+  // MUI Select trigger has role="combobox" with the floating label as its
+  // accessible name. Open it, then click the option whose data-testid matches.
+  userEvent.click(screen.getByRole("combobox", { name: /filter by/i }));
+  userEvent.click(await screen.findByTestId(`user-filter-by-${label}`));
+};
+
 describe("UserManagement", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/admin");
@@ -94,7 +108,6 @@ describe("UserManagement", () => {
     abortError.name = "AbortError";
     mockFetchUsers.mockRejectedValue(abortError);
     renderRouter();
-    // Should not show error message, just stay loading or empty
     await waitFor(() => {
       expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
     });
@@ -116,7 +129,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId("user-name-link-1"));
+    userEvent.click(screen.getByTestId("user-name-link-1"));
     expect(mockNavigate).toHaveBeenCalledWith(
       "/admin/userProfile?harpId=harp1"
     );
@@ -138,7 +151,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId("user-name-link-9"));
+    userEvent.click(screen.getByTestId("user-name-link-9"));
     expect(mockNavigate).toHaveBeenCalledWith(
       "/admin/userProfile?harpId=harp%20with%20spaces%26special"
     );
@@ -159,7 +172,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId("user-name-link-10"));
+    userEvent.click(screen.getByTestId("user-name-link-10"));
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -170,35 +183,24 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    // Check user count
     expect(screen.getByTestId("user-count-total")).toHaveTextContent("3 users");
     expect(screen.getByTestId("user-count-breakdown")).toHaveTextContent(
       "(2 active, 1 deactivated)"
     );
 
-    // Check rows rendered
     const rows = screen.getAllByTestId("user-row-item");
     expect(rows).toHaveLength(3);
 
-    // Check name column
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("Bob Brown")).toBeInTheDocument();
-
-    // Check harpId
     expect(screen.getByText("harp1")).toBeInTheDocument();
-
-    // Check email
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
-
-    // Check status chips
     expect(screen.getAllByTestId("status-chip-ACTIVE")).toHaveLength(2);
     expect(screen.getAllByText("Active")).toHaveLength(2);
     expect(screen.getByTestId("status-chip-DEACTIVATED")).toBeInTheDocument();
     expect(screen.getByText("Deactivated")).toBeInTheDocument();
-
-    // Check last login - formatted date or dash
-    expect(screen.getByText("-")).toBeInTheDocument(); // Jane has no lastLoginAt
+    expect(screen.getByText("-")).toBeInTheDocument();
   });
 
   it("filters users by search text across all fields", async () => {
@@ -208,8 +210,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "jane" } });
+    typeSearch("jane");
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -225,12 +226,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    // Select "Harp ID" filter
-    const filterSelect = screen.getByTestId("user-filter-by-input");
-    fireEvent.change(filterSelect, { target: { value: "Harp ID" } });
-
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "harp3" } });
+    await selectFilter("Harp ID");
+    typeSearch("harp3");
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -246,11 +243,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const filterSelect = screen.getByTestId("user-filter-by-input");
-    fireEvent.change(filterSelect, { target: { value: "Name" } });
-
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "doe" } });
+    await selectFilter("Name");
+    typeSearch("doe");
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -266,11 +260,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const filterSelect = screen.getByTestId("user-filter-by-input");
-    fireEvent.change(filterSelect, { target: { value: "Email Address" } });
-
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "bob@" } });
+    await selectFilter("Email Address");
+    typeSearch("bob@");
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -286,11 +277,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const filterSelect = screen.getByTestId("user-filter-by-input");
-    fireEvent.change(filterSelect, { target: { value: "Status" } });
-
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "deactivated" } });
+    await selectFilter("Status");
+    typeSearch("deactivated");
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -306,16 +294,13 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "jane" } });
+    typeSearch("jane");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
     });
 
-    // Click clear
-    const clearBtn = screen.getByTestId("user-clear-search");
-    fireEvent.click(clearBtn);
+    userEvent.click(screen.getByTestId("user-clear-search"));
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(3);
@@ -329,14 +314,12 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByTestId("user-search-input");
-    fireEvent.change(searchInput, { target: { value: "nonexistent_xyz" } });
+    typeSearch("nonexistent_xyz");
 
     await waitFor(() => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
     });
     expect(screen.getByText("No results were found.")).toBeInTheDocument();
-    // original "no users" message should NOT appear
     expect(screen.queryByTestId("no-users-message")).not.toBeInTheDocument();
   });
 
@@ -370,21 +353,19 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
     });
 
-    // Default is ascending by Name (Bob Brown first)
     const nameHeader = screen.getByText("Name").closest("th");
     if (!nameHeader) {
       throw new Error("Name header not found");
     }
 
-    fireEvent.click(nameHeader);
+    userEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
       expect(rows[0]).toHaveTextContent("John Doe");
     });
 
-    // Click again for descending
-    fireEvent.click(nameHeader);
+    userEvent.click(nameHeader);
 
     await waitFor(() => {
       const rows = screen.getAllByTestId("user-row-item");
@@ -404,14 +385,13 @@ describe("UserManagement", () => {
       throw new Error("Name header not found");
     }
 
-    fireEvent.mouseEnter(nameHeader);
+    userEvent.hover(nameHeader);
 
-    // UnfoldMoreIcon should appear (via SVG)
     await waitFor(() => {
       expect(nameHeader.querySelector("svg")).toBeInTheDocument();
     });
 
-    fireEvent.mouseLeave(nameHeader);
+    userEvent.unhover(nameHeader);
   });
 
   it("handles Enter key in search without submitting", async () => {
@@ -422,13 +402,7 @@ describe("UserManagement", () => {
     });
 
     const searchInput = screen.getByTestId("user-search-input");
-    const preventDefaultMock = jest.fn();
-    fireEvent.keyPress(searchInput, {
-      key: "Enter",
-      code: "Enter",
-      charCode: 13,
-      preventDefault: preventDefaultMock,
-    });
+    userEvent.type(searchInput, "{enter}");
     // No crash, test passes
   });
 
@@ -440,9 +414,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "harp2" },
-    });
+    typeSearch("harp2");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
@@ -457,9 +429,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "bob@example" },
-    });
+    typeSearch("bob@example");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
@@ -474,9 +444,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "Deactivated" },
-    });
+    typeSearch("Deactivated");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
@@ -491,10 +459,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    // "Active" status label matches two users
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "Active" },
-    });
+    typeSearch("Active");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(2);
@@ -511,12 +476,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Name" },
-    });
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "example.com" }, // exists in emails but NOT names
-    });
+    await selectFilter("Name");
+    typeSearch("example.com");
 
     await waitFor(() => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
@@ -531,12 +492,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Harp ID" },
-    });
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "John" }, // exists in name but NOT harpId
-    });
+    await selectFilter("Harp ID");
+    typeSearch("John");
 
     await waitFor(() => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
@@ -551,12 +508,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Email Address" },
-    });
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "Brown" }, // name only
-    });
+    await selectFilter("Email Address");
+    typeSearch("Brown");
 
     await waitFor(() => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
@@ -571,13 +524,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Status" },
-    });
-    // "harp" only appears in harpId, not status
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "harp" },
-    });
+    await selectFilter("Status");
+    typeSearch("harp");
 
     await waitFor(() => {
       expect(screen.getByTestId("no-results-message")).toBeInTheDocument();
@@ -593,32 +541,21 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    // Set filter
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Name" },
-    });
-    // Set search
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "doe" },
-    });
+    await selectFilter("Name");
+    typeSearch("doe");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
     });
 
-    // Click clear
-    fireEvent.click(screen.getByTestId("user-clear-search"));
+    userEvent.click(screen.getByTestId("user-clear-search"));
 
     await waitFor(() => {
-      // All users restored
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(3);
     });
 
-    // Search input is empty
     expect(screen.getByTestId("user-search-input")).toHaveValue("");
-    // Filter By is empty/default (no results message gone)
     expect(screen.queryByTestId("no-results-message")).not.toBeInTheDocument();
-    // Clear button should no longer be visible
     expect(screen.queryByTestId("user-clear-search")).not.toBeInTheDocument();
   });
 
@@ -630,12 +567,9 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "   " },
-    });
+    typeSearch("   ");
 
     await waitFor(() => {
-      // All 3 users still shown
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(3);
     });
   });
@@ -648,9 +582,7 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "JOHN" },
-    });
+    typeSearch("JOHN");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
@@ -665,12 +597,8 @@ describe("UserManagement", () => {
       expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
-      target: { value: "Email Address" },
-    });
-    fireEvent.change(screen.getByTestId("user-search-input"), {
-      target: { value: "JANE@EXAMPLE" },
-    });
+    await selectFilter("Email Address");
+    typeSearch("JANE@EXAMPLE");
 
     await waitFor(() => {
       expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
