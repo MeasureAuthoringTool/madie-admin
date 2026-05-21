@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
-  import type { UserDetails } from "@madie/madie-models";
   import type { AxiosError } from "axios";
 
   export interface FeatureFlags {
@@ -8,6 +8,22 @@ declare module "@madie/madie-util" {
     AdminTransferLibrary: boolean;
     AdminShareLibrary: boolean;
     AdminUserList: boolean;
+  }
+
+  export interface HarpRole {
+    roleType?: string;
+    role?: string;
+  }
+
+  export interface UserDetails {
+    id?: string;
+    harpId?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    status?: string;
+    roles?: HarpRole[];
+    lastLoginAt?: string;
   }
 
   export function useFeatureFlags(): FeatureFlags;

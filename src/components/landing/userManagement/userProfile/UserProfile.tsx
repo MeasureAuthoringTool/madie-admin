@@ -3,6 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { useUserServiceApi, adminUserStore } from "@madie/madie-util";
 import "./UserProfile.scss";
 
+const isAbortError = (err: unknown): boolean => {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { name?: string; code?: string };
+  return e.name === "AbortError" || e.code === "ERR_CANCELED";
+};
+
 const UserProfile = () => {
   const [searchParams] = useSearchParams();
   const harpId = searchParams.get("harpId");
@@ -20,15 +26,7 @@ const UserProfile = () => {
         adminUserStore.updateUser(user);
       })
       .catch((err: unknown) => {
-        const name =
-          err && typeof err === "object" && "name" in err
-            ? (err as { name?: string }).name
-            : undefined;
-        const code =
-          err && typeof err === "object" && "code" in err
-            ? (err as { code?: string }).code
-            : undefined;
-        if (name !== "AbortError" && code !== "ERR_CANCELED") {
+        if (!isAbortError(err)) {
           adminUserStore.updateUser(null);
         }
       });
