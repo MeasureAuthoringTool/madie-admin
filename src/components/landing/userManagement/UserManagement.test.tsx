@@ -19,7 +19,6 @@ const renderRouter = () =>
   );
 
 const mockFetchUsers = jest.fn();
-
 const mockUseFeatureFlags = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
