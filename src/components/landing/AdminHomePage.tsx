@@ -7,7 +7,7 @@ import UserManagement from "./userManagement/UserManagement";
 export default function AdminHomePage() {
   const featureFlags = useFeatureFlags();
 
-  if (!featureFlags.AdminUserList) {
+  if (!featureFlags?.AdminUserList) {
     return null;
   }
 

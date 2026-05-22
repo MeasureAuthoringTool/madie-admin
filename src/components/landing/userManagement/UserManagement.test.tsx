@@ -20,6 +20,8 @@ const renderRouter = () =>
 
 const mockFetchUsers = jest.fn();
 
+const mockUseFeatureFlags = jest.fn();
+
 jest.mock("@madie/madie-util", () => ({
   useDocumentTitle: jest.fn(),
   useUserRoles: jest
@@ -30,6 +32,7 @@ jest.mock("@madie/madie-util", () => ({
     getUserName: () => "testUser",
   }),
   useUserServiceApi: jest.fn(),
+  useFeatureFlags: (...args: unknown[]) => mockUseFeatureFlags(...args),
 }));
 
 const mockUsers = [
@@ -67,6 +70,8 @@ describe("UserManagement", () => {
     window.history.replaceState({}, "", "/admin");
     mockFetchUsers.mockReset();
     mockNavigate.mockReset();
+    mockUseFeatureFlags.mockReset();
+    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
     });
@@ -159,6 +164,19 @@ describe("UserManagement", () => {
 
     fireEvent.click(screen.getByTestId("user-name-link-10"));
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("renders the user name as plain text (no link) when AdminUserProfile flag is off", async () => {
+    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    renderRouter();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("user-name-1")).toHaveTextContent("John Doe");
+    expect(screen.queryByTestId("user-name-link-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("user-name-1").tagName).toBe("SPAN");
   });
 
   it("renders user table with data", async () => {

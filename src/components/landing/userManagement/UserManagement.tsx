@@ -17,7 +17,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { UserDetails, UserStatus } from "@madie/madie-models";
 // @ts-ignore
-import { useUserServiceApi } from "@madie/madie-util";
+import { useFeatureFlags, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
@@ -49,6 +49,7 @@ const UserManagement = () => {
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
   const userServiceApi = useRef(useUserServiceApi()).current;
+  const featureFlags = useFeatureFlags();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -140,6 +141,9 @@ const UserManagement = () => {
         cell: (info) => {
           const name = info.getValue() as string;
           const user = info.row.original;
+          if (!featureFlags?.AdminUserProfile) {
+            return <span data-testid={`user-name-${user.id}`}>{name}</span>;
+          }
           return (
             <button
               type="button"
@@ -182,7 +186,7 @@ const UserManagement = () => {
         },
       },
     ],
-    [navigate]
+    [navigate, featureFlags?.AdminUserProfile]
   );
 
   const table = useReactTable({

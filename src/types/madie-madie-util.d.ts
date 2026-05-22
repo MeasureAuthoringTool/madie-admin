@@ -8,6 +8,7 @@ declare module "@madie/madie-util" {
     AdminTransferLibrary: boolean;
     AdminShareLibrary: boolean;
     AdminUserList: boolean;
+    AdminUserProfile: boolean;
   }
 
   export interface HarpRole {
