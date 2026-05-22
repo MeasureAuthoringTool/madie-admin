@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useDocumentTitle, useUserRoles } from "@madie/madie-util";
 import AdminHomePage from "./AdminHomePage";
@@ -10,7 +10,9 @@ const AdminLanding = () => {
   const userRoles = useUserRoles();
 
   if (!userRoles?.isAdmin) {
-    return null;
+    if (userRoles && !userRoles.isAdmin) {
+      window.location.replace("/404");
+    }
   }
 
   return (

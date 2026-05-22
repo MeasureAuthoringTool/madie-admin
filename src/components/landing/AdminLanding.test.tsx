@@ -41,15 +41,21 @@ describe("AdminLanding Component", () => {
     expect(tab).toHaveAttribute("aria-selected", "true");
   });
 
-  test("renders nothing for non-admin users", () => {
+  test("redirects non-admin users to /404", () => {
     (useUserRoles as jest.Mock).mockReturnValueOnce({
       roles: [],
       isAdmin: false,
     });
+    const replaceMock = jest.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, replace: replaceMock },
+    });
 
-    const { container } = render(<AdminLanding />);
+    render(<AdminLanding />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(replaceMock).toHaveBeenCalledWith("/404");
   });
 
   test("does not render User Management when AdminUserList flag is disabled", async () => {
