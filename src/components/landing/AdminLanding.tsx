@@ -10,9 +10,7 @@ const AdminLanding = () => {
   const userRoles = useUserRoles();
 
   if (!userRoles?.isAdmin) {
-    if (userRoles && !userRoles.isAdmin) {
-      window.location.replace("/404");
-    }
+    window.location.replace("/404");
   }
 
   return (
