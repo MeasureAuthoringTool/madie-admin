@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -71,10 +77,13 @@ const UserManagement = () => {
     return () => controller.abort();
   }, [userServiceApi]);
 
-  const openUserProfile = (user: UserDetails) => {
-    if (!user.harpId) return;
-    navigate(`/admin/userProfile/${encodeURIComponent(user.harpId)}`);
-  };
+  const openUserProfile = useCallback(
+    (user: UserDetails) => {
+      if (!user.harpId) return;
+      navigate(`/admin/userProfile/${encodeURIComponent(user.harpId)}`);
+    },
+    [navigate]
+  );
 
   const totalCount = users.length;
   const activeCount = useMemo(
@@ -186,7 +195,7 @@ const UserManagement = () => {
         },
       },
     ],
-    [navigate, featureFlags?.AdminUserProfile]
+    [openUserProfile, featureFlags?.AdminUserProfile]
   );
 
   const table = useReactTable({
