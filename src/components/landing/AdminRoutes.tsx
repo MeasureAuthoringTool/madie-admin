@@ -14,7 +14,7 @@ const AdminRoutes = () => {
   }
 
   return (
-    <div data-testid="admin-landing">
+    <div data-testid="admin-routes">
       <BrowserRouter>
         <Routes>
           <Route path="/admin" element={<AdminHomePage />} />

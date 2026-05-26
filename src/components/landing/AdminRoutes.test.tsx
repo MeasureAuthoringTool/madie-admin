@@ -26,7 +26,7 @@ describe("AdminRoutes Component", () => {
   test("renders the User Management tab for admin users when flag is enabled", async () => {
     render(<AdminRoutes />);
 
-    expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
+    expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
     expect(screen.getByTestId("user-management-tab")).toBeInTheDocument();
     expect(screen.getByText("User Management")).toBeInTheDocument();
     await waitFor(() => {
@@ -65,7 +65,7 @@ describe("AdminRoutes Component", () => {
 
     render(<AdminRoutes />);
 
-    expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
+    expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
     expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
     expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });
