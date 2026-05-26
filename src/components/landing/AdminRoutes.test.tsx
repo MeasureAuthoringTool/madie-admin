@@ -46,16 +46,12 @@ describe("AdminRoutes Component", () => {
       roles: [],
       isAdmin: false,
     });
-    const replaceMock = jest.fn();
-    const originalLocation = window.location;
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: { ...originalLocation, replace: replaceMock },
-    });
 
     render(<AdminRoutes />);
 
-    expect(replaceMock).toHaveBeenCalledWith("/404");
+    expect(window.location.pathname).toBe("/404");
+    expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });
 
   test("does not render User Management when AdminUserList flag is disabled", async () => {
