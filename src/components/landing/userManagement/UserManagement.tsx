@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -7,6 +13,7 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
+import { useNavigate } from "react-router-dom";
 import { Select, TextField } from "@madie/madie-design-system/dist/react";
 import { InputAdornment, IconButton, MenuItem, Chip } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
@@ -16,7 +23,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { UserDetails, UserStatus } from "@madie/madie-models";
 // @ts-ignore
-import { useUserServiceApi } from "@madie/madie-util";
+import { useFeatureFlags, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
@@ -48,6 +55,8 @@ const UserManagement = () => {
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
   const userServiceApi = useRef(useUserServiceApi()).current;
+  const featureFlags = useFeatureFlags();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,7 +77,14 @@ const UserManagement = () => {
     return () => controller.abort();
   }, [userServiceApi]);
 
-  // Counts
+  const openUserProfile = useCallback(
+    (user: UserDetails) => {
+      if (!user.harpId) return;
+      navigate(`/admin/userProfile/${encodeURIComponent(user.harpId)}`);
+    },
+    [navigate]
+  );
+
   const totalCount = users.length;
   const activeCount = useMemo(
     () => users.filter((u) => u.status === UserStatus.ACTIVE).length,
@@ -131,27 +147,37 @@ const UserManagement = () => {
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         id: "name",
         size: 25,
+        cell: (info) => {
+          const name = info.getValue() as string;
+          const user = info.row.original;
+          if (!featureFlags?.AdminUserProfile) {
+            return <span data-testid={`user-name-${user.id}`}>{name}</span>;
+          }
+          return (
+            <button
+              type="button"
+              className="user-name-link"
+              data-testid={`user-name-link-${user.id}`}
+              onClick={() => {
+                openUserProfile(user);
+              }}
+            >
+              {name}
+            </button>
+          );
+        },
       },
-      {
-        header: "Harp ID",
-        accessorKey: "harpId",
-        size: 20,
-      },
-      {
-        header: "Email Address",
-        accessorKey: "email",
-        size: 25,
-      },
+      { header: "Harp ID", accessorKey: "harpId", size: 20 },
+      { header: "Email Address", accessorKey: "email", size: 25 },
       {
         header: "Status",
         accessorKey: "status",
         size: 15,
         cell: (info) => {
           const status = info.getValue() as UserStatus;
-          const label = getStatusLabel(status);
           return (
             <Chip
-              label={label}
+              label={getStatusLabel(status)}
               className={STATUS_CHIP_CLASS[status] ?? "status-chip"}
               size="small"
               data-testid={`status-chip-${status}`}
@@ -169,7 +195,7 @@ const UserManagement = () => {
         },
       },
     ],
-    []
+    [openUserProfile, featureFlags?.AdminUserProfile]
   );
 
   const table = useReactTable({

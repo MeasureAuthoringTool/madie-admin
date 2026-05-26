@@ -2,7 +2,7 @@ import React, { FC } from "react";
 import ReactDOM from "react-dom";
 import singleSpaReact from "single-spa-react";
 import Root from "./root.component";
-import AdminLanding from "./components/landing/AdminLanding";
+import AdminRoutes from "./components/landing/AdminRoutes";
 
 const lifecycles = singleSpaReact({
   React,
@@ -14,6 +14,6 @@ const lifecycles = singleSpaReact({
   },
 });
 
-export const MadieAdmin: FC = AdminLanding;
+export const MadieAdmin: FC = AdminRoutes;
 
 export const { bootstrap, mount, unmount } = lifecycles;

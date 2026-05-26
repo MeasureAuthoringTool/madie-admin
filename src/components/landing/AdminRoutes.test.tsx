@@ -1,7 +1,7 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
-import AdminLanding from "./AdminLanding";
+import AdminRoutes from "./AdminRoutes";
 import { useUserRoles, useFeatureFlags } from "@madie/madie-util";
 
 jest.mock("@madie/madie-util", () => ({
@@ -19,11 +19,14 @@ jest.mock("@madie/madie-util", () => ({
   }),
 }));
 
-describe("AdminLanding Component", () => {
+describe("AdminRoutes Component", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/admin");
+  });
   test("renders the User Management tab for admin users when flag is enabled", async () => {
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
-    expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
+    expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
     expect(screen.getByTestId("user-management-tab")).toBeInTheDocument();
     expect(screen.getByText("User Management")).toBeInTheDocument();
     await waitFor(() => {
@@ -32,21 +35,23 @@ describe("AdminLanding Component", () => {
   });
 
   test("User Management tab is selected by default", () => {
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
     const tab = screen.getByTestId("user-management-tab");
     expect(tab).toHaveAttribute("aria-selected", "true");
   });
 
-  test("renders nothing for non-admin users", () => {
+  test("redirects non-admin users to /404", () => {
     (useUserRoles as jest.Mock).mockReturnValueOnce({
       roles: [],
       isAdmin: false,
     });
 
-    const { container } = render(<AdminLanding />);
+    render(<AdminRoutes />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(window.location.pathname).toBe("/404");
+    expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });
 
   test("does not render User Management when AdminUserList flag is disabled", async () => {
@@ -54,9 +59,9 @@ describe("AdminLanding Component", () => {
       AdminUserList: false,
     });
 
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
-    expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
+    expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
     expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
     expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });

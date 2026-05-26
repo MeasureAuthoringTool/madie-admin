@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
-  import { UserDetails } from "@madie/madie-models";
-  import { AxiosError } from "axios";
+  import type { AxiosError } from "axios";
 
   export interface FeatureFlags {
     AdminShareMeasures: boolean;
@@ -8,6 +8,23 @@ declare module "@madie/madie-util" {
     AdminTransferLibrary: boolean;
     AdminShareLibrary: boolean;
     AdminUserList: boolean;
+    AdminUserProfile: boolean;
+  }
+
+  export interface HarpRole {
+    roleType?: string;
+    role?: string;
+  }
+
+  export interface UserDetails {
+    id?: string;
+    harpId?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    status?: string;
+    roles?: HarpRole[];
+    lastLoginAt?: string;
   }
 
   export function useFeatureFlags(): FeatureFlags;
@@ -22,7 +39,23 @@ declare module "@madie/madie-util" {
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
+    getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
+
+  export interface AdminUserStoreSubscription {
+    unsubscribe(): void;
+  }
+
+  export interface AdminUserStore {
+    subscribe(
+      callback: (user: UserDetails | null) => void
+    ): AdminUserStoreSubscription;
+    updateUser(user: UserDetails | null): void;
+    initialState: null;
+    state: UserDetails | null;
+  }
+
+  export const adminUserStore: AdminUserStore;
 }
