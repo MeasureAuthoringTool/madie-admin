@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useDocumentTitle, useUserRoles } from "@madie/madie-util";
 import AdminHomePage from "./AdminHomePage";
 import UserProfile from "./userManagement/userProfile/UserProfile";
-import "./AdminLanding.scss";
+import "./AdminRoutes.scss";
 
-const AdminLanding = () => {
+const AdminRoutes = () => {
   useDocumentTitle("MADiE Admin");
   const userRoles = useUserRoles();
 
@@ -25,4 +25,4 @@ const AdminLanding = () => {
   );
 };
 
-export default AdminLanding;
+export default AdminRoutes;

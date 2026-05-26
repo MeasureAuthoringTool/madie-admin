@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs, Tab } from "@madie/madie-design-system/dist/react";
 import { useFeatureFlags } from "@madie/madie-util";
-import "./AdminLanding.scss";
+import "./AdminRoutes.scss";
 import UserManagement from "./userManagement/UserManagement";
 
 export default function AdminHomePage() {

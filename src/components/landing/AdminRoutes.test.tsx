@@ -1,7 +1,7 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
-import AdminLanding from "./AdminLanding";
+import AdminRoutes from "./AdminRoutes";
 import { useUserRoles, useFeatureFlags } from "@madie/madie-util";
 
 jest.mock("@madie/madie-util", () => ({
@@ -19,12 +19,12 @@ jest.mock("@madie/madie-util", () => ({
   }),
 }));
 
-describe("AdminLanding Component", () => {
+describe("AdminRoutes Component", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/admin");
   });
   test("renders the User Management tab for admin users when flag is enabled", async () => {
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
     expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
     expect(screen.getByTestId("user-management-tab")).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe("AdminLanding Component", () => {
   });
 
   test("User Management tab is selected by default", () => {
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
     const tab = screen.getByTestId("user-management-tab");
     expect(tab).toHaveAttribute("aria-selected", "true");
@@ -53,7 +53,7 @@ describe("AdminLanding Component", () => {
       value: { ...originalLocation, replace: replaceMock },
     });
 
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
     expect(replaceMock).toHaveBeenCalledWith("/404");
   });
@@ -63,7 +63,7 @@ describe("AdminLanding Component", () => {
       AdminUserList: false,
     });
 
-    render(<AdminLanding />);
+    render(<AdminRoutes />);
 
     expect(screen.getByTestId("admin-landing")).toBeInTheDocument();
     expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
