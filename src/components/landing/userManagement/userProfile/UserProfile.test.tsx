@@ -22,7 +22,6 @@ const renderAt = (initialEntry: string) =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/admin/userProfile" element={<UserProfile />} />
         <Route path="/admin/userProfile/:harpId" element={<UserProfile />} />
       </Routes>
     </MemoryRouter>
@@ -36,19 +35,11 @@ describe("UserProfile", () => {
 
   it("renders the user-profile card structure", () => {
     mockGetUser.mockResolvedValue(null);
-    renderAt("/admin/userProfile");
+    renderAt("/admin/userProfile/some_harp_id");
     expect(screen.getByTestId("user-profile")).toBeInTheDocument();
     expect(
       screen.getByTestId("user-profile").querySelector(".user-profile-header")
     ).toBeInTheDocument();
-  });
-
-  it("clears adminUserStore when no harpId is in the URL", async () => {
-    renderAt("/admin/userProfile");
-    await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith(null);
-    });
-    expect(mockGetUser).not.toHaveBeenCalled();
   });
 
   it("fetches the user by harpId and pushes the result into adminUserStore", async () => {

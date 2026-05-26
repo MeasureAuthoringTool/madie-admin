@@ -10,14 +10,10 @@ const isAbortError = (err: unknown): boolean => {
 };
 
 const UserProfile = () => {
-  const { harpId } = useParams<{ harpId: string }>();
+  const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
   const userServiceApi = useRef(useUserServiceApi()).current;
 
   useEffect(() => {
-    if (!harpId) {
-      adminUserStore.updateUser(null);
-      return;
-    }
     const controller = new AbortController();
     userServiceApi
       .getUser(harpId, controller.signal)
