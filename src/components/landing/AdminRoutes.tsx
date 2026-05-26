@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useDocumentTitle, useUserRoles } from "@madie/madie-util";
 import AdminHomePage from "./AdminHomePage";
@@ -18,7 +18,7 @@ const AdminRoutes = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/admin" element={<AdminHomePage />} />
-          <Route path="/admin/userProfile" element={<UserProfile />} />
+          <Route path="/admin/userProfile/:harpId" element={<UserProfile />} />
         </Routes>
       </BrowserRouter>
     </div>

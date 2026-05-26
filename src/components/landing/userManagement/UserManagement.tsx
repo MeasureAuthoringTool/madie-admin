@@ -73,7 +73,7 @@ const UserManagement = () => {
 
   const openUserProfile = (user: UserDetails) => {
     if (!user.harpId) return;
-    navigate(`/admin/userProfile?harpId=${encodeURIComponent(user.harpId)}`);
+    navigate(`/admin/userProfile/${encodeURIComponent(user.harpId)}`);
   };
 
   const totalCount = users.length;

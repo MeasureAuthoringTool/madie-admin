@@ -119,9 +119,7 @@ describe("UserManagement", () => {
     });
 
     fireEvent.click(screen.getByTestId("user-name-link-1"));
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/admin/userProfile?harpId=harp1"
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/admin/userProfile/harp1");
   });
 
   it("URL-encodes the harpId when navigating to the user profile", async () => {
@@ -142,7 +140,7 @@ describe("UserManagement", () => {
 
     fireEvent.click(screen.getByTestId("user-name-link-9"));
     expect(mockNavigate).toHaveBeenCalledWith(
-      "/admin/userProfile?harpId=harp%20with%20spaces%26special"
+      "/admin/userProfile/harp%20with%20spaces%26special"
     );
   });
 

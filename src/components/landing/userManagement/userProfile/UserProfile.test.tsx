@@ -1,7 +1,7 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import UserProfile from "./UserProfile";
 
 const mockGetUser = jest.fn();
@@ -21,7 +21,10 @@ jest.mock("@madie/madie-util", () => ({
 const renderAt = (initialEntry: string) =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <UserProfile />
+      <Routes>
+        <Route path="/admin/userProfile" element={<UserProfile />} />
+        <Route path="/admin/userProfile/:harpId" element={<UserProfile />} />
+      </Routes>
     </MemoryRouter>
   );
 
@@ -59,7 +62,7 @@ describe("UserProfile", () => {
     };
     mockGetUser.mockResolvedValue(user);
 
-    renderAt("/admin/userProfile?harpId=lila_kensington");
+    renderAt("/admin/userProfile/lila_kensington");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalledWith(
@@ -75,7 +78,7 @@ describe("UserProfile", () => {
   it("clears adminUserStore when the fetch fails with a non-abort error", async () => {
     mockGetUser.mockRejectedValue(new Error("Network error"));
 
-    renderAt("/admin/userProfile?harpId=missing_user");
+    renderAt("/admin/userProfile/missing_user");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalledWith(
@@ -93,7 +96,7 @@ describe("UserProfile", () => {
     abortError.name = "AbortError";
     mockGetUser.mockRejectedValue(abortError);
 
-    renderAt("/admin/userProfile?harpId=any_user");
+    renderAt("/admin/userProfile/any_user");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled();
@@ -109,7 +112,7 @@ describe("UserProfile", () => {
     });
     mockGetUser.mockRejectedValue(canceled);
 
-    renderAt("/admin/userProfile?harpId=any_user");
+    renderAt("/admin/userProfile/any_user");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled();
@@ -128,7 +131,7 @@ describe("UserProfile", () => {
         })
     );
 
-    const { unmount } = renderAt("/admin/userProfile?harpId=lila_kensington");
+    const { unmount } = renderAt("/admin/userProfile/lila_kensington");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled();

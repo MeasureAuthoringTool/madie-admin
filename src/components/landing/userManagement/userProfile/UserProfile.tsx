@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useUserServiceApi, adminUserStore } from "@madie/madie-util";
 import "./UserProfile.scss";
 
@@ -10,8 +10,7 @@ const isAbortError = (err: unknown): boolean => {
 };
 
 const UserProfile = () => {
-  const [searchParams] = useSearchParams();
-  const harpId = searchParams.get("harpId");
+  const { harpId } = useParams<{ harpId: string }>();
   const userServiceApi = useRef(useUserServiceApi()).current;
 
   useEffect(() => {
