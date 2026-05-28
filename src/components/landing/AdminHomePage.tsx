@@ -19,9 +19,9 @@ export default function AdminHomePage() {
       <div id="admin-nav" style={{ marginTop: "-48px", marginLeft: "32px" }}>
         <Tabs
           value={activeTab}
-          onChange={(_e: React.SyntheticEvent, value: string) =>
-            setActiveTab(value)
-          }
+          onChange={(_e: React.SyntheticEvent, value: string) => {
+            setActiveTab(value);
+          }}
           type="A"
           size="standard"
         >
