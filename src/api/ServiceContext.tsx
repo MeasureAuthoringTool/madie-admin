@@ -4,6 +4,9 @@ export interface ServiceConfig {
   adminService: {
     baseUrl: string;
   };
+  terminologyService: {
+    baseUrl: string;
+  };
 }
 
 const ServiceContext = createContext<ServiceConfig>(null);
