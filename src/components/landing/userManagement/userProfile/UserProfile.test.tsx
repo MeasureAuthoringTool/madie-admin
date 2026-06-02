@@ -1,6 +1,6 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import UserProfile from "./UserProfile";
 
@@ -31,10 +31,10 @@ describe("UserProfile", () => {
   beforeEach(() => {
     mockGetUser.mockReset();
     mockUpdateUser.mockReset();
+    mockGetUser.mockResolvedValue(null);
   });
 
   it("renders the user-profile card structure", () => {
-    mockGetUser.mockResolvedValue(null);
     renderAt("/admin/userProfile/some_harp_id");
     expect(screen.getByTestId("user-profile")).toBeInTheDocument();
     expect(
@@ -92,7 +92,6 @@ describe("UserProfile", () => {
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled();
     });
-    // wait for any pending promise resolution, then assert updateUser was not called with null
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockUpdateUser).not.toHaveBeenCalledWith(null);
   });
@@ -112,7 +111,7 @@ describe("UserProfile", () => {
     expect(mockUpdateUser).not.toHaveBeenCalledWith(null);
   });
 
-  it("aborts the in-flight request on unmount", async () => {
+  it("aborts the in-flight user request on unmount", async () => {
     mockGetUser.mockImplementation(
       (_harpId: string, signal: AbortSignal) =>
         new Promise((_resolve, reject) => {
@@ -132,5 +131,35 @@ describe("UserProfile", () => {
     expect(signal.aborted).toBe(false);
     unmount();
     expect(signal.aborted).toBe(true);
+  });
+
+  it("renders the Owned and Shared Measures tabs", () => {
+    renderAt("/admin/userProfile/lila_kensington");
+    expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
+      "Owned Measures (0)"
+    );
+    expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
+      "Shared Measures (0)"
+    );
+  });
+
+  it("renders the table column headers", () => {
+    renderAt("/admin/userProfile/lila_kensington");
+    expect(screen.getByText("Measure")).toBeInTheDocument();
+    expect(screen.getByText("Version")).toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
+    expect(screen.getByText("Model")).toBeInTheDocument();
+    expect(screen.getByText("Shared")).toBeInTheDocument();
+    expect(screen.getByText("CMS ID")).toBeInTheDocument();
+    expect(screen.getByText("Updated")).toBeInTheDocument();
+  });
+
+  it("keeps the Shared column rendered on both tabs to avoid column reflow", () => {
+    renderAt("/admin/userProfile/lila_kensington");
+    expect(screen.getByText("Shared")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("shared-measures-tab"));
+
+    expect(screen.getByText("Shared")).toBeInTheDocument();
   });
 });
