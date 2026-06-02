@@ -44,6 +44,17 @@ declare module "@madie/madie-util" {
 
   export function useUserServiceApi(): UserServiceApi;
 
+  export interface ServiceConfig {
+    terminologyService?: {
+      baseUrl: string;
+    };
+    userService?: {
+      baseUrl: string;
+    };
+  }
+
+  export function useServiceConfig(): ServiceConfig;
+
   export interface AdminUserStoreSubscription {
     unsubscribe(): void;
   }
