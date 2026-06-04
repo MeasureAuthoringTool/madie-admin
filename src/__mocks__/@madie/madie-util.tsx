@@ -27,6 +27,7 @@ const useMeasureServiceApi = jest.fn().mockReturnValue({
     numberOfElements: 0,
     pageable: { offset: 0 },
   }),
+  getMeasuresByMeasureSetId: jest.fn().mockResolvedValue([]),
 });
 
 module.exports = {

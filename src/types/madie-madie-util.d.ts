@@ -72,6 +72,11 @@ declare module "@madie/madie-util" {
       searchCriteria?: MeasureSearchCriteria,
       abortController?: AbortController
     ): Promise<MeasurePage>;
+    getMeasuresByMeasureSetId(
+      measureSetId: string,
+      sortByLatestVersion?: boolean,
+      searchCriteria?: MeasureSearchCriteria
+    ): Promise<any[]>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;

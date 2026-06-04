@@ -7,6 +7,7 @@ import {
 } from "@madie/madie-util";
 import {
   ColumnDef,
+  flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -21,6 +22,10 @@ import {
 } from "@madie/madie-design-system/dist/react";
 import { Chip } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import {
+  CollapseIcon,
+  ExpandIcon,
+} from "../../../../icons/MeasureListTableRightArrowIcons";
 import { formatCmsId } from "../../../../utils/cmsIdFormatter";
 import "./UserProfile.scss";
 
@@ -72,6 +77,7 @@ type MeasureRow = {
   version: string;
   model: string;
   actions: any;
+  hasAssociatedMeasures: boolean;
 };
 
 const MeasureStatusChips = ({ measure }: { measure: any }) => (
@@ -122,6 +128,10 @@ const UserProfile = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
+  const [currentSort, setCurrentSort] = useState("");
+  const [currentDirection, setCurrentDirection] = useState<"ASC" | "DESC" | "">(
+    ""
+  );
 
   const [list, setList] = useState<ListState>(EMPTY_LIST_STATE);
   const [counts, setCounts] = useState<Record<Ownership, number>>({
@@ -130,6 +140,10 @@ const UserProfile = () => {
   });
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const [expandedMeasureSetId, setExpandedMeasureSetId] = useState<
+    string | null
+  >(null);
+  const [expandedRows, setExpandedRows] = useState<MeasureRow[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -156,8 +170,8 @@ const UserProfile = () => {
       [active],
       currentLimit,
       currentPage - 1,
-      "lastModifiedAt",
-      "DESC",
+      currentSort || "lastModifiedAt",
+      currentDirection || "DESC",
       DEFAULT_SEARCH_CRITERIA,
       controller
     );
@@ -207,17 +221,27 @@ const UserProfile = () => {
     });
 
     return () => controller.abort();
-  }, [harpId, activeTab, currentPage, currentLimit, measureServiceApi]);
+  }, [
+    harpId,
+    activeTab,
+    currentPage,
+    currentLimit,
+    currentSort,
+    currentDirection,
+    measureServiceApi,
+  ]);
+
+  const transformRow = (m: any): MeasureRow => ({
+    id: m?.id,
+    measureName: m?.measureName,
+    version: m?.version,
+    model: m?.model,
+    actions: m,
+    hasAssociatedMeasures: !!m?.hasAssociatedMeasures,
+  });
 
   const data = useMemo<MeasureRow[]>(
-    () =>
-      list.measures.map((m) => ({
-        id: m?.id,
-        measureName: m?.measureName,
-        version: m?.version,
-        model: m?.model,
-        actions: m,
-      })),
+    () => list.measures.map(transformRow),
     [list.measures]
   );
 
@@ -271,7 +295,6 @@ const UserProfile = () => {
       {
         header: "Status",
         accessorKey: "measureMetaData.draft",
-        enableSorting: false,
         cell: (info) => (
           <MeasureStatusChips measure={info.row.original.actions} />
         ),
@@ -290,7 +313,6 @@ const UserProfile = () => {
       {
         header: "Shared",
         accessorKey: "measureSet.acls",
-        enableSorting: false,
         cell: (info) => (
           <div
             data-testid={`measure-shared-${info.row.original.id}`}
@@ -309,7 +331,6 @@ const UserProfile = () => {
       {
         header: "CMS ID",
         accessorKey: "measureSet.cmsId",
-        enableSorting: false,
         cell: (info) => (
           <TruncateText
             text={formatCmsId(
@@ -324,7 +345,6 @@ const UserProfile = () => {
       {
         header: "Updated",
         accessorKey: "lastModifiedAt",
-        enableSorting: false,
         cell: (info) => (
           <span data-testid={`measure-updated-${info.row.original.id}`}>
             {info.row.original.actions?.lastModifiedAt
@@ -351,8 +371,39 @@ const UserProfile = () => {
           </Button>
         ),
       },
+      {
+        id: "expandArrow",
+        enableSorting: false,
+        header: () => <span aria-label="expandArrow" />,
+        cell: (info) => {
+          if (!info.row.original.hasAssociatedMeasures) return null;
+          const measure = info.row.original.actions;
+          const isOpen = expandedMeasureSetId === measure?.measureSetId;
+          const onActivate = () => toggleExpansion(measure);
+          return (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={isOpen ? "Collapse versions" : "Expand versions"}
+              data-testid={`expand-toggle-${info.row.original.id}`}
+              onClick={onActivate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onActivate();
+              }}
+              style={{
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isOpen ? <CollapseIcon /> : <ExpandIcon />}
+            </span>
+          );
+        },
+      },
     ],
-    []
+    [expandedMeasureSetId]
   );
 
   const table = useReactTable({
@@ -370,6 +421,8 @@ const UserProfile = () => {
 
   const handleTabChange = (_e: any, nextTab: number) => {
     setActiveTab(nextTab);
+    setExpandedMeasureSetId(null);
+    setExpandedRows([]);
     resetPaging(1);
   };
 
@@ -381,6 +434,45 @@ const UserProfile = () => {
   const handleLimitChange = (e: any) => {
     setCurrentLimit(Number(e.target.value));
     resetPaging(1);
+  };
+
+  const toggleExpansion = async (parent: any) => {
+    const measureSetId = parent?.measureSetId;
+    if (!measureSetId) return;
+    if (expandedMeasureSetId === measureSetId) {
+      setExpandedMeasureSetId(null);
+      setExpandedRows([]);
+      return;
+    }
+    try {
+      const results = await measureServiceApi.getMeasuresByMeasureSetId(
+        measureSetId,
+        true,
+        DEFAULT_SEARCH_CRITERIA
+      );
+      const siblings = (results ?? []).filter((r: any) => r?.id !== parent?.id);
+      setExpandedMeasureSetId(measureSetId);
+      setExpandedRows(siblings.map(transformRow));
+    } catch {
+      // Swallow — the parent row stays in its current state.
+    }
+  };
+
+  const handleSort = (sort: string) => {
+    let nextSort = sort;
+    let nextDirection: "ASC" | "DESC" | "" = "ASC";
+    if (sort === currentSort) {
+      if (currentDirection === "ASC") {
+        nextDirection = "DESC";
+      } else if (currentDirection === "DESC") {
+        nextSort = "";
+        nextDirection = "";
+      }
+    }
+    setCurrentSort(nextSort);
+    setCurrentDirection(nextDirection);
+    setCurrentPage(1);
+    table.toggleAllRowsSelected(false);
   };
 
   return (
@@ -416,11 +508,36 @@ const UserProfile = () => {
             <div className="table">
               <MadieTable
                 table={table}
-                currentSort=""
-                currentDirection=""
-                handleSort={() => undefined}
+                currentSort={currentSort}
+                currentDirection={currentDirection}
+                handleSort={handleSort}
                 id="userProfileMeasuresTable"
                 dataTestId="user-profile-measures-tbl"
+                renderExpandedRow={(parentRow: any) =>
+                  expandedMeasureSetId ===
+                    parentRow.original.actions?.measureSetId &&
+                  expandedRows.map((subRow) => (
+                    <tr
+                      key={subRow.id}
+                      className="expanded-row"
+                      data-testid={`expanded-row-${subRow.id}`}
+                    >
+                      {table.getAllLeafColumns().map((col) => {
+                        if (col.id === "select" || col.id === "expandArrow") {
+                          return <td key={`${subRow.id}-${col.id}`} />;
+                        }
+                        return (
+                          <td key={`${subRow.id}-${col.id}`}>
+                            {flexRender(col.columnDef.cell, {
+                              row: { original: subRow },
+                              getValue: () => (subRow as any)[col.id],
+                            } as any)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                }
               />
             </div>
 
