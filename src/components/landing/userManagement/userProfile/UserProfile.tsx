@@ -1,22 +1,38 @@
 import React, { HTMLProps, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useUserServiceApi, adminUserStore } from "@madie/madie-util";
+import {
+  useUserServiceApi,
+  useMeasureServiceApi,
+  adminUserStore,
+} from "@madie/madie-util";
 import {
   ColumnDef,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  Button,
+  MadieSpinner,
   MadieTable,
   Pagination,
   Tab,
   Tabs,
   TruncateText,
 } from "@madie/madie-design-system/dist/react";
-import { Button, Chip } from "@mui/material";
+import { Chip } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { formatCmsId } from "../../../../utils/cmsIdFormatter";
 import "./UserProfile.scss";
+
+type Ownership = "OWNED" | "SHARED";
+
+const ownershipForTab = (tab: number): Ownership =>
+  tab === 1 ? "SHARED" : "OWNED";
+
+const DEFAULT_SEARCH_CRITERIA = {
+  searchField: "",
+  optionalSearchProperties: [],
+};
 
 const isAbortError = (err: unknown): boolean => {
   if (!err || typeof err !== "object") return false;
@@ -82,56 +98,131 @@ const MeasureStatusChips = ({ measure }: { measure: any }) => (
   </div>
 );
 
+type ListState = {
+  measures: any[];
+  totalElements: number;
+  visibleItems: number;
+  totalPages: number;
+  offset: number;
+};
+
+const EMPTY_LIST_STATE: ListState = {
+  measures: [],
+  totalElements: 0,
+  visibleItems: 0,
+  totalPages: 0,
+  offset: 0,
+};
+
 const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
   const userServiceApi = useRef(useUserServiceApi()).current;
+  const measureServiceApi = useRef(useMeasureServiceApi()).current;
 
-  const [activeTab, setActiveTab] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [currentLimit, setCurrentLimit] = useState<number>(10);
+  const [activeTab, setActiveTab] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentLimit, setCurrentLimit] = useState(10);
 
-  const measureList: any[] = [];
-  const ownedCount = 0;
-  const sharedCount = 0;
-
-  // Until the backend wiring lands, these are static placeholders so the
-  // pagination control still mirrors the Measures landing page layout.
-  const totalItems = 0;
-  const visibleItems = 0;
-  const totalPages = 0;
-  const offset = 0;
+  const [list, setList] = useState<ListState>(EMPTY_LIST_STATE);
+  const [counts, setCounts] = useState<Record<Ownership, number>>({
+    OWNED: 0,
+    SHARED: 0,
+  });
+  const [loading, setLoading] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     userServiceApi
       .getUser(harpId, controller.signal)
-      .then((user) => {
-        adminUserStore.updateUser(user);
-      })
+      .then((user) => adminUserStore.updateUser(user))
       .catch((err: unknown) => {
-        if (!isAbortError(err)) {
-          adminUserStore.updateUser(null);
-        }
+        if (!isAbortError(err)) adminUserStore.updateUser(null);
       });
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [harpId, userServiceApi]);
+
+  const requestIdRef = useRef(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+    const active = ownershipForTab(activeTab);
+    const inactive: Ownership = active === "OWNED" ? "SHARED" : "OWNED";
+    setLoading(true);
+    setErrMsg("");
+
+    const dataPromise = measureServiceApi.adminSearchMeasuresForUser(
+      harpId,
+      [active],
+      currentLimit,
+      currentPage - 1,
+      "lastModifiedAt",
+      "DESC",
+      DEFAULT_SEARCH_CRITERIA,
+      controller
+    );
+    const countPromise = measureServiceApi.adminSearchMeasuresForUser(
+      harpId,
+      [inactive],
+      1,
+      0,
+      "lastModifiedAt",
+      "DESC",
+      DEFAULT_SEARCH_CRITERIA,
+      controller
+    );
+
+    Promise.allSettled([dataPromise, countPromise]).then((results) => {
+      if (requestId !== requestIdRef.current) return;
+
+      const [dataRes, countRes] = results;
+      let activeTotal = 0;
+
+      if (dataRes.status === "fulfilled") {
+        const d = dataRes.value;
+        activeTotal = d?.totalElements ?? 0;
+        setList({
+          measures: d?.content ?? [],
+          totalElements: activeTotal,
+          totalPages: d?.totalPages ?? 0,
+          visibleItems: d?.numberOfElements ?? 0,
+          offset: d?.pageable?.offset ?? 0,
+        });
+      } else if (!isAbortError(dataRes.reason)) {
+        setErrMsg(dataRes.reason?.message || "Unable to load measures");
+        setList(EMPTY_LIST_STATE);
+      }
+
+      const inactiveTotal =
+        countRes.status === "fulfilled"
+          ? countRes.value?.totalElements ?? 0
+          : undefined;
+
+      setCounts((prev) => ({
+        ...prev,
+        [active]: activeTotal,
+        ...(inactiveTotal !== undefined ? { [inactive]: inactiveTotal } : {}),
+      }));
+      setLoading(false);
+    });
+
+    return () => controller.abort();
+  }, [harpId, activeTab, currentPage, currentLimit, measureServiceApi]);
 
   const data = useMemo<MeasureRow[]>(
     () =>
-      measureList.map((m) => ({
+      list.measures.map((m) => ({
         id: m?.id,
         measureName: m?.measureName,
         version: m?.version,
         model: m?.model,
         actions: m,
       })),
-    [measureList]
+    [list.measures]
   );
 
-  const columns = useMemo<ColumnDef<MeasureRow>[]>(() => {
-    const cols: ColumnDef<MeasureRow>[] = [
+  const columns = useMemo<ColumnDef<MeasureRow>[]>(
+    () => [
       {
         id: "select",
         enableSorting: false,
@@ -196,77 +287,73 @@ const UserProfile = () => {
           />
         ),
       },
-    ];
-
-    cols.push({
-      header: "Shared",
-      accessorKey: "measureSet.acls",
-      enableSorting: false,
-      cell: (info) => (
-        <div
-          data-testid={`measure-shared-${info.row.original.id}`}
-          aria-label={
-            info.row.original.actions?.measureSet?.acls?.length > 0
-              ? "Shared"
-              : "Not shared"
-          }
-        >
-          {info.row.original.actions?.measureSet?.acls?.length > 0 && (
-            <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
-          )}
-        </div>
-      ),
-    });
-
-    cols.push({
-      header: "CMS ID",
-      accessorKey: "measureSet.cmsId",
-      enableSorting: false,
-      cell: (info) => (
-        <TruncateText
-          text={formatCmsId(
-            info.row.original.actions?.measureSet?.cmsId,
-            info.row.original.actions?.model
-          )}
-          maxLength={60}
-          dataTestId={`measure-cmsId-${info.row.original.id}`}
-        />
-      ),
-    });
-
-    cols.push({
-      header: "Updated",
-      accessorKey: "lastModifiedAt",
-      enableSorting: false,
-      cell: (info) => (
-        <span data-testid={`measure-updated-${info.row.original.id}`}>
-          {info.row.original.actions?.lastModifiedAt
-            ? new Date(
-                info.row.original.actions.lastModifiedAt
-              ).toLocaleDateString()
-            : ""}
-        </span>
-      ),
-    });
-
-    cols.push({
-      id: "action",
-      header: "",
-      enableSorting: false,
-      cell: (info) => (
-        <Button
-          variant="outlined"
-          size="small"
-          data-testid={`measure-action-view-${info.row.original.id}`}
-          aria-label={`View Measure ${info.row.original.measureName}`}
-        >
-          View
-        </Button>
-      ),
-    });
-
-    return cols;
-  }, []);
+      {
+        header: "Shared",
+        accessorKey: "measureSet.acls",
+        enableSorting: false,
+        cell: (info) => (
+          <div
+            data-testid={`measure-shared-${info.row.original.id}`}
+            aria-label={
+              info.row.original.actions?.measureSet?.acls?.length > 0
+                ? "Shared"
+                : "Not shared"
+            }
+          >
+            {info.row.original.actions?.measureSet?.acls?.length > 0 && (
+              <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
+            )}
+          </div>
+        ),
+      },
+      {
+        header: "CMS ID",
+        accessorKey: "measureSet.cmsId",
+        enableSorting: false,
+        cell: (info) => (
+          <TruncateText
+            text={formatCmsId(
+              info.row.original.actions?.measureSet?.cmsId,
+              info.row.original.actions?.model
+            )}
+            maxLength={60}
+            dataTestId={`measure-cmsId-${info.row.original.id}`}
+          />
+        ),
+      },
+      {
+        header: "Updated",
+        accessorKey: "lastModifiedAt",
+        enableSorting: false,
+        cell: (info) => (
+          <span data-testid={`measure-updated-${info.row.original.id}`}>
+            {info.row.original.actions?.lastModifiedAt
+              ? new Date(
+                  info.row.original.actions.lastModifiedAt
+                ).toLocaleDateString()
+              : ""}
+          </span>
+        ),
+      },
+      {
+        id: "action",
+        header: "",
+        enableSorting: false,
+        cell: (info) => (
+          <Button
+            variant="outline-filled"
+            data-testid={`measure-action-${info.row.original.id}`}
+            aria-label={`View Measure ${info.row.original.measureName} ${info.row.original.version}`}
+            tabIndex={0}
+            role="button"
+          >
+            View
+          </Button>
+        ),
+      },
+    ],
+    []
+  );
 
   const table = useReactTable({
     data,
@@ -276,22 +363,24 @@ const UserProfile = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  useEffect(() => {
+  const resetPaging = (nextPage = 1) => {
     table.toggleAllRowsSelected(false);
-  }, [activeTab, table]);
+    setCurrentPage(nextPage);
+  };
 
   const handleTabChange = (_e: any, nextTab: number) => {
     setActiveTab(nextTab);
-    setCurrentPage(1);
+    resetPaging(1);
   };
 
   const handlePageChange = (_e: any, page: number) => {
+    table.toggleAllRowsSelected(false);
     setCurrentPage(page);
   };
 
   const handleLimitChange = (e: any) => {
     setCurrentLimit(Number(e.target.value));
-    setCurrentPage(1);
+    resetPaging(1);
   };
 
   return (
@@ -302,44 +391,65 @@ const UserProfile = () => {
             <Tabs value={activeTab} onChange={handleTabChange} type="B">
               <Tab
                 type="B"
-                label={`Owned Measures (${ownedCount})`}
+                label={`Owned Measures (${counts.OWNED})`}
                 data-testid="owned-measures-tab"
               />
               <Tab
                 type="B"
-                label={`Shared Measures (${sharedCount})`}
+                label={`Shared Measures (${counts.SHARED})`}
                 data-testid="shared-measures-tab"
               />
             </Tabs>
           </section>
 
-          <div className="table">
-            <MadieTable
-              table={table}
-              currentSort=""
-              currentDirection=""
-              handleSort={() => undefined}
-              id="userProfileMeasuresTable"
-              dataTestId="user-profile-measures-tbl"
-            />
+          {errMsg && !loading && (
+            <p
+              className="error-message"
+              data-testid="measures-error-message"
+              role="alert"
+            >
+              {errMsg}
+            </p>
+          )}
+
+          <div style={{ display: loading ? "none" : "block" }}>
+            <div className="table">
+              <MadieTable
+                table={table}
+                currentSort=""
+                currentDirection=""
+                handleSort={() => undefined}
+                id="userProfileMeasuresTable"
+                dataTestId="user-profile-measures-tbl"
+              />
+            </div>
 
             <div className="pagination-container">
               <Pagination
-                totalItems={totalItems}
-                visibleItems={visibleItems}
+                totalItems={list.totalElements}
+                visibleItems={list.visibleItems}
                 limitOptions={[10, 25, 50]}
-                offset={offset}
+                offset={list.offset}
                 handlePageChange={handlePageChange}
                 handleLimitChange={handleLimitChange}
                 page={currentPage}
                 limit={currentLimit}
-                count={totalPages}
+                count={list.totalPages}
                 shape="rounded"
-                hideNextButton={currentPage >= totalPages}
+                hideNextButton={currentPage >= list.totalPages}
                 hidePrevButton={currentPage <= 1}
               />
             </div>
           </div>
+
+          {loading && (
+            <div
+              className="loading-container"
+              data-testid="measures-loading-spinner"
+            >
+              <MadieSpinner style={{ height: 50, width: 50 }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
