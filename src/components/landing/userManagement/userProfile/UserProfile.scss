@@ -18,17 +18,17 @@
       display: flex;
       padding: 0 16px;
       border-bottom: 1px solid #b0b0b0;
+      margin-bottom: 24px;
     }
 
     .table {
-      padding-top: 24px;
       max-height: 703px;
       overflow: auto;
     }
 
     .tcl-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
       border-spacing: 0;
     }
 
@@ -63,6 +63,9 @@
     }
 
     thead.sticky-table > tr > th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
       background: #ededed;
       border-bottom: solid 1px #000;
       color: #2d3540;
@@ -94,12 +97,6 @@
       padding: 0 !important;
 
       > tr {
-        border-bottom: solid 1px #e0e0e0;
-
-        &:last-of-type {
-          border-bottom: none;
-        }
-
         > td {
           font-family: Rubik, sans-serif;
           color: #242424;
@@ -107,6 +104,11 @@
           line-height: 1.4;
           vertical-align: middle;
           padding: 14px 16px;
+          border-bottom: solid 1px #e0e0e0;
+        }
+
+        &:last-of-type > td {
+          border-bottom: none;
         }
 
         .chip-draft {
