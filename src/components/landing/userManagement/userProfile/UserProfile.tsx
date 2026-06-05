@@ -144,6 +144,13 @@ const UserProfile = () => {
     string | null
   >(null);
   const [expandedRows, setExpandedRows] = useState<MeasureRow[]>([]);
+  const [selectedExpandedRowIds, setSelectedExpandedRowIds] = useState<
+    string[]
+  >([]);
+  const expandedMeasureSetIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    expandedMeasureSetIdRef.current = expandedMeasureSetId;
+  }, [expandedMeasureSetId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -423,11 +430,13 @@ const UserProfile = () => {
     setActiveTab(nextTab);
     setExpandedMeasureSetId(null);
     setExpandedRows([]);
+    setSelectedExpandedRowIds([]);
     resetPaging(1);
   };
 
   const handlePageChange = (_e: any, page: number) => {
     table.toggleAllRowsSelected(false);
+    setSelectedExpandedRowIds([]);
     setCurrentPage(page);
   };
 
@@ -439,9 +448,10 @@ const UserProfile = () => {
   const toggleExpansion = async (parent: any) => {
     const measureSetId = parent?.measureSetId;
     if (!measureSetId) return;
-    if (expandedMeasureSetId === measureSetId) {
+    if (expandedMeasureSetIdRef.current === measureSetId) {
       setExpandedMeasureSetId(null);
       setExpandedRows([]);
+      setSelectedExpandedRowIds([]);
       return;
     }
     try {
@@ -450,11 +460,16 @@ const UserProfile = () => {
         true,
         DEFAULT_SEARCH_CRITERIA
       );
-      const siblings = (results ?? []).filter((r: any) => r?.id !== parent?.id);
+      const nestedMeasures = (results ?? []).filter(
+        (r: any) => r?.id !== parent?.id
+      );
       setExpandedMeasureSetId(measureSetId);
-      setExpandedRows(siblings.map(transformRow));
-    } catch {
-      // Swallow — the parent row stays in its current state.
+      setExpandedRows(nestedMeasures.map(transformRow));
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setExpandedMeasureSetId(null);
+      setExpandedRows([]);
+      setErrMsg("Unable to load related nested measures");
     }
   };
 
@@ -523,8 +538,32 @@ const UserProfile = () => {
                       data-testid={`expanded-row-${subRow.id}`}
                     >
                       {table.getAllLeafColumns().map((col) => {
-                        if (col.id === "select" || col.id === "expandArrow") {
+                        if (col.id === "expandArrow") {
                           return <td key={`${subRow.id}-${col.id}`} />;
+                        }
+                        if (col.id === "select") {
+                          const isChecked = selectedExpandedRowIds.includes(
+                            subRow.id
+                          );
+                          return (
+                            <td key={`${subRow.id}-${col.id}`}>
+                              <IndeterminateCheckbox
+                                checked={isChecked}
+                                onChange={(
+                                  e: React.ChangeEvent<HTMLInputElement>
+                                ) => {
+                                  const checked = e.target.checked;
+                                  setSelectedExpandedRowIds((prev) =>
+                                    checked
+                                      ? [...prev, subRow.id]
+                                      : prev.filter((id) => id !== subRow.id)
+                                  );
+                                }}
+                                id={subRow.id}
+                                aria-label={`Select measure ${subRow.measureName}`}
+                              />
+                            </td>
+                          );
                         }
                         return (
                           <td key={`${subRow.id}-${col.id}`}>
