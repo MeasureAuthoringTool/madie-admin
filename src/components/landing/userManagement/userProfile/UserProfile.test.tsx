@@ -411,6 +411,109 @@ describe("UserProfile", () => {
     });
   });
 
+  it("shows an error message when the nested-measures fetch fails", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockRejectedValue(
+      new Error("nested fetch failed")
+    );
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load related nested measures"
+      );
+    });
+    expect(
+      screen.queryByTestId("expanded-row-m1-prev")
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["Enter", "{enter}"],
+    [" ", "{space}"],
+  ])(
+    "expands a row when '%s' is pressed on the toggle",
+    async (_label: string, keySeq: string) => {
+      const parentMeasure = {
+        ...ownedMeasure,
+        hasAssociatedMeasures: true,
+        measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      const nestedMeasure = {
+        id: "m1-prev",
+        measureName: "Owned Measure A v0.9",
+        version: "0.9.000",
+        model: "QI-Core v4.1.1",
+        lastModifiedAt: "2026-04-01T12:00:00Z",
+        measureMetaData: { draft: false },
+        measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+      mockGetMeasuresByMeasureSetId.mockResolvedValue([
+        parentMeasure,
+        nestedMeasure,
+      ]);
+
+      renderAt("/admin/userProfile/test_user");
+
+      const toggle = await screen.findByTestId("expand-toggle-m1");
+      toggle.focus();
+      userEvent.type(toggle, keySeq);
+      expect(
+        await screen.findByTestId("expanded-row-m1-prev")
+      ).toBeInTheDocument();
+    }
+  );
+
+  it("selects and deselects a nested measure via its checkbox", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    const nestedMeasure = {
+      id: "m1-prev",
+      measureName: "Owned Measure A v0.9",
+      version: "0.9.000",
+      model: "QI-Core v4.1.1",
+      lastModifiedAt: "2026-04-01T12:00:00Z",
+      measureMetaData: { draft: false },
+      measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockResolvedValue([
+      parentMeasure,
+      nestedMeasure,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    const nestedCheckbox = (await screen.findByTestId(
+      "checkbox-m1-prev"
+    )) as HTMLInputElement;
+    expect(nestedCheckbox.checked).toBe(false);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(true);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(false);
+  });
+
   it("refetches with the new limit and resets to page 1 on limit change", async () => {
     mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
 
