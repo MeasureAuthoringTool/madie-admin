@@ -19,6 +19,16 @@ const wafIntercept = jest.fn((error) => {
 const useUserServiceApi = jest.fn().mockReturnValue({
   fetchUsers: jest.fn().mockResolvedValue([]),
 });
+const useMeasureServiceApi = jest.fn().mockReturnValue({
+  adminSearchMeasuresForUser: jest.fn().mockResolvedValue({
+    content: [],
+    totalElements: 0,
+    totalPages: 0,
+    numberOfElements: 0,
+    pageable: { offset: 0 },
+  }),
+  getMeasuresByMeasureSetId: jest.fn().mockResolvedValue([]),
+});
 
 module.exports = {
   useDocumentTitle,
@@ -26,4 +36,5 @@ module.exports = {
   useOktaTokens,
   wafIntercept,
   useUserServiceApi,
+  useMeasureServiceApi,
 };

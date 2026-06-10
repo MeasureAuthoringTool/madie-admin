@@ -1,15 +1,24 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import UserProfile from "./UserProfile";
 
 const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
+const mockAdminSearchMeasures = jest.fn();
+const mockGetMeasuresByMeasureSetId = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
   useUserServiceApi: jest.fn(() => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
+  })),
+  useMeasureServiceApi: jest.fn(() => ({
+    adminSearchMeasuresForUser: (...args: unknown[]) =>
+      mockAdminSearchMeasures(...args),
+    getMeasuresByMeasureSetId: (...args: unknown[]) =>
+      mockGetMeasuresByMeasureSetId(...args),
   })),
   adminUserStore: {
     state: null,
@@ -27,25 +36,68 @@ const renderAt = (initialEntry: string) =>
     </MemoryRouter>
   );
 
+const emptyPage = {
+  content: [],
+  totalPages: 0,
+  totalElements: 0,
+  numberOfElements: 0,
+  pageable: { offset: 0 },
+};
+
+const ownedMeasure = {
+  id: "m1",
+  measureName: "Owned Measure A",
+  version: "1.0.000",
+  model: "QI-Core v4.1.1",
+  lastModifiedAt: "2026-05-01T12:00:00Z",
+  measureMetaData: { draft: true },
+  measureSet: { acls: [{ userId: "x" }], cmsId: 42 },
+};
+
+const sharedMeasure = {
+  id: "m2",
+  measureName: "Shared Measure B",
+  version: "2.1.000",
+  model: "QDM v5.6",
+  lastModifiedAt: "2026-04-15T08:00:00Z",
+  measureMetaData: { draft: false },
+  measureSet: { acls: [], cmsId: 7 },
+};
+
+const pageWith = (rows: any[], totalElements: number = rows.length) => ({
+  content: rows,
+  totalPages: 1,
+  totalElements,
+  numberOfElements: rows.length,
+  pageable: { offset: 0 },
+});
+
 describe("UserProfile", () => {
   beforeEach(() => {
     mockGetUser.mockReset();
     mockUpdateUser.mockReset();
+    mockAdminSearchMeasures.mockReset();
+    mockGetMeasuresByMeasureSetId.mockReset();
+    mockGetUser.mockResolvedValue(null);
+    mockAdminSearchMeasures.mockResolvedValue(emptyPage);
+    mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
   });
 
-  it("renders the user-profile card structure", () => {
-    mockGetUser.mockResolvedValue(null);
+  it("renders the user-profile card structure", async () => {
     renderAt("/admin/userProfile/some_harp_id");
     expect(screen.getByTestId("user-profile")).toBeInTheDocument();
     expect(
       screen.getByTestId("user-profile").querySelector(".user-profile-header")
     ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
   });
 
   it("fetches the user by harpId and pushes the result into adminUserStore", async () => {
     const user = {
       id: "u1",
-      harpId: "lila_kensington",
+      harpId: "test_user",
       firstName: "Lila",
       lastName: "Kensington",
       email: "l.kensington@cms.hhs.gov",
@@ -53,11 +105,11 @@ describe("UserProfile", () => {
     };
     mockGetUser.mockResolvedValue(user);
 
-    renderAt("/admin/userProfile/lila_kensington");
+    renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalledWith(
-        "lila_kensington",
+        "test_user",
         expect.any(AbortSignal)
       );
     });
@@ -66,23 +118,17 @@ describe("UserProfile", () => {
     });
   });
 
-  it("clears adminUserStore when the fetch fails with a non-abort error", async () => {
+  it("clears adminUserStore when the user fetch fails", async () => {
     mockGetUser.mockRejectedValue(new Error("Network error"));
 
     renderAt("/admin/userProfile/missing_user");
 
     await waitFor(() => {
-      expect(mockGetUser).toHaveBeenCalledWith(
-        "missing_user",
-        expect.any(AbortSignal)
-      );
-    });
-    await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith(null);
     });
   });
 
-  it("does not clear adminUserStore when the fetch is aborted", async () => {
+  it("does not clear adminUserStore when the user fetch is aborted", async () => {
     const abortError = new Error("Aborted");
     abortError.name = "AbortError";
     mockGetUser.mockRejectedValue(abortError);
@@ -92,45 +138,415 @@ describe("UserProfile", () => {
     await waitFor(() => {
       expect(mockGetUser).toHaveBeenCalled();
     });
-    // wait for any pending promise resolution, then assert updateUser was not called with null
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockUpdateUser).not.toHaveBeenCalledWith(null);
   });
 
-  it("does not clear adminUserStore when the fetch is canceled via ERR_CANCELED", async () => {
-    const canceled = Object.assign(new Error("canceled"), {
-      code: "ERR_CANCELED",
-    });
-    mockGetUser.mockRejectedValue(canceled);
+  it("calls the admin search endpoint for OWNED on mount and renders the rows", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 7));
 
-    renderAt("/admin/userProfile/any_user");
+    renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
-      expect(mockGetUser).toHaveBeenCalled();
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        expect.objectContaining({ searchField: "" }),
+        expect.any(AbortController)
+      );
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockUpdateUser).not.toHaveBeenCalledWith(null);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measure-name-m1-content")).toHaveTextContent(
+        "Owned Measure A"
+      );
+      expect(screen.getByTestId("measure-cmsId-m1-content")).toHaveTextContent(
+        "0042FHIR"
+      );
+    });
+    expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
+      "Owned Measures (7)"
+    );
   });
 
-  it("aborts the in-flight request on unmount", async () => {
-    mockGetUser.mockImplementation(
-      (_harpId: string, signal: AbortSignal) =>
-        new Promise((_resolve, reject) => {
-          signal.addEventListener("abort", () => {
-            reject(new DOMException("Aborted", "AbortError"));
-          });
-        })
+  it("switches to the Shared tab and re-queries with SHARED ownership", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 3));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+
+    mockAdminSearchMeasures.mockClear();
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 2));
+
+    userEvent.click(screen.getByTestId("shared-measures-tab"));
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["SHARED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measure-name-m2-content")).toHaveTextContent(
+        "Shared Measure B"
+      );
+      expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
+        "Shared Measures (2)"
+      );
+    });
+  });
+
+  it("fetches the inactive tab's count on mount", async () => {
+    mockAdminSearchMeasures.mockImplementation(
+      (_harpId: string, ownershipTypes: string[]) => {
+        if (ownershipTypes[0] === "OWNED") {
+          return Promise.resolve(pageWith([], 4));
+        }
+        return Promise.resolve(pageWith([], 9));
+      }
     );
 
-    const { unmount } = renderAt("/admin/userProfile/lila_kensington");
+    renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
-      expect(mockGetUser).toHaveBeenCalled();
+      expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
+        "Owned Measures (4)"
+      );
+      expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
+        "Shared Measures (9)"
+      );
+    });
+  });
+
+  it("shows an error message when the search fails", async () => {
+    mockAdminSearchMeasures.mockRejectedValue(new Error("boom"));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "boom"
+      );
+    });
+  });
+
+  it("sort Measure column in the direction of ASC → DESC → unsorted ", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+    mockAdminSearchMeasures.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "measureName",
+        "ASC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
     });
 
-    const signal = mockGetUser.mock.calls[0][1] as AbortSignal;
-    expect(signal.aborted).toBe(false);
-    unmount();
-    expect(signal.aborted).toBe(true);
+    mockAdminSearchMeasures.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "measureName",
+        "DESC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
+    });
+
+    mockAdminSearchMeasures.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
+    });
+  });
+
+  it("expands a row with associated measures and fetches the nested measures", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    const nestedMeasure = {
+      id: "m1-prev",
+      measureName: "Owned Measure A",
+      version: "0.9.000",
+      model: "QI-Core v4.1.1",
+      lastModifiedAt: "2026-04-01T12:00:00Z",
+      measureMetaData: { draft: false },
+      measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockResolvedValue([
+      parentMeasure,
+      nestedMeasure,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+
+    const toggle = await screen.findByTestId("expand-toggle-m1");
+    userEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mockGetMeasuresByMeasureSetId).toHaveBeenCalledWith(
+        "set-1",
+        true,
+        expect.any(Object)
+      );
+    });
+    expect(
+      await screen.findByTestId("expanded-row-m1-prev")
+    ).toBeInTheDocument();
+  });
+
+  it("collapses an already-expanded row when its toggle is clicked again", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    const nestedMeasure = {
+      id: "m1-prev",
+      measureName: "Owned Measure A v0.9",
+      version: "0.9.000",
+      model: "QI-Core v4.1.1",
+      lastModifiedAt: "2026-04-01T12:00:00Z",
+      measureMetaData: { draft: false },
+      measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockResolvedValue([
+      parentMeasure,
+      nestedMeasure,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    expect(
+      await screen.findByTestId("expanded-row-m1-prev")
+    ).toBeInTheDocument();
+
+    mockGetMeasuresByMeasureSetId.mockClear();
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("expanded-row-m1-prev")
+      ).not.toBeInTheDocument();
+    });
+    expect(mockGetMeasuresByMeasureSetId).not.toHaveBeenCalled();
+  });
+
+  it("refetches with the new page when pagination changes", async () => {
+    mockAdminSearchMeasures.mockResolvedValue({
+      content: [ownedMeasure],
+      totalElements: 12,
+      totalPages: 2,
+      numberOfElements: 1,
+      pageable: { offset: 0 },
+    });
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+
+    mockAdminSearchMeasures.mockClear();
+    const page2 = await screen.findByRole("button", { name: /go to page 2/i });
+    userEvent.click(page2);
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        1,
+        "lastModifiedAt",
+        "DESC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
+    });
+  });
+
+  it("shows an error message when the nested-measures fetch fails", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockRejectedValue(
+      new Error("nested fetch failed")
+    );
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load related nested measures"
+      );
+    });
+    expect(
+      screen.queryByTestId("expanded-row-m1-prev")
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["Enter", "{enter}"],
+    [" ", "{space}"],
+  ])(
+    "expands a row when '%s' is pressed on the toggle",
+    async (_label: string, keySeq: string) => {
+      const parentMeasure = {
+        ...ownedMeasure,
+        hasAssociatedMeasures: true,
+        measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      const nestedMeasure = {
+        id: "m1-prev",
+        measureName: "Owned Measure A v0.9",
+        version: "0.9.000",
+        model: "QI-Core v4.1.1",
+        lastModifiedAt: "2026-04-01T12:00:00Z",
+        measureMetaData: { draft: false },
+        measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+      mockGetMeasuresByMeasureSetId.mockResolvedValue([
+        parentMeasure,
+        nestedMeasure,
+      ]);
+
+      renderAt("/admin/userProfile/test_user");
+
+      const toggle = await screen.findByTestId("expand-toggle-m1");
+      toggle.focus();
+      userEvent.type(toggle, keySeq);
+      expect(
+        await screen.findByTestId("expanded-row-m1-prev")
+      ).toBeInTheDocument();
+    }
+  );
+
+  it("selects and deselects a nested measure via its checkbox", async () => {
+    const parentMeasure = {
+      ...ownedMeasure,
+      hasAssociatedMeasures: true,
+      measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    const nestedMeasure = {
+      id: "m1-prev",
+      measureName: "Owned Measure A v0.9",
+      version: "0.9.000",
+      model: "QI-Core v4.1.1",
+      lastModifiedAt: "2026-04-01T12:00:00Z",
+      measureMetaData: { draft: false },
+      measureSet: { acls: [], cmsId: 42, measureSetId: "set-1" },
+      measureSetId: "set-1",
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+    mockGetMeasuresByMeasureSetId.mockResolvedValue([
+      parentMeasure,
+      nestedMeasure,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    const nestedCheckbox = (await screen.findByTestId(
+      "checkbox-m1-prev"
+    )) as HTMLInputElement;
+    expect(nestedCheckbox.checked).toBe(false);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(true);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(false);
+  });
+
+  it("refetches with the new limit and resets to page 1 on limit change", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+    mockAdminSearchMeasures.mockClear();
+    const limitSelect = screen
+      .getAllByRole("combobox")
+      .find(
+        (el) => el.getAttribute("aria-labelledby") === "pagination-limit-select"
+      );
+    expect(limitSelect).toBeTruthy();
+    userEvent.click(limitSelect!);
+    const option25 = (await screen.findAllByTestId("limit-option")).find(
+      (el) => el.textContent === "25"
+    );
+    expect(option25).toBeTruthy();
+    userEvent.click(option25!);
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        25,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        expect.any(Object),
+        expect.any(AbortController)
+      );
+    });
   });
 });

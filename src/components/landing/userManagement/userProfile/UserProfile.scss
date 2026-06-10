@@ -5,10 +5,158 @@
     position: relative;
     z-index: 1;
     margin-top: -18px;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 4%);
-    min-height: 500px;
-    padding: 24px;
+  }
+
+  .user-measure-table {
+    background-color: #fff;
+    border: 1px solid #8c8c8c;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+
+    .tabs-section {
+      display: flex;
+      padding: 0 16px;
+      border-bottom: 1px solid #b0b0b0;
+      margin-bottom: 24px;
+    }
+
+    .table {
+      max-height: 703px;
+      overflow: auto;
+    }
+
+    .tcl-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    thead > tr > th:first-of-type,
+    tbody > tr > td:first-of-type {
+      width: 32px;
+      padding-left: 16px;
+      padding-right: 0;
+    }
+
+    thead > tr > th:nth-of-type(2),
+    tbody > tr > td:nth-of-type(2) {
+      width: 30%;
+      min-width: 280px;
+      max-width: 480px;
+    }
+
+    thead > tr > th:last-of-type,
+    tbody > tr > td:last-of-type {
+      width: 1%;
+      min-width: 96px;
+      white-space: nowrap;
+      text-align: left;
+      padding-right: 16px;
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+    }
+
+    thead.sticky-table > tr > th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #ededed;
+      border-bottom: solid 1px #000;
+      color: #2d3540;
+      font-family: Rubik, sans-serif;
+      font-size: 14.4px;
+      font-weight: 700;
+      text-align: left;
+      padding: 14px 16px;
+    }
+
+    thead .header-button {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+      padding: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    thead .arrowDisplay {
+      position: absolute;
+      right: -25px;
+    }
+
+    .table-body {
+      padding: 0 !important;
+
+      > tr {
+        // Mirror MeasureLanding.scss row styling.
+        > td {
+          font-family: Rubik, sans-serif;
+          color: #242424;
+          font-size: 16px;
+          font-weight: 400;
+          vertical-align: top;
+          line-height: 16px;
+          padding: 16px;
+          border-bottom: solid 1px #e0e0e0;
+        }
+
+        &:last-of-type > td {
+          border-bottom: none;
+        }
+
+        .chip-draft {
+          height: 24px;
+          background-color: #e1f3f8;
+        }
+
+        .chip-composite {
+          height: 24px;
+          background-color: #f8e1f8;
+        }
+      }
+
+      .expanded-row {
+        background-color: #f8f8f8;
+
+        > td {
+          background-color: #f8f8f8;
+          padding: 10px;
+          height: 72px;
+          border-top: 1px solid #8c8c8c;
+          border-bottom: 1px solid #8c8c8c;
+
+          &:nth-of-type(2) {
+            padding-left: 40px !important;
+          }
+        }
+      }
+    }
+
+    .pagination-container {
+      background: #fff;
+      border-top: solid 1px #8c8c8c;
+      padding: 8px 16px;
+    }
+
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      padding: 48px 0;
+    }
+
+    .error-message {
+      color: #b00020;
+      padding: 16px;
+      margin: 0;
+    }
   }
 }

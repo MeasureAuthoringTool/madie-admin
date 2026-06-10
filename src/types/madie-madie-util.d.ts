@@ -44,11 +44,51 @@ declare module "@madie/madie-util" {
 
   export function useUserServiceApi(): UserServiceApi;
 
+  export interface MeasureSearchCriteria {
+    searchField?: string;
+    optionalSearchProperties?: string[];
+    model?: string;
+    draft?: boolean;
+    excludeByMeasureIds?: string[];
+  }
+
+  export interface MeasurePage {
+    content: any[];
+    totalElements: number;
+    totalPages: number;
+    numberOfElements: number;
+    pageable?: { offset: number };
+  }
+
+  export class MeasureServiceApi {
+    constructor(baseUrl: string, getAccessToken: () => string);
+    adminSearchMeasuresForUser(
+      harpId: string,
+      ownershipTypes: string[],
+      limit?: string | number,
+      page?: number,
+      sort?: string,
+      direction?: string,
+      searchCriteria?: MeasureSearchCriteria,
+      abortController?: AbortController
+    ): Promise<MeasurePage>;
+    getMeasuresByMeasureSetId(
+      measureSetId: string,
+      sortByLatestVersion?: boolean,
+      searchCriteria?: MeasureSearchCriteria
+    ): Promise<any[]>;
+  }
+
+  export function useMeasureServiceApi(): MeasureServiceApi;
+
   export interface ServiceConfig {
     terminologyService?: {
       baseUrl: string;
     };
     userService?: {
+      baseUrl: string;
+    };
+    measureService?: {
       baseUrl: string;
     };
   }
