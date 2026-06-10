@@ -48,7 +48,7 @@ type MeasureRow = {
   hasAssociatedMeasures: boolean;
 };
 
-type ListState = {
+type MeasuresPageState = {
   measures: any[];
   totalElements: number;
   visibleItems: number;
@@ -61,7 +61,7 @@ const DEFAULT_SEARCH_CRITERIA = {
   optionalSearchProperties: [],
 };
 
-const EMPTY_LIST_STATE: ListState = {
+const EMPTY_MEASURES_PAGE: MeasuresPageState = {
   measures: [],
   totalElements: 0,
   visibleItems: 0,
@@ -148,7 +148,8 @@ const UserProfile = () => {
   const [currentSort, setCurrentSort] = useState("");
   const [currentDirection, setCurrentDirection] = useState<Direction>("");
 
-  const [list, setList] = useState<ListState>(EMPTY_LIST_STATE);
+  const [measuresPage, setMeasuresPage] =
+    useState<MeasuresPageState>(EMPTY_MEASURES_PAGE);
   const [counts, setCounts] = useState<Record<Ownership, number>>({
     OWNED: 0,
     SHARED: 0,
@@ -224,7 +225,7 @@ const UserProfile = () => {
       if (dataRes.status === "fulfilled") {
         const d = dataRes.value;
         activeTotal = d?.totalElements ?? 0;
-        setList({
+        setMeasuresPage({
           measures: d?.content ?? [],
           totalElements: activeTotal,
           totalPages: d?.totalPages ?? 0,
@@ -233,7 +234,7 @@ const UserProfile = () => {
         });
       } else if (!isAbortError(dataRes.reason)) {
         setErrMsg(dataRes.reason?.message || "Unable to load measures");
-        setList(EMPTY_LIST_STATE);
+        setMeasuresPage(EMPTY_MEASURES_PAGE);
       }
 
       const inactiveTotal =
@@ -261,8 +262,8 @@ const UserProfile = () => {
   ]);
 
   const data = useMemo<MeasureRow[]>(
-    () => list.measures.map(transformRow),
-    [list.measures]
+    () => measuresPage.measures.map(transformRow),
+    [measuresPage.measures]
   );
 
   const toggleExpansion = useCallback(
@@ -604,17 +605,17 @@ const UserProfile = () => {
 
             <div className="pagination-container">
               <Pagination
-                totalItems={list.totalElements}
-                visibleItems={list.visibleItems}
+                totalItems={measuresPage.totalElements}
+                visibleItems={measuresPage.visibleItems}
                 limitOptions={[10, 25, 50]}
-                offset={list.offset}
+                offset={measuresPage.offset}
                 handlePageChange={handlePageChange}
                 handleLimitChange={handleLimitChange}
                 page={currentPage}
                 limit={currentLimit}
-                count={list.totalPages}
+                count={measuresPage.totalPages}
                 shape="rounded"
-                hideNextButton={currentPage >= list.totalPages}
+                hideNextButton={currentPage >= measuresPage.totalPages}
                 hidePrevButton={currentPage <= 1}
               />
             </div>
