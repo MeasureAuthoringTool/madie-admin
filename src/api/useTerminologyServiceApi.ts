@@ -24,6 +24,32 @@ export class TerminologyServiceApi {
       throw new Error(message);
     }
   }
+  async triggerUpdateCodeSystems(): Promise<void> {
+    try {
+      return await axios.post(
+        `${this.baseUrl}/terminology/admin/trigger-code-system-refresh`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${this.getAccessToken()}`,
+          },
+        }
+      );
+    } catch (error: any) {
+      let message =
+        "An error occurred while triggering the code system refresh. Please try again. If the error persists, please contact the help desk.";
+      if (error.status === 409) {
+        message =
+          "Update Code System is already running. We have NOT started the job again";
+      }
+
+      if (error.response?.data?.message) {
+        message = `${message}: ${error.response.data.message}`;
+      }
+
+      throw new Error(message);
+    }
+  }
 }
 
 export default function useTerminologyServiceApi(): TerminologyServiceApi {

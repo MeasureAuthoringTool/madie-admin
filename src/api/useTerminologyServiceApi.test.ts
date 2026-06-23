@@ -121,6 +121,103 @@ describe("TerminologyServiceApi", () => {
       );
     });
   });
+  describe("triggerUpdateCodeSystems", () => {
+    it("calls the trigger endpoint with correct headers", async () => {
+      (axios.post as jest.Mock).mockResolvedValueOnce({ status: 200 });
+
+      await terminologyService.triggerUpdateCodeSystems();
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(axios.post).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/trigger-code-system-refresh",
+        {},
+        {
+          headers: { Authorization: "Bearer test-token" },
+        }
+      );
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+
+      (axios.post as jest.Mock).mockResolvedValue({ status: 200 });
+
+      await service.triggerUpdateCodeSystems();
+      await service.triggerUpdateCodeSystems();
+
+      expect(axios.post).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        {},
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-1" },
+        })
+      );
+
+      expect(axios.post).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        {},
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-2" },
+        })
+      );
+    });
+
+    it("throws conflict message when status is 409", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce({
+        status: 409, // matches your current code
+        response: {},
+      });
+
+      await expect(
+        terminologyService.triggerUpdateCodeSystems()
+      ).rejects.toThrow(
+        "Update Code System is already running. We have NOT started the job again"
+      );
+    });
+
+    it("throws default error message when request fails without server message", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce({
+        response: {},
+      });
+
+      await expect(
+        terminologyService.triggerUpdateCodeSystems()
+      ).rejects.toThrow(
+        "An error occurred while triggering the code system refresh. Please try again. If the error persists, please contact the help desk."
+      );
+    });
+
+    it("appends server message when present", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce({
+        response: { data: { message: "Service unavailable" } },
+      });
+
+      await expect(
+        terminologyService.triggerUpdateCodeSystems()
+      ).rejects.toThrow(
+        "An error occurred while triggering the code system refresh. Please try again. If the error persists, please contact the help desk.: Service unavailable"
+      );
+    });
+
+    it("falls back to default message when no response exists", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce(
+        new Error("Network error")
+      );
+
+      await expect(
+        terminologyService.triggerUpdateCodeSystems()
+      ).rejects.toThrow(
+        "An error occurred while triggering the code system refresh. Please try again. If the error persists, please contact the help desk."
+      );
+    });
+  });
 });
 
 describe("useTerminologyServiceApi hook", () => {
