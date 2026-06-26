@@ -11,6 +11,7 @@ import {
   useUserServiceApi,
   useMeasureServiceApi,
   adminUserStore,
+  useFeatureFlags,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -23,9 +24,11 @@ import {
   MadieSpinner,
   MadieTable,
   Pagination,
+  SearchAndFilter,
   Tab,
   Tabs,
   TruncateText,
+  useFilterSearch,
 } from "@madie/madie-design-system/dist/react";
 import { Chip } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -59,6 +62,14 @@ type MeasuresPageState = {
 const DEFAULT_SEARCH_CRITERIA = {
   searchField: "",
   optionalSearchProperties: [],
+};
+
+const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
+const MEASURE_FILTER_MAP: Record<string, string> = {
+  Measure: "measure",
+  Version: "version",
+  Model: "model",
+  "CMS ID": "cmsId",
 };
 
 const EMPTY_MEASURES_PAGE: MeasuresPageState = {
@@ -141,6 +152,17 @@ const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
+  const featureFlags = useFeatureFlags();
+
+  const {
+    filterBy,
+    searchField,
+    handleFilter,
+    handleSearch,
+    finalizeSearchCriteria,
+    blankSearchCriteria,
+  } = useFilterSearch();
+  const [searchCriteria, setSearchCriteria] = useState(DEFAULT_SEARCH_CRITERIA);
 
   const [activeTab, setActiveTab] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -202,7 +224,7 @@ const UserProfile = () => {
       currentPage - 1,
       currentSort || "lastModifiedAt",
       currentDirection || "DESC",
-      DEFAULT_SEARCH_CRITERIA,
+      searchCriteria,
       controller
     );
     const countPromise = measureServiceApi.adminSearchMeasuresForUser(
@@ -258,6 +280,7 @@ const UserProfile = () => {
     currentLimit,
     currentSort,
     currentDirection,
+    searchCriteria,
     measureServiceApi,
   ]);
 
@@ -477,6 +500,28 @@ const UserProfile = () => {
     [table]
   );
 
+  const handleSearchTrigger = () => {
+    finalizeSearchCriteria();
+
+    const optionalSearchProperties: string[] = [];
+
+    if (filterBy && MEASURE_FILTER_MAP[filterBy]) {
+      optionalSearchProperties.push(MEASURE_FILTER_MAP[filterBy]);
+    } else if (!filterBy && searchField) {
+      MEASURE_FILTER_OPTIONS.forEach((option) =>
+        optionalSearchProperties.push(MEASURE_FILTER_MAP[option])
+      );
+    }
+
+    setSearchCriteria({ searchField, optionalSearchProperties });
+    handlePageChange(null, 1);
+  };
+
+  const handleSearchClear = () => {
+    blankSearchCriteria();
+    setSearchCriteria({ searchField: "", optionalSearchProperties: [] });
+  };
+
   const handleLimitChange = useCallback(
     (e: any) => {
       setCurrentLimit(Number(e.target.value));
@@ -579,6 +624,21 @@ const UserProfile = () => {
               />
             </Tabs>
           </section>
+
+          {featureFlags?.AdminUserProfile && (
+            <div className="search-filter-bar" data-testid="search-filter-bar">
+              <SearchAndFilter
+                filterBy={filterBy}
+                searchField={searchField}
+                onFilterChange={handleFilter}
+                onSearchChange={handleSearch}
+                onSearchTrigger={handleSearchTrigger}
+                onSearchClear={handleSearchClear}
+                filterByOpts={MEASURE_FILTER_OPTIONS}
+                textFieldID="user-profile-measures"
+              />
+            </div>
+          )}
 
           {errMsg && !loading && (
             <p
