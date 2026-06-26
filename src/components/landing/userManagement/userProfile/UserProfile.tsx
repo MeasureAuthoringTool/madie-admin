@@ -65,12 +65,13 @@ const DEFAULT_SEARCH_CRITERIA = {
 };
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
-const MEASURE_FILTER_MAP: Record<string, string> = {
-  Measure: "measure",
-  Version: "version",
-  Model: "model",
-  "CMS ID": "cmsId",
-};
+
+const MEASURE_FILTER_MAP = new Map<string, string>([
+  ["Measure", "measure"],
+  ["Version", "version"],
+  ["Model", "model"],
+  ["CMS ID", "cmsId"],
+]);
 
 const EMPTY_MEASURES_PAGE: MeasuresPageState = {
   measures: [],
@@ -503,14 +504,13 @@ const UserProfile = () => {
   const handleSearchTrigger = () => {
     finalizeSearchCriteria();
 
-    const optionalSearchProperties: string[] = [];
+    const selectedProperty = MEASURE_FILTER_MAP.get(filterBy);
+    let optionalSearchProperties: string[] = [];
 
-    if (filterBy && MEASURE_FILTER_MAP[filterBy]) {
-      optionalSearchProperties.push(MEASURE_FILTER_MAP[filterBy]);
+    if (filterBy && selectedProperty) {
+      optionalSearchProperties = [selectedProperty];
     } else if (!filterBy && searchField) {
-      MEASURE_FILTER_OPTIONS.forEach((option) =>
-        optionalSearchProperties.push(MEASURE_FILTER_MAP[option])
-      );
+      optionalSearchProperties = Array.from(MEASURE_FILTER_MAP.values());
     }
 
     setSearchCriteria({ searchField, optionalSearchProperties });
