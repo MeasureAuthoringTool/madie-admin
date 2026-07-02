@@ -39,8 +39,7 @@ export class TerminologyServiceApi {
       let message =
         "An error occurred while triggering the code system refresh. Please try again. If the error persists, please contact the help desk.";
       if (error.status === 409) {
-        message =
-          "Update Code System is already running. We have NOT started the job again";
+        throw new Error(error.response.data);
       }
 
       if (error.response?.data?.message) {

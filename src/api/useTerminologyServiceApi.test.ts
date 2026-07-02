@@ -171,8 +171,11 @@ describe("TerminologyServiceApi", () => {
 
     it("throws conflict message when status is 409", async () => {
       (axios.post as jest.Mock).mockRejectedValueOnce({
-        status: 409, // matches your current code
-        response: {},
+        status: 409,
+
+        response: {
+          data: "Update Code System is already running. We have NOT started the job again",
+        },
       });
 
       await expect(
