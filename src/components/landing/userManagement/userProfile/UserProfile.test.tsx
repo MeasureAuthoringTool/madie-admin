@@ -1,6 +1,12 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import UserProfile from "./UserProfile";
@@ -9,6 +15,7 @@ const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockAdminSearchMeasures = jest.fn();
 const mockGetMeasuresByMeasureSetId = jest.fn();
+const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 
 jest.mock("@madie/madie-util", () => ({
   useUserServiceApi: jest.fn(() => ({
@@ -20,6 +27,7 @@ jest.mock("@madie/madie-util", () => ({
     getMeasuresByMeasureSetId: (...args: unknown[]) =>
       mockGetMeasuresByMeasureSetId(...args),
   })),
+  useFeatureFlags: () => mockUseFeatureFlags(),
   adminUserStore: {
     state: null,
     updateUser: (...args: unknown[]) => mockUpdateUser(...args),
@@ -78,6 +86,8 @@ describe("UserProfile", () => {
     mockUpdateUser.mockReset();
     mockAdminSearchMeasures.mockReset();
     mockGetMeasuresByMeasureSetId.mockReset();
+    mockUseFeatureFlags.mockReset();
+    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
@@ -548,5 +558,159 @@ describe("UserProfile", () => {
         expect.any(AbortController)
       );
     });
+  });
+
+  it("filter by a column and search measures based on criteria", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+
+    const filterBy = screen.getByTestId("filter-by-select");
+    const filterByDropDown = within(filterBy).getByRole("combobox", {
+      hidden: true,
+    });
+    userEvent.click(filterByDropDown);
+
+    const optionsList = await screen.findAllByRole("option");
+    expect(optionsList).toHaveLength(5); // placeholder "-" + 4 columns
+
+    userEvent.click(screen.getByTestId("filter-by-Model"));
+
+    const input = screen.getByTestId("user-profile-measures-list-search-input");
+    userEvent.type(input, "QI-Core");
+    expect(input).toHaveValue("QI-Core");
+
+    mockAdminSearchMeasures.mockClear();
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        { searchField: "QI-Core", optionalSearchProperties: ["model"] },
+        expect.any(AbortController)
+      );
+    });
+  });
+
+  it("searches across all columns when no filter is selected", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+
+    const input = screen.getByTestId("user-profile-measures-list-search-input");
+    userEvent.type(input, "Owned");
+
+    mockAdminSearchMeasures.mockClear();
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        {
+          searchField: "Owned",
+          optionalSearchProperties: ["measure", "version", "model", "cmsId"],
+        },
+        expect.any(AbortController)
+      );
+    });
+  });
+
+  it("shows 'No results were found' when a search yields no matches", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measure-name-m1-content")).toBeInTheDocument();
+    });
+
+    mockAdminSearchMeasures.mockResolvedValue(emptyPage);
+    userEvent.type(
+      screen.getByTestId("user-profile-measures-list-search-input"),
+      "zzzz"
+    );
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
+
+    await waitFor(() => {
+      expect(screen.getByText("No results were found")).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByTestId("measure-name-m1-content")
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears the search and refetches all measures when the X is clicked", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+
+    const input = screen.getByTestId("user-profile-measures-list-search-input");
+    userEvent.type(input, "Owned");
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        expect.objectContaining({ searchField: "Owned" }),
+        expect.any(AbortController)
+      );
+    });
+
+    mockAdminSearchMeasures.mockClear();
+    userEvent.click(screen.getByTestId("user-profile-measures-clear-search"));
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
+        "test_user",
+        ["OWNED"],
+        10,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        { searchField: "", optionalSearchProperties: [] },
+        expect.any(AbortController)
+      );
+    });
+    expect(input).toHaveValue("");
+  });
+
+  it("hides the search/filter bar when the AdminUserProfile flag is off", async () => {
+    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockAdminSearchMeasures).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("search-filter-bar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("filter-by-select")).not.toBeInTheDocument();
   });
 });
