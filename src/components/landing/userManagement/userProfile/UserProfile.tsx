@@ -501,7 +501,7 @@ const UserProfile = () => {
     [table]
   );
 
-  const handleSearchTrigger = () => {
+  const handleSearchTrigger = useCallback(() => {
     finalizeSearchCriteria();
 
     const selectedProperty = MEASURE_FILTER_MAP.get(filterBy);
@@ -515,12 +515,12 @@ const UserProfile = () => {
 
     setSearchCriteria({ searchField, optionalSearchProperties });
     handlePageChange(null, 1);
-  };
+  }, [finalizeSearchCriteria, filterBy, searchField, handlePageChange]);
 
-  const handleSearchClear = () => {
+  const handleSearchClear = useCallback(() => {
     blankSearchCriteria();
     setSearchCriteria({ searchField: "", optionalSearchProperties: [] });
-  };
+  }, [blankSearchCriteria]);
 
   const handleLimitChange = useCallback(
     (e: any) => {
