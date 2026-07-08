@@ -83,8 +83,14 @@ describe("ValueSetManagement", () => {
   });
 
   it("shows loading message while data is being retrieved", async () => {
-    let resolvePromise;
-
+    let resolvePromise: (value: {
+      content: [];
+      totalElements: number;
+      totalPages: number;
+      number: number;
+      size: number;
+      numberOfElements: number;
+    }) => void;
     mockGetValueSets.mockReturnValueOnce(
       new Promise((resolve) => {
         resolvePromise = resolve;
