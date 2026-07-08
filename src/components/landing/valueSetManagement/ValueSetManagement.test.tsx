@@ -1,6 +1,6 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ValueSetManagement from "./ValueSetManagement";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
@@ -386,6 +386,64 @@ describe("ValueSetManagement", () => {
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false");
+    });
+  });
+  it("toggles url sort from ASC to DESC", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-url")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("header-url"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,true");
+    });
+  });
+  it("changes sort column to lastUpdated", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-lastUpdated")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("header-lastUpdated"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "lastUpdated,false");
     });
   });
 });
