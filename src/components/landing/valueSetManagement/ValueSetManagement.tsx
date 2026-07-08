@@ -6,8 +6,11 @@ import {
   MadieTable,
 } from "@madie/madie-design-system/dist/react";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { ColumnDef } from "@tanstack/react-table";
+import {
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table";
 import CheckIcon from "@mui/icons-material/Check";
 import "twin.macro";
 import "styled-components/macro";
@@ -79,7 +82,9 @@ export default function ValueSetManagement() {
       }
     };
 
-    void loadValueSets();
+    loadValueSets().catch((error) => {
+      console.error(error);
+    });
   }, [terminologyServiceApi, page, limit, currentSort, currentDirection]);
 
   const handleSort = (sort: string) => {
