@@ -1,13 +1,152 @@
-import React, { useState } from "react";
-import { Button, Toast } from "@madie/madie-design-system/dist/react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Button,
+  Toast,
+  Pagination,
+  MadieTable,
+} from "@madie/madie-design-system/dist/react";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import {
+  ColumnDef,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import CheckIcon from "@mui/icons-material/Check";
+import "twin.macro";
+import "styled-components/macro";
 import "./ValueSetManagement.scss";
 
+type ValueSetDisplayForAdmin = {
+  id: string;
+  url: string;
+  lastUpdated: string;
+  manuallyModified: boolean;
+};
+
 export default function ValueSetManagement() {
-  const terminologyServiceApi = useTerminologyServiceApi();
+  const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
+
   const [toastOpen, setToastOpen] = useState<boolean>(false);
   const [toastType, setToastType] = useState<string>("success");
   const [toastMessage, setToastMessage] = useState<string>("");
+
+  const [valueSets, setValueSets] = useState<ValueSetDisplayForAdmin[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // pagination
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [visibleItems, setVisibleItems] = useState<number>(0);
+
+  // future search/filter implementation
+  // const [filterBy] = useState("");
+  // const [searchText] = useState("");
+  // const VALUE_SET_FILTER_OPTIONS = ["URL", "Last Updated", "Manually Modified"];
+
+  // MadieTable sorting
+  const [currentSort, setCurrentSort] = useState<string>("url");
+  const [currentDirection, setCurrentDirection] = useState<string>("ASC");
+
+  useEffect(() => {
+    const loadValueSets = async () => {
+      try {
+        setLoading(true);
+
+        const sortInfo = currentSort
+          ? `${currentSort},${currentDirection === "DESC"}`
+          : undefined;
+
+        const response = await terminologyServiceApi.getValueSets(
+          page - 1,
+          limit,
+          sortInfo
+        );
+
+        setValueSets(response.content);
+        setTotalPages(response.totalPages);
+        setTotalItems(response.totalElements);
+        setVisibleItems(response.numberOfElements);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "An error occurred while loading value sets.";
+
+        setToastType("danger");
+        setToastMessage(errorMessage);
+        setToastOpen(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadValueSets();
+  }, [terminologyServiceApi, page, limit, currentSort, currentDirection]);
+
+  const handleSort = (sort: string) => {
+    let sortChange = "";
+    let directionChange = "";
+
+    if (sort === currentSort) {
+      if (currentDirection === "ASC") {
+        sortChange = sort;
+        directionChange = "DESC";
+      }
+    } else {
+      sortChange = sort;
+      directionChange = "ASC";
+    }
+
+    setCurrentSort(sortChange);
+    setCurrentDirection(directionChange);
+    setPage(1);
+  };
+
+  const columns = useMemo<ColumnDef<ValueSetDisplayForAdmin>[]>(
+    () => [
+      {
+        header: "URL",
+        accessorKey: "url",
+      },
+      {
+        header: "Last Updated",
+        accessorKey: "lastUpdated",
+        cell: (info) => {
+          const value = info.getValue() as string;
+          return value ? new Date(value).toLocaleString() : "-";
+        },
+      },
+      {
+        header: "Manually Modified",
+        accessorKey: "manuallyModified",
+        cell: (info) =>
+          info.getValue() ? (
+            <CheckIcon data-testid="manual-modified-check" />
+          ) : (
+            "-"
+          ),
+      },
+      {
+        header: "Action",
+        accessorKey: "action",
+        enableSorting: false,
+        cell: () => (
+          <Button variant="outline-secondary">View Expansions</Button>
+        ),
+      },
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: valueSets,
+    columns,
+    getRowId: (row) => row.id,
+    getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+  });
 
   const handleUpdateValueSets = async () => {
     setToastOpen(false);
@@ -41,23 +180,91 @@ export default function ValueSetManagement() {
           Update VSES Data
         </Button>
       </div>
-      <Toast
-        toastKey="value-set-management-toast"
-        aria-live="polite"
-        toastType={toastType}
-        testId={
-          toastType === "danger"
-            ? "update-vses-error-message"
-            : "update-vses-success-message"
-        }
-        closeButtonProps={{
-          "data-testid": "close-toast-button",
-        }}
-        open={toastOpen}
-        message={toastMessage}
-        onClose={onToastClose}
-        autoHideDuration={6000}
-      />
+      {/* to put in later likely when sticky styling is required. */}
+      {/* <div style={{ overflow: "auto", maxHeight: "800px" }}> */}
+      <div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 16,
+            backgroundColor: "#fff",
+            alignItems: "end",
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+          }}
+        ></div>
+
+        {loading ? (
+          <p data-testid="loading-message" className="loading-message">
+            Loading value sets...
+          </p>
+        ) : table.getRowModel().rows.length > 0 ? (
+          <>
+            <div
+              style={{
+                overflow: "auto",
+              }}
+            >
+              <MadieTable
+                table={table}
+                currentSort={currentSort}
+                currentDirection={currentDirection}
+                handleSort={handleSort}
+                id="valueSetTable"
+                dataTestId="value-set-table"
+              />
+            </div>
+
+            <Pagination
+              totalItems={totalItems}
+              visibleItems={visibleItems}
+              limitOptions={[10, 25, 50]}
+              offset={(page - 1) * limit}
+              page={page}
+              limit={limit}
+              count={totalPages}
+              shape="rounded"
+              hideNextButton={page >= totalPages}
+              hidePrevButton={page <= 1}
+              handlePageChange={(_, value) => {
+                setPage(value);
+              }}
+              handleLimitChange={(event) => {
+                setLimit(Number(event.target.value));
+                setPage(1);
+              }}
+            />
+          </>
+        ) : (
+          <p
+            data-testid="no-value-sets-message"
+            className="no-value-sets-message"
+          >
+            No value sets found.
+          </p>
+        )}
+
+        <Toast
+          toastKey="value-set-management-toast"
+          aria-live="polite"
+          toastType={toastType}
+          testId={
+            toastType === "danger"
+              ? "update-vses-error-message"
+              : "update-vses-success-message"
+          }
+          closeButtonProps={{
+            "data-testid": "close-toast-button",
+          }}
+          open={toastOpen}
+          message={toastMessage}
+          onClose={onToastClose}
+          autoHideDuration={6000}
+        />
+      </div>
     </div>
   );
 }

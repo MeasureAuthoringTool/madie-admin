@@ -1,8 +1,51 @@
 import axios from "./axios-instance";
 import { useOktaTokens, useServiceConfig } from "@madie/madie-util";
 
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+  numberOfElements: number;
+}
+
+export interface ValueSetDisplayForAdmin {
+  id: string;
+  url: string;
+  lastUpdated: string;
+  manuallyModified: boolean;
+}
+
 export class TerminologyServiceApi {
   constructor(private baseUrl: string, private getAccessToken: () => string) {}
+
+  async getValueSets(
+    page = 0,
+    limit = 10,
+    sortInfo?: string
+  ): Promise<Page<ValueSetDisplayForAdmin>> {
+    const params: Record<string, string | number> = {
+      page,
+      limit,
+    };
+
+    if (sortInfo) {
+      params.sortInfo = sortInfo;
+    }
+
+    const response = await axios.get(
+      `${this.baseUrl}/terminology/admin/valuesets`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+        params,
+      }
+    );
+
+    return response.data;
+  }
 
   async updateValueSets(ig?: string, version?: string): Promise<void> {
     try {

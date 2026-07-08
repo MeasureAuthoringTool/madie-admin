@@ -1,6 +1,7 @@
+@use "sass:color";
+
 .value-set-management {
   padding: 0 32px 24px;
-
   .value-set-management-card {
     position: relative;
     z-index: 1;
@@ -8,10 +9,69 @@
     background: #fff;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 4%);
-    min-height: 500px;
     padding: 24px;
     display: flex;
     justify-content: flex-end;
     align-items: flex-start;
+  }
+}
+
+#valueSetTable {
+  overflow: visible;
+
+  .measures-list {
+    > tr {
+      > td {
+        font-size: 14px;
+      }
+    }
+  }
+  thead tr {
+    border-bottom: solid 1px #8c8c8c;
+    background: #f5f5f5;
+    text-align: center;
+  }
+
+  .ll-tr {
+    border-bottom: solid 1px #8c8c8c;
+
+    > td {
+      // max-width: 10vw;
+
+      white-space: normal;
+      vertical-align: top;
+      border-bottom: inherit;
+      overflow-wrap: break-word;
+      text-align: center;
+    }
+    // last table cell in .ll-tr row
+    td:last-child {
+      max-width: fit-content;
+    }
+  }
+
+  .ll-table {
+    border-collapse: collapse;
+    border-spacing: 0 1em;
+    border: solid 1px #8c8c8c;
+    border-top: 0;
+    border-radius: 0 0 3px 3px;
+    > .table-body {
+      border-top: inherit;
+      border-radius: 3px;
+      font-size: 14px;
+      color: red;
+    }
+  }
+
+  th:hover {
+    background-color: color.adjust(#333, $lightness: 60%);
+  }
+  button > .arrowDisplay {
+    position: absolute;
+    right: -25px;
+  }
+  th > button {
+    position: relative;
   }
 }

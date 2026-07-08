@@ -8,12 +8,24 @@ import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
 jest.mock("../../../api/useTerminologyServiceApi");
 
 const mockUpdateValueSets = jest.fn();
+const mockGetValueSets = jest.fn();
 
 describe("ValueSetManagement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    mockGetValueSets.mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 10,
+      numberOfElements: 0,
+    });
+
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       updateValueSets: mockUpdateValueSets,
+      getValueSets: mockGetValueSets,
     });
   });
 
@@ -41,6 +53,142 @@ describe("ValueSetManagement", () => {
     const button = screen.getByTestId("update-vses-data-button");
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent("Update VSES Data");
+  });
+
+  it("loads value sets on mount using default sorting", async () => {
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalled();
+    });
+
+    expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+  });
+
+  it("shows empty state when no value sets are returned", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 10,
+      numberOfElements: 0,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("no-value-sets-message")).toBeInTheDocument();
+    });
+  });
+
+  it("shows loading message while data is being retrieved", async () => {
+    let resolvePromise: any;
+
+    mockGetValueSets.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePromise = resolve;
+      })
+    );
+
+    render(<ValueSetManagement />);
+
+    expect(screen.getByTestId("loading-message")).toBeInTheDocument();
+
+    resolvePromise({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 10,
+      numberOfElements: 0,
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("loading-message")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows error toast when getValueSets throws an Error", async () => {
+    mockGetValueSets.mockRejectedValueOnce(
+      new Error("Failed loading value sets")
+    );
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Failed loading value sets")).toBeInTheDocument();
+  });
+
+  it("uses generic load error message when thrown value is not an Error", async () => {
+    mockGetValueSets.mockRejectedValueOnce("failure");
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText("An error occurred while loading value sets.")
+    ).toBeInTheDocument();
+  });
+
+  it("renders loaded value sets", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T12:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByText("http://example.com/vs")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("View Expansions")).toBeInTheDocument();
+  });
+
+  it("renders manually modified icon when value set is manually modified", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T12:00:00Z",
+          manuallyModified: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-modified-check")).toBeInTheDocument();
+    });
   });
 
   it("shows the success toast after a successful update", async () => {
