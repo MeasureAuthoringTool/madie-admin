@@ -16,12 +16,12 @@ import "twin.macro";
 import "styled-components/macro";
 import "./ValueSetManagement.scss";
 
-type ValueSetDisplayForAdmin = {
+interface ValueSetDisplayForAdmin {
   id: string;
   url: string;
   lastUpdated: string;
   manuallyModified: boolean;
-};
+}
 
 export default function ValueSetManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;

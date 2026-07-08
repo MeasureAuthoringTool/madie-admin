@@ -1,6 +1,6 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ValueSetManagement from "./ValueSetManagement";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
@@ -83,7 +83,7 @@ describe("ValueSetManagement", () => {
   });
 
   it("shows loading message while data is being retrieved", async () => {
-    let resolvePromise: any;
+    let resolvePromise;
 
     mockGetValueSets.mockReturnValueOnce(
       new Promise((resolve) => {
