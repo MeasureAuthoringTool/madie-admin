@@ -1,6 +1,6 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ValueSetManagement from "./ValueSetManagement";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
@@ -291,6 +291,101 @@ describe("ValueSetManagement", () => {
       expect(
         screen.getByTestId("update-vses-success-message")
       ).toBeInTheDocument();
+    });
+  });
+  it("changes sort field when last updated header is clicked", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+    });
+
+    await userEvent.click(screen.getByTestId("header-lastUpdated"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+    });
+  });
+
+  it("reloads value sets when page changes", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 20,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 10,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Go to page 2" })
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 10, "url,false");
+    });
+  });
+
+  it("reloads value sets when limit changes", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 20,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 10,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("combobox"));
+
+    const option25 = await screen.findByText("25");
+
+    await userEvent.click(option25);
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false");
     });
   });
 });
