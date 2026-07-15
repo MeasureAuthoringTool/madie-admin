@@ -77,6 +77,8 @@ declare module "@madie/madie-util" {
       sortByLatestVersion?: boolean,
       searchCriteria?: MeasureSearchCriteria
     ): Promise<any[]>;
+    deleteMeasure(id: string): Promise<Response>;
+    adminDeleteMeasure(id: string, ownerHarpId: string): Promise<Response>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;
