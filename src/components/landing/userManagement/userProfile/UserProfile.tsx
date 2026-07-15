@@ -32,8 +32,9 @@ import {
   TruncateText,
   useFilterSearch,
 } from "@madie/madie-design-system/dist/react";
-import { Chip } from "@mui/material";
+import { Chip, Tooltip } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import {
   CollapseIcon,
   ExpandIcon,
@@ -66,6 +67,12 @@ const DEFAULT_SEARCH_CRITERIA = {
   searchField: "",
   optionalSearchProperties: [],
 };
+
+const COMPONENT_MEASURE_MSG =
+  "This measure is a component of a composite measure";
+
+const COMPONENT_DELETE_DISABLED_MSG =
+  "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component.";
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
 
@@ -147,6 +154,33 @@ const MeasureStatusChips = ({ measure }: { measure: any }) => (
         label="Composite"
         role="status"
         aria-label="Composite"
+      />
+    )}
+    {measure?.component && (
+      <Chip
+        className="chip-in-composite"
+        role="status"
+        aria-label={`In Composite: ${COMPONENT_MEASURE_MSG}`}
+        label={
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            In Composite
+            <Tooltip title={`${COMPONENT_MEASURE_MSG}`} arrow>
+              <InfoOutlinedIcon
+                sx={{ fontSize: 16 }}
+                aria-label={`${COMPONENT_MEASURE_MSG}`}
+                role="img"
+                tabIndex={0}
+                focusable="true"
+              />
+            </Tooltip>
+          </span>
+        }
       />
     )}
   </div>
@@ -623,12 +657,20 @@ const UserProfile = () => {
   /*
     Delete is enabled only when exactly one top-level (latest) measure is
     selected. Any expanded sub-row (older version) selection, or more than one
-    selection across the two selection sources disables it.
+    selection across the two rows disables it. A measure used as a
+    component in one or more composite measures also cannot be deleted.
   */
   const selectedTopLevelRows = table.getSelectedRowModel().rows;
   const totalSelected =
     selectedTopLevelRows.length + selectedExpandedRowIds.length;
-  const canDelete = totalSelected === 1 && selectedTopLevelRows.length === 1;
+  const singleTopSelected =
+    totalSelected === 1 && selectedTopLevelRows.length === 1;
+  const selectedIsComponent =
+    singleTopSelected && selectedTopLevelRows[0].original.actions?.component;
+  const canDelete = singleTopSelected && !selectedIsComponent;
+  const deleteDisabledReason = selectedIsComponent
+    ? COMPONENT_DELETE_DISABLED_MSG
+    : undefined;
 
   const draftOrVersionLabel = deleteTarget?.measureMetaData?.draft
     ? "draft"
@@ -713,7 +755,11 @@ const UserProfile = () => {
                 filterByOpts={MEASURE_FILTER_OPTIONS}
                 textFieldID="user-profile-measures"
               />
-              <ActionCenter canDelete={canDelete} onDelete={openDeleteDialog} />
+              <ActionCenter
+                canDelete={canDelete}
+                onDelete={openDeleteDialog}
+                disabledReason={deleteDisabledReason}
+              />
             </div>
           )}
 

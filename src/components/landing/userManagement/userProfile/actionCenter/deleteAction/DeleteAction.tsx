@@ -6,13 +6,20 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 interface PropTypes {
   disabled: boolean;
   onClick: () => void;
+  disabledReason?: string;
 }
 
 export const DELETE_MEASURE = "Delete measure";
 export const NOTHING_SELECTED = "Select measure to delete";
 
-export default function DeleteAction({ disabled, onClick }: PropTypes) {
-  const tooltipMessage = disabled ? NOTHING_SELECTED : DELETE_MEASURE;
+export default function DeleteAction({
+  disabled,
+  onClick,
+  disabledReason,
+}: PropTypes) {
+  const tooltipMessage = disabled
+    ? disabledReason ?? NOTHING_SELECTED
+    : DELETE_MEASURE;
   return (
     <Tooltip
       data-testid="delete-action-tooltip"
