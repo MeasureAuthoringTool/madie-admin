@@ -164,10 +164,12 @@ describe("CodeSystemManagement", () => {
     // loading should be visible while the promise is pending
     expect(screen.getByTestId("loading-message")).toBeInTheDocument();
     // resolve the promise to finish loading
-    resolvePromise!({
+    resolvePromise({
       content: [],
-      totalPages: 0,
       totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 10,
       numberOfElements: 0,
     });
     await waitFor(() => {
