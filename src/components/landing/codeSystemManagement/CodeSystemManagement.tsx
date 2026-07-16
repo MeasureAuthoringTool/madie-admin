@@ -116,12 +116,10 @@ export default function CodeSystemManagement() {
     () => [
       {
         header: "Title",
-        // accessorFn: (row) => row.title,
         accessorKey: "title",
       },
       {
         header: "Name",
-        // accessorFn: (row) => row.name,
         accessorKey: "name",
       },
       {
@@ -130,12 +128,10 @@ export default function CodeSystemManagement() {
       },
       {
         header: "Full URL",
-        // accessorFn: (row) => row.fullUrl,
         accessorKey: "fullUrl",
       },
       {
         header: "Last Updated",
-        // accessorFn: (row) => row.lastUpdated,
         accessorKey: "lastUpdated",
         cell: (info) => {
           const value = info.getValue() as string;
@@ -144,7 +140,6 @@ export default function CodeSystemManagement() {
       },
       {
         header: "Latest Version?",
-        // accessorFn: (row) => row.isLatestVersion,
         accessorKey: "isLatestVersion",
         cell: (info) => (info.getValue() ? <CheckIcon /> : "-"),
       },

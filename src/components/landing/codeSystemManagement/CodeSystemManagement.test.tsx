@@ -3,17 +3,29 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import userEvent from "@testing-library/user-event";
 
 jest.mock("../../../api/useTerminologyServiceApi");
 
 describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
+  const mockGetCodeSystems = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
 
+    mockGetCodeSystems.mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 20,
+      numberOfElements: 0,
+    });
+
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystems: mockGetCodeSystems,
     });
   });
 
@@ -202,5 +214,178 @@ describe("CodeSystemManagement", () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByTestId("update-vses-error-message")).toBeInTheDocument();
+  });
+
+  it("changes sort field when last updated header is clicked", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,false");
+    });
+
+    await userEvent.click(screen.getByTestId("header-lastUpdated"));
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,false");
+    });
+  });
+
+  it("reloads value sets when page changes", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 20,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 10,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Go to page 2" })
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(1, 20, "title,false");
+    });
+  });
+
+  it("reloads value sets when limit changes", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 20,
+      totalPages: 2,
+      number: 0,
+      size: 10,
+      numberOfElements: 10,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("combobox"));
+
+    const option40 = await screen.findByText("40");
+
+    await userEvent.click(option40);
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(0, 40, "title,false");
+    });
+  });
+  it("toggles title sort from ASC to DESC", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-title")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("header-title"));
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,true");
+    });
+  });
+  it("changes sort column to lastUpdated", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-lastUpdated")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("header-lastUpdated"));
+
+    await waitFor(() => {
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(
+        0,
+        20,
+        "lastUpdated,false"
+      );
+    });
   });
 });
