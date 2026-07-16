@@ -144,7 +144,14 @@ describe("CodeSystemManagement", () => {
   });
 
   it("shows loading message while fetching code systems", async () => {
-    let resolvePromise: (value: any) => void;
+    let resolvePromise: (value: {
+      content: [];
+      totalElements: number;
+      totalPages: number;
+      number: number;
+      size: number;
+      numberOfElements: number;
+    }) => void;
     const pendingPromise = new Promise((res) => {
       resolvePromise = res;
     });
