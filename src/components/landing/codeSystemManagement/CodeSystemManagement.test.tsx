@@ -19,7 +19,7 @@ describe("CodeSystemManagement", () => {
       totalElements: 0,
       totalPages: 0,
       number: 0,
-      size: 20,
+      size: 25,
       numberOfElements: 0,
     });
 
@@ -140,7 +140,7 @@ describe("CodeSystemManagement", () => {
     await waitFor(() => {
       expect(mockGet).toHaveBeenCalled();
     });
-    expect(mockGet).toHaveBeenCalledWith(0, 20, "title,false");
+    expect(mockGet).toHaveBeenCalledWith(0, 25, "title,false");
   });
 
   it("shows loading message while fetching code systems", async () => {
@@ -239,13 +239,13 @@ describe("CodeSystemManagement", () => {
     render(<CodeSystemManagement />);
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,false");
     });
 
     await userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,false");
     });
   });
 
@@ -262,7 +262,7 @@ describe("CodeSystemManagement", () => {
           isLatestVersion: true,
         },
       ],
-      totalElements: 20,
+      totalElements: 25,
       totalPages: 2,
       number: 0,
       size: 10,
@@ -280,7 +280,7 @@ describe("CodeSystemManagement", () => {
     await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(1, 20, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(1, 25, "title,false");
     });
   });
 
@@ -297,7 +297,7 @@ describe("CodeSystemManagement", () => {
           isLatestVersion: true,
         },
       ],
-      totalElements: 20,
+      totalElements: 25,
       totalPages: 2,
       number: 0,
       size: 10,
@@ -312,12 +312,12 @@ describe("CodeSystemManagement", () => {
 
     await userEvent.click(screen.getByRole("combobox"));
 
-    const option40 = await screen.findByText("40");
+    const option50 = await screen.findByText("50");
 
-    await userEvent.click(option40);
+    await userEvent.click(option50);
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(0, 40, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(0, 50, "title,false");
     });
   });
   it("toggles title sort from ASC to DESC", async () => {
@@ -349,7 +349,7 @@ describe("CodeSystemManagement", () => {
     fireEvent.click(screen.getByTestId("header-title"));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 20, "title,true");
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,true");
     });
   });
   it("changes sort column to lastUpdated", async () => {
@@ -383,7 +383,7 @@ describe("CodeSystemManagement", () => {
     await waitFor(() => {
       expect(mockGetCodeSystems).toHaveBeenCalledWith(
         0,
-        20,
+        25,
         "lastUpdated,false"
       );
     });

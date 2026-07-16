@@ -26,7 +26,7 @@ export default function CodeSystemManagement() {
 
   // pagination
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(25);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [visibleItems, setVisibleItems] = useState<number>(0);
@@ -204,7 +204,7 @@ export default function CodeSystemManagement() {
             <Pagination
               totalItems={totalItems}
               visibleItems={visibleItems}
-              limitOptions={[20, 40, 60]}
+              limitOptions={[10, 25, 50]}
               offset={(page - 1) * limit}
               page={page}
               limit={limit}
