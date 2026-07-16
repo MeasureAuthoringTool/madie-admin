@@ -1,5 +1,15 @@
 import axios from "./axios-instance";
 import { useOktaTokens, useServiceConfig } from "@madie/madie-util";
+import { CodeSystem } from "../components/landing/codeSystemManagement/CodeSystem";
+
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+  numberOfElements: number;
+}
 
 export interface Page<T> {
   content: T[];
@@ -91,6 +101,32 @@ export class TerminologyServiceApi {
 
       throw new Error(message);
     }
+  }
+  async getCodeSystems(
+    page = 0,
+    limit = 10,
+    sortInfo?: string
+  ): Promise<Page<CodeSystem>> {
+    const params: Record<string, string | number> = {
+      page,
+      limit,
+    };
+
+    if (sortInfo) {
+      params.sortInfo = sortInfo;
+    }
+
+    const response = await axios.get(
+      `${this.baseUrl}/terminology/admin/codesystems`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+        params,
+      }
+    );
+
+    return response.data;
   }
 }
 
