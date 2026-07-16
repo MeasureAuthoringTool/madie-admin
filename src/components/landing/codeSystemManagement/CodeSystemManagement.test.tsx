@@ -145,7 +145,17 @@ describe("CodeSystemManagement", () => {
 
   it("shows loading message while fetching code systems", async () => {
     let resolvePromise: (value: {
-      content: [];
+      content: [
+        {
+          id: string;
+          title: string;
+          name: string;
+          version: { fhirVersion: string };
+          fullUrl: string;
+          lastUpdated: string;
+          isLatestVersion: boolean;
+        }
+      ];
       totalElements: number;
       totalPages: number;
       number: number;
@@ -165,12 +175,22 @@ describe("CodeSystemManagement", () => {
     expect(screen.getByTestId("loading-message")).toBeInTheDocument();
     // resolve the promise to finish loading
     resolvePromise({
-      content: [],
-      totalElements: 0,
-      totalPages: 0,
+      content: [
+        {
+          id: "cs-1",
+          title: "Example Title",
+          name: "example",
+          version: { fhirVersion: "4.0.1" },
+          fullUrl: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
       number: 0,
       size: 10,
-      numberOfElements: 0,
+      numberOfElements: 1,
     });
     await waitFor(() => {
       expect(screen.queryByTestId("loading-message")).not.toBeInTheDocument();
