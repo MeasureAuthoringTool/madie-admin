@@ -15,6 +15,8 @@ const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockAdminSearchMeasures = jest.fn();
 const mockGetMeasuresByMeasureSetId = jest.fn();
+const mockAdminDeleteMeasure = jest.fn();
+const mockDeleteMeasure = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 
 jest.mock("@madie/madie-util", () => ({
@@ -26,6 +28,8 @@ jest.mock("@madie/madie-util", () => ({
       mockAdminSearchMeasures(...args),
     getMeasuresByMeasureSetId: (...args: unknown[]) =>
       mockGetMeasuresByMeasureSetId(...args),
+    adminDeleteMeasure: (...args: unknown[]) => mockAdminDeleteMeasure(...args),
+    deleteMeasure: (...args: unknown[]) => mockDeleteMeasure(...args),
   })),
   useFeatureFlags: () => mockUseFeatureFlags(),
   adminUserStore: {
@@ -59,7 +63,7 @@ const ownedMeasure = {
   model: "QI-Core v4.1.1",
   lastModifiedAt: "2026-05-01T12:00:00Z",
   measureMetaData: { draft: true },
-  measureSet: { acls: [{ userId: "x" }], cmsId: 42 },
+  measureSet: { acls: [{ userId: "x" }], cmsId: 42, owner: "test_user" },
 };
 
 const sharedMeasure = {
@@ -69,7 +73,7 @@ const sharedMeasure = {
   model: "QDM v5.6",
   lastModifiedAt: "2026-04-15T08:00:00Z",
   measureMetaData: { draft: false },
-  measureSet: { acls: [], cmsId: 7 },
+  measureSet: { acls: [], cmsId: 7, owner: "other_user" },
 };
 
 const pageWith = (rows: any[], totalElements: number = rows.length) => ({
@@ -86,11 +90,15 @@ describe("UserProfile", () => {
     mockUpdateUser.mockReset();
     mockAdminSearchMeasures.mockReset();
     mockGetMeasuresByMeasureSetId.mockReset();
+    mockAdminDeleteMeasure.mockReset();
+    mockDeleteMeasure.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
+    mockAdminDeleteMeasure.mockResolvedValue({ status: 200 });
+    mockDeleteMeasure.mockResolvedValue({ status: 200 });
   });
 
   it("renders the user-profile card structure", async () => {
@@ -712,5 +720,238 @@ describe("UserProfile", () => {
     });
     expect(screen.queryByTestId("search-filter-bar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("filter-by-select")).not.toBeInTheDocument();
+  });
+
+  describe("delete measure action", () => {
+    it("hides the action center when the AdminUserProfile flag is off", async () => {
+      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      expect(screen.queryByTestId("action-center")).not.toBeInTheDocument();
+    });
+
+    it("disables Delete with no selection and shows 'Select measure to delete'", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      expect(deleteBtn).toBeDisabled();
+      userEvent.hover(deleteBtn.parentElement as HTMLElement);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "Select measure to delete"
+      );
+    });
+
+    it("enables Delete for a single top-level draft and shows 'Delete measure'", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.hover(deleteBtn);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "Delete measure"
+      );
+    });
+
+    it("deletes a DRAFT via the regular soft-delete endpoint and shows success", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+      expect(within(dialog).getByText("Delete Measure")).toBeInTheDocument();
+      expect(within(dialog).getByText(/draft of/)).toBeInTheDocument();
+      expect(within(dialog).getByText("Owned Measure A")).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(/This action cannot be undone/i)
+      ).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      // Drafts use the regular soft-delete endpoint, not the admin hard delete.
+      await waitFor(() => expect(mockDeleteMeasure).toHaveBeenCalledWith("m1"));
+      expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+      expect(
+        await screen.findByText("Measure successfully deleted")
+      ).toBeInTheDocument();
+    });
+
+    it("shows version wording and deletes a versioned measure with the owner harpId", async () => {
+      const versioned = {
+        ...ownedMeasure,
+        id: "mv",
+        measureName: "Versioned Measure",
+        version: "2.0.000",
+        measureMetaData: { draft: false },
+        measureSet: { ...ownedMeasure.measureSet, owner: "owner_x" },
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([versioned], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mv"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+      expect(
+        within(dialog).getByText(/version 2\.0\.000 of/)
+      ).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+      await waitFor(() =>
+        expect(mockAdminDeleteMeasure).toHaveBeenCalledWith("mv", "owner_x")
+      );
+    });
+
+    it("deletes a DRAFT composite measure via the regular soft-delete endpoint", async () => {
+      const draftComposite = {
+        ...ownedMeasure,
+        id: "mdc",
+        measureName: "Draft Composite",
+        measureMetaData: { draft: true, composite: true },
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftComposite], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mdc"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+      expect(within(dialog).getByText(/draft of/)).toBeInTheDocument();
+      expect(within(dialog).getByText("Draft Composite")).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+      await waitFor(() =>
+        expect(mockDeleteMeasure).toHaveBeenCalledWith("mdc")
+      );
+      expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("deletes a VERSIONED composite measure via the admin hard-delete endpoint", async () => {
+      const versionedComposite = {
+        ...ownedMeasure,
+        id: "mvc",
+        measureName: "Versioned Composite",
+        version: "3.0.000",
+        measureMetaData: { draft: false, composite: true },
+        measureSet: { ...ownedMeasure.measureSet, owner: "owner_z" },
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([versionedComposite], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mvc"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+      expect(
+        within(dialog).getByText(/version 3\.0\.000 of/)
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Versioned Composite")
+      ).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+      await waitFor(() =>
+        expect(mockAdminDeleteMeasure).toHaveBeenCalledWith("mvc", "owner_z")
+      );
+      expect(mockDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("closes the dialog without deleting when Cancel is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
+      );
+      expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("disables Delete when more than one measure is selected", async () => {
+      const second = {
+        ...ownedMeasure,
+        id: "m3",
+        measureName: "Owned Measure C",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([ownedMeasure, second], 2)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m3"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+    });
+
+    it("disables Delete when only an expanded (non-latest) version is selected", async () => {
+      const parentMeasure = {
+        ...ownedMeasure,
+        hasAssociatedMeasures: true,
+        measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      const nestedMeasure = {
+        id: "m1-prev",
+        measureName: "Owned Measure A v0.9",
+        version: "0.9.000",
+        model: "QI-Core v4.1.1",
+        lastModifiedAt: "2026-04-01T12:00:00Z",
+        measureMetaData: { draft: false },
+        measureSet: {
+          acls: [],
+          cmsId: 42,
+          owner: "test_user",
+          measureSetId: "set-1",
+        },
+        measureSetId: "set-1",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+      mockGetMeasuresByMeasureSetId.mockResolvedValue([
+        parentMeasure,
+        nestedMeasure,
+      ]);
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1-prev"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+    });
   });
 });

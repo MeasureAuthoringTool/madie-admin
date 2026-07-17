@@ -21,12 +21,14 @@ import {
 } from "@tanstack/react-table";
 import {
   Button,
+  MadieDeleteDialog,
   MadieSpinner,
   MadieTable,
   Pagination,
   SearchAndFilter,
   Tab,
   Tabs,
+  Toast,
   TruncateText,
   useFilterSearch,
 } from "@madie/madie-design-system/dist/react";
@@ -37,6 +39,7 @@ import {
   ExpandIcon,
 } from "../../../../icons/MeasureListTableRightArrowIcons";
 import { formatCmsId } from "../../../../utils/cmsIdFormatter";
+import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 
 type Ownership = "OWNED" | "SHARED";
@@ -180,6 +183,16 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
+  // Delete measure action state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastType, setToastType] = useState<"success" | "danger">("success");
+  const [toastMessage, setToastMessage] = useState("");
+
+  // Retriggers useEffects after action performed
+  const [refreshToken, setRefreshToken] = useState(0);
+
   const [expandedMeasureSetId, setExpandedMeasureSetId] = useState<
     string | null
   >(null);
@@ -283,6 +296,7 @@ const UserProfile = () => {
     currentDirection,
     searchCriteria,
     measureServiceApi,
+    refreshToken,
   ]);
 
   const data = useMemo<MeasureRow[]>(
@@ -606,6 +620,68 @@ const UserProfile = () => {
     ]
   );
 
+  /*
+    Delete is enabled only when exactly one top-level (latest) measure is
+    selected. Any expanded sub-row (older version) selection, or more than one
+    selection across the two selection sources disables it.
+  */
+  const selectedTopLevelRows = table.getSelectedRowModel().rows;
+  const totalSelected =
+    selectedTopLevelRows.length + selectedExpandedRowIds.length;
+  const canDelete = totalSelected === 1 && selectedTopLevelRows.length === 1;
+
+  const draftOrVersionLabel = deleteTarget?.measureMetaData?.draft
+    ? "draft"
+    : `version ${deleteTarget?.version}`;
+
+  const openDeleteDialog = useCallback(() => {
+    const rows = table.getSelectedRowModel().rows;
+    if (rows.length === 1 && selectedExpandedRowIds.length === 0) {
+      setDeleteTarget(rows[0].original.actions);
+      setDeleteDialogOpen(true);
+    }
+  }, [table, selectedExpandedRowIds]);
+
+  const closeDeleteDialog = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+
+    const id = deleteTarget.id;
+    const isDraft = !!deleteTarget?.measureMetaData?.draft;
+    const owner = deleteTarget?.measureSet?.owner;
+
+    try {
+      if (isDraft) {
+        await measureServiceApi.deleteMeasure(id);
+      } else {
+        await measureServiceApi.adminDeleteMeasure(id, owner);
+      }
+
+      setToastType("success");
+      setToastMessage("Measure successfully deleted");
+      setToastOpen(true);
+      closeDeleteDialog();
+      table.toggleAllRowsSelected(false);
+      clearExpansion();
+      setRefreshToken((t) => t + 1);
+    } catch (err: any) {
+      setToastType("danger");
+      setToastMessage(err?.message || "Unable to delete measure");
+      setToastOpen(true);
+      closeDeleteDialog();
+    }
+  }, [
+    deleteTarget,
+    measureServiceApi,
+    closeDeleteDialog,
+    clearExpansion,
+    table,
+  ]);
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -637,6 +713,7 @@ const UserProfile = () => {
                 filterByOpts={MEASURE_FILTER_OPTIONS}
                 textFieldID="user-profile-measures"
               />
+              <ActionCenter canDelete={canDelete} onDelete={openDeleteDialog} />
             </div>
           )}
 
@@ -691,6 +768,38 @@ const UserProfile = () => {
           )}
         </div>
       </div>
+
+      <MadieDeleteDialog
+        open={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onContinue={handleConfirmDelete}
+        dialogTitle="Delete Measure"
+        statement
+        customDialogBody={
+          <>
+            Are you sure you want to delete {draftOrVersionLabel} of{" "}
+            <span className="strong">{deleteTarget?.measureName}</span>
+          </>
+        }
+      />
+
+      <Toast
+        toastKey="user-profile-delete-toast"
+        aria-live="polite"
+        toastType={toastType}
+        testId={
+          toastType === "danger"
+            ? "delete-measure-error-message"
+            : "delete-measure-success-message"
+        }
+        closeButtonProps={{
+          "data-testid": "close-toast-button",
+        }}
+        open={toastOpen}
+        message={toastMessage}
+        onClose={() => setToastOpen(false)}
+        autoHideDuration={6000}
+      />
     </div>
   );
 };
