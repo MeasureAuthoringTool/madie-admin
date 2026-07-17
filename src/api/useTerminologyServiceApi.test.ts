@@ -409,6 +409,198 @@ describe("TerminologyServiceApi", () => {
       );
     });
   });
+
+  describe("getCodeSystems", () => {
+    it("calls codesystems endpoint with default paging params", async () => {
+      const responseData = {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        number: 0,
+        size: 10,
+        numberOfElements: 0,
+      };
+
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: responseData,
+      });
+
+      const result = await terminologyService.getCodeSystems();
+
+      expect(axios.get).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/codesystems",
+        {
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          params: {
+            page: 0,
+            limit: 10,
+          },
+        }
+      );
+
+      expect(result).toEqual(responseData);
+    });
+
+    it("calls codesystems endpoint with custom page and limit", async () => {
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 2,
+          size: 25,
+          numberOfElements: 0,
+        },
+      });
+
+      await terminologyService.getCodeSystems(2, 25);
+
+      expect(axios.get).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/codesystems",
+        {
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          params: {
+            page: 2,
+            limit: 25,
+          },
+        }
+      );
+    });
+
+    it("includes sortInfo when provided", async () => {
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 10,
+          numberOfElements: 0,
+        },
+      });
+
+      await terminologyService.getCodeSystems(1, 20, "lastUpdated,true");
+
+      expect(axios.get).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/codesystems",
+        {
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          params: {
+            page: 1,
+            limit: 20,
+            sortInfo: "lastUpdated,true",
+          },
+        }
+      );
+    });
+
+    it("does not include sortInfo when not provided", async () => {
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 10,
+          numberOfElements: 0,
+        },
+      });
+
+      await terminologyService.getCodeSystems(1, 20);
+
+      expect(axios.get).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/codesystems",
+        {
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          params: {
+            page: 1,
+            limit: 20,
+          },
+        }
+      );
+    });
+
+    it("returns the page data from the response", async () => {
+      const responseData = {
+        content: [
+          {
+            id: "cs-1",
+            title: "Example Title",
+            name: "example",
+            version: { fhirVersion: "4.0.1" },
+            fullUrl: "http://example.com",
+            lastUpdated: new Date().toISOString(),
+            isLatestVersion: true,
+          },
+        ],
+        totalElements: 1,
+        totalPages: 1,
+        number: 0,
+        size: 10,
+        numberOfElements: 1,
+      };
+
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: responseData,
+      });
+
+      const result = await terminologyService.getCodeSystems();
+
+      expect(result).toEqual(responseData);
+      expect(result.content[0].id).toBe("cs-1");
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+
+      (axios.get as jest.Mock).mockResolvedValue({
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 10,
+          numberOfElements: 0,
+        },
+      });
+
+      await service.getCodeSystems();
+      await service.getCodeSystems();
+
+      expect(axios.get).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.objectContaining({
+          headers: {
+            Authorization: "Bearer token-1",
+          },
+        })
+      );
+
+      expect(axios.get).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.objectContaining({
+          headers: {
+            Authorization: "Bearer token-2",
+          },
+        })
+      );
+    });
+  });
 });
 
 describe("useTerminologyServiceApi hook", () => {
