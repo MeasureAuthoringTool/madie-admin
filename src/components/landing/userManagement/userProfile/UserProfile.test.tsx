@@ -722,6 +722,35 @@ describe("UserProfile", () => {
     expect(screen.queryByTestId("filter-by-select")).not.toBeInTheDocument();
   });
 
+  describe("status chips", () => {
+    it("renders the 'In Composite' chip for a component measure", async () => {
+      const componentMeasure = {
+        ...ownedMeasure,
+        id: "mc",
+        measureName: "Component Measure",
+        version: "1.0.000",
+        measureMetaData: { draft: false },
+        component: true,
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([componentMeasure], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      expect(await screen.findByText("In Composite")).toBeInTheDocument();
+    });
+
+    it("does not render the 'In Composite' chip for a non-component measure", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await screen.findByTestId("checkbox-m1");
+      expect(screen.queryByText("In Composite")).not.toBeInTheDocument();
+    });
+  });
+
   describe("delete measure action", () => {
     it("hides the action center when the AdminUserProfile flag is off", async () => {
       mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
@@ -952,6 +981,51 @@ describe("UserProfile", () => {
 
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeDisabled());
+    });
+
+    it("disables Delete with a composite tooltip when a single component measure is selected", async () => {
+      const componentMeasure = {
+        ...ownedMeasure,
+        id: "mc",
+        measureName: "Component Measure",
+        version: "1.0.000",
+        measureMetaData: { draft: false },
+        component: true,
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([componentMeasure], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mc"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+
+      userEvent.hover(deleteBtn.parentElement as HTMLElement);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component."
+      );
+    });
+
+    it("keeps Delete enabled for a single versioned non-component measure", async () => {
+      const versionedNonComponent = {
+        ...ownedMeasure,
+        id: "mvn",
+        measureName: "Versioned Non-Component",
+        version: "2.0.000",
+        measureMetaData: { draft: false },
+        component: false,
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([versionedNonComponent], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mvn"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
     });
   });
 });
