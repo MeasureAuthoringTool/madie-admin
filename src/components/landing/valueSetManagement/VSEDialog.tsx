@@ -35,7 +35,9 @@ export default function VSEDialog(props: ModalProps) {
 
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
   return (
     <MadieDialog
