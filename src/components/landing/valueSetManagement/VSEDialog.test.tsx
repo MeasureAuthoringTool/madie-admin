@@ -2,7 +2,7 @@
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import VSEDialog, { ModalProps, ReadOnlyJsonEditor } from "./VSEDialog";
+import VSEDialog, { type ModalProps, ReadOnlyJsonEditor } from "./VSEDialog";
 
 jest.mock("react-ace", () => {
   return function MockAceEditor(props: ModalProps) {
