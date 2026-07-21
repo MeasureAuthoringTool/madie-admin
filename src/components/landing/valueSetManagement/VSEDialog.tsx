@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef } from "react";
 import { MadieDialog } from "@madie/madie-design-system/dist/react";
 import { DialogContent } from "@mui/material";
 import AceEditor from "react-ace";
@@ -24,21 +24,7 @@ export default function VSEDialog(props: ModalProps) {
   }, [targetVSE]);
 
   // editor needs a fixed size. This gives it a relatively large set of real estate for most screens.
-  const [editorHeight, setEditorHeight] = useState(
-    `${window.innerHeight - 375}px`
-  );
-
-  useEffect(() => {
-    const handleResize = () => {
-      setEditorHeight(`${window.innerHeight - 200}px`);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  const editorHeight = `${window.innerHeight - 375}px`;
   return (
     <MadieDialog
       form
@@ -51,7 +37,7 @@ export default function VSEDialog(props: ModalProps) {
         },
       }}
       dialogProps={{
-        id: "view-hr-modal",
+        id: "view-vse-modal",
         onClose,
         open,
         maxWidth: "lg",

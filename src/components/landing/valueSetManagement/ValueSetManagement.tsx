@@ -6,7 +6,7 @@ import {
   MadieTable,
 } from "@madie/madie-design-system/dist/react";
 import useTerminologyServiceApi, {
-  ValueSetDisplayForAdmin,
+  type ValueSetDisplayForAdmin,
 } from "../../../api/useTerminologyServiceApi";
 import {
   getCoreRowModel,
@@ -256,7 +256,9 @@ export default function ValueSetManagement() {
         )}
         <VSEDialog
           open={!!targetVSE}
-          onClose={() => setTargetVSE(null)}
+          onClose={() => {
+            setTargetVSE(null);
+          }}
           targetVSE={targetVSE}
         />
 
