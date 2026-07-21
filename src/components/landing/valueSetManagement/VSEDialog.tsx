@@ -2,7 +2,6 @@ import React, { useMemo, useRef } from "react";
 import { MadieDialog } from "@madie/madie-design-system/dist/react";
 import { DialogContent } from "@mui/material";
 import AceEditor from "react-ace";
-import "ace-builds/src-noconflict/mode-json";
 
 interface ModalProps {
   open: boolean;
