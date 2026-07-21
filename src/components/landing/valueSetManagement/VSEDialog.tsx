@@ -10,9 +10,44 @@ interface ModalProps {
   targetVSE: string | null;
 }
 
+export function ReadOnlyJsonEditor({
+  value,
+  height,
+}: {
+  value: string;
+  height: string;
+}) {
+  const aceRef = useRef<AceEditor>(null);
+
+  return (
+    <AceEditor
+      value={value}
+      ref={aceRef}
+      mode="json"
+      theme="monokai"
+      name="ace-editor-wrapper"
+      enableBasicAutocompletion
+      width="100%"
+      height={height}
+      showPrintMargin
+      showGutter
+      setOptions={{
+        enableBasicAutocompletion: true,
+        enableLiveAutocompletion: true,
+        enableSnippets: true,
+        showLineNumbers: true,
+        tabSize: 2,
+        autoScrollEditorIntoView: true,
+      }}
+      editorProps={{ $blockScrolling: true }}
+      readOnly
+      wrapEnabled
+    />
+  );
+}
+
 export default function VSEDialog(props: ModalProps) {
   const { open = false, onClose, targetVSE } = props;
-  const aceRef = useRef<AceEditor>(null);
   // we get a string that's unformatted from the db. This will give it the pretty print look
   const formattedJson = useMemo(() => {
     if (!targetVSE) return "";
@@ -49,29 +84,7 @@ export default function VSEDialog(props: ModalProps) {
           data-testid="read-only-modal-container"
           className="read-only-modal-container"
         >
-          <AceEditor
-            value={formattedJson || ""}
-            ref={aceRef}
-            mode="json"
-            theme="monokai"
-            name="ace-editor-wrapper"
-            enableBasicAutocompletion={true}
-            width="100%"
-            height={editorHeight}
-            showPrintMargin={true}
-            showGutter={true}
-            setOptions={{
-              enableBasicAutocompletion: true,
-              enableLiveAutocompletion: true,
-              enableSnippets: true,
-              showLineNumbers: true,
-              tabSize: 2,
-              autoScrollEditorIntoView: true,
-            }}
-            editorProps={{ $blockScrolling: true }}
-            readOnly={true}
-            wrapEnabled={true}
-          />
+          <ReadOnlyJsonEditor value={formattedJson} height={editorHeight} />
         </div>
       </DialogContent>
     </MadieDialog>
