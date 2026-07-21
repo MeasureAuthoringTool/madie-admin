@@ -5,7 +5,9 @@ import {
   Pagination,
   MadieTable,
 } from "@madie/madie-design-system/dist/react";
-import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import useTerminologyServiceApi, {
+  ValueSetDisplayForAdmin,
+} from "../../../api/useTerminologyServiceApi";
 import {
   getCoreRowModel,
   useReactTable,
@@ -15,13 +17,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import "twin.macro";
 import "styled-components/macro";
 import "./ValueSetManagement.scss";
-
-interface ValueSetDisplayForAdmin {
-  id: string;
-  url: string;
-  lastUpdated: string;
-  manuallyModified: boolean;
-}
+import VSEDialog from "./VSEDialog";
 
 export default function ValueSetManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
@@ -48,6 +44,8 @@ export default function ValueSetManagement() {
   // MadieTable sorting
   const [currentSort, setCurrentSort] = useState<string>("url");
   const [currentDirection, setCurrentDirection] = useState<string>("ASC");
+
+  const [targetVSE, setTargetVSE] = useState<null | string>(null);
 
   useEffect(() => {
     const loadValueSets = async () => {
@@ -134,8 +132,16 @@ export default function ValueSetManagement() {
         header: "Action",
         accessorKey: "action",
         enableSorting: false,
-        cell: () => (
-          <Button variant="outline-secondary">View Expansions</Button>
+        cell: ({ row }) => (
+          <Button
+            variant="outline-secondary"
+            data-testId={`open-vs-${row.original.id}`}
+            onClick={() => {
+              setTargetVSE(row.original.valueSet);
+            }}
+          >
+            View Expansions
+          </Button>
         ),
       },
     ],
@@ -248,6 +254,11 @@ export default function ValueSetManagement() {
             No value sets found.
           </p>
         )}
+        <VSEDialog
+          open={!!targetVSE}
+          onClose={() => setTargetVSE(null)}
+          targetVSE={targetVSE}
+        />
 
         <Toast
           toastKey="value-set-management-toast"
