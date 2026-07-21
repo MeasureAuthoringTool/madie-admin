@@ -3,8 +3,8 @@ import { MadieDialog } from "@madie/madie-design-system/dist/react";
 import { DialogContent } from "@mui/material";
 import AceEditor from "react-ace";
 
-interface ModalProps {
-  open: boolean;
+export interface ModalProps {
+  open?: boolean;
   onClose: () => void;
   targetVSE: string | null;
 }

@@ -2,16 +2,16 @@
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import VSEDialog, { ReadOnlyJsonEditor } from "./VSEDialog";
+import VSEDialog, { ModalProps, ReadOnlyJsonEditor } from "./VSEDialog";
 
 jest.mock("react-ace", () => {
-  return function MockAceEditor(props: any) {
+  return function MockAceEditor(props: ModalProps) {
     return <div data-testid="ace-editor">{props.value}</div>;
   };
 });
 
 jest.mock("@madie/madie-design-system/dist/react", () => ({
-  MadieDialog: ({ title, children, dialogProps }: any) => (
+  MadieDialog: ({ title, children, dialogProps }: unknown) => (
     <div data-testid="madie-dialog" data-open={dialogProps.open}>
       <div>{title}</div>
       {children}
