@@ -25,6 +25,7 @@ export interface ValueSetDisplayForAdmin {
   url: string;
   lastUpdated: string;
   manuallyModified: boolean;
+  valueSet: string;
 }
 
 export class TerminologyServiceApi {

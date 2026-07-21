@@ -452,4 +452,38 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "lastUpdated,false");
     });
   });
+  it("opens the VSE dialog when View Expansions is clicked", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+          valueSet: '{"resourceType":"ValueSet"}',
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    const button = await screen.findByRole("button", {
+      name: /view expansions/i,
+    });
+
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      expect(screen.getByText("Details")).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByTestId("close-button"));
+    await waitFor(() => {
+      expect(screen.queryByText("Details")).not.toBeInTheDocument();
+    });
+  });
 });
