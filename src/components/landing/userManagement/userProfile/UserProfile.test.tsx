@@ -412,6 +412,46 @@ describe("UserProfile", () => {
     expect(screen.getByTestId("library-action-lib2")).toBeInTheDocument();
   });
 
+  it("logs an error when loading library counts fails", async () => {
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockRejectedValueOnce(new Error("count failure"))
+      .mockResolvedValueOnce(pageWith([], 0));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Unable to load library counts",
+        expect.any(Error)
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("shows a fallback error when library loading fails without an error message", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 1))
+      .mockResolvedValueOnce(pageWith([], 1))
+      .mockRejectedValueOnce({});
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load libraries"
+      );
+    });
+  });
+
   it("expands a shared library row and loads nested versions from library set hierarchy", async () => {
     const nestedSharedLibrary = {
       ...sharedLibrary,
@@ -446,6 +486,32 @@ describe("UserProfile", () => {
     expect(
       await screen.findByTestId("expanded-library-row-lib2-prev")
     ).toBeInTheDocument();
+  });
+
+  it("shows an error message when the nested-libraries fetch fails", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockResolvedValueOnce(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockRejectedValue(
+      new Error("nested library fetch failed")
+    );
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load related nested libraries"
+      );
+    });
+    expect(
+      screen.queryByTestId("expanded-library-row-lib1-prev")
+    ).not.toBeInTheDocument();
   });
 
   it("shows an error message when the search fails", async () => {
@@ -1123,6 +1189,27 @@ describe("UserProfile", () => {
         expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
       );
       expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("shows a fallback delete error toast when delete fails without an error message", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockDeleteMeasure.mockRejectedValue({});
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("delete-measure-error-message")
+        ).toHaveTextContent("Unable to delete measure");
+      });
     });
 
     it("disables Delete when more than one measure is selected", async () => {
