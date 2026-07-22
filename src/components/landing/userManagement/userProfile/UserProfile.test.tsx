@@ -98,6 +98,22 @@ const ownedLibrary = {
   hasAssociatedLibraries: true,
 };
 
+const sharedLibrary = {
+  id: "lib2",
+  cqlLibraryName: "Shared Library B",
+  version: "2.0.000",
+  model: "QDM v5.6",
+  draft: false,
+  ownerDisplayName: "Library Owner",
+  lastModifiedAt: "2026-05-09T12:00:00Z",
+  librarySet: {
+    librarySetId: "library-set-2",
+    acls: [],
+  },
+  librarySetId: "library-set-2",
+  hasAssociatedLibraries: true,
+};
+
 const pageWith = (rows: any[], totalElements: number = rows.length) => ({
   content: rows,
   totalPages: 1,
@@ -278,7 +294,9 @@ describe("UserProfile", () => {
 
   it("renders Owned Libraries tab with the library set count", async () => {
     mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
-    mockFetchCqlLibraries.mockResolvedValue(pageWith([], 5));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2));
 
     renderAt("/admin/userProfile/test_user");
 
@@ -294,6 +312,9 @@ describe("UserProfile", () => {
     });
     expect(screen.getByTestId("owned-libraries-tab")).toHaveTextContent(
       "Owned Libraries (5)"
+    );
+    expect(screen.getByTestId("shared-libraries-tab")).toHaveTextContent(
+      "Shared Libraries (2)"
     );
   });
 
@@ -355,6 +376,75 @@ describe("UserProfile", () => {
 
     expect(
       await screen.findByTestId("expanded-library-row-lib1-prev")
+    ).toBeInTheDocument();
+  });
+
+  it("loads shared libraries on tab click using Updated DESC as default sort", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValueOnce(pageWith([sharedLibrary], 4));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    mockFetchCqlLibraries.mockClear();
+    userEvent.click(screen.getByTestId("shared-libraries-tab"));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "SHARED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    expect(
+      await screen.findByTestId("library-name-lib2-content")
+    ).toHaveTextContent("Shared Library B");
+    expect(screen.getByText("Owner")).toBeInTheDocument();
+    expect(screen.getByText("Library Owner")).toBeInTheDocument();
+    expect(screen.queryByText("Shared")).not.toBeInTheDocument();
+    expect(screen.getByTestId("library-action-lib2")).toBeInTheDocument();
+  });
+
+  it("expands a shared library row and loads nested versions from library set hierarchy", async () => {
+    const nestedSharedLibrary = {
+      ...sharedLibrary,
+      id: "lib2-prev",
+      version: "1.9.000",
+      hasAssociatedLibraries: false,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValueOnce(pageWith([sharedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      sharedLibrary,
+      nestedSharedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib2"));
+
+    await waitFor(() => {
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
+        "library-set-2",
+        true,
+        { searchField: "", optionalSearchProperties: [] }
+      );
+    });
+
+    expect(
+      await screen.findByTestId("expanded-library-row-lib2-prev")
     ).toBeInTheDocument();
   });
 
