@@ -52,11 +52,11 @@ type SearchCriteria = {
   optionalSearchProperties: string[];
 };
 
-type RequestResult<T> = { ok: true; data: T } | { ok: false; reason: unknown };
+type RequestResult<T> = { ok: true; data: T } | { ok: false; reason: any };
 
 const isFailedRequestResult = <T,>(
   result: RequestResult<T>
-): result is { ok: false; reason: unknown } => result.ok === false;
+): result is { ok: false; reason: any } => result.ok === false;
 
 type MeasureRow = {
   id: string;
@@ -149,15 +149,15 @@ const isLibraryOwnership = (ownership: Ownership): boolean =>
 const cqlLibraryOwnershipForTab = (ownership: Ownership): "OWNED" | "SHARED" =>
   ownership === "SHAREDLIBRARY" ? "SHARED" : "OWNED";
 
-const isAbortError = (err: unknown): boolean => {
+const isAbortError = (err: any): boolean => {
   if (!err || typeof err !== "object") return false;
   const e = err as { name?: string; code?: string };
   return e.name === "AbortError" || e.code === "ERR_CANCELED";
 };
 
-const getErrorMessage = (err: unknown, fallback: string): string => {
+const getErrorMessage = (err: any, fallback: string): string => {
   if (err && typeof err === "object" && "message" in err) {
-    return String((err as { message?: unknown }).message || fallback);
+    return String((err as { message?: any }).message || fallback);
   }
   return fallback;
 };
@@ -346,7 +346,7 @@ const UserProfile = () => {
     userServiceApi
       .getUser(harpId, controller.signal)
       .then((user) => adminUserStore.updateUser(user))
-      .catch((err: unknown) => {
+      .catch((err: any) => {
         if (!isAbortError(err)) adminUserStore.updateUser(null);
       });
     return () => controller.abort();
@@ -381,7 +381,7 @@ const UserProfile = () => {
           SHAREDLIBRARY: sharedData?.totalElements ?? 0,
         }));
       })
-      .catch((err: unknown) => {
+      .catch((err: any) => {
         if (!isAbortError(err)) {
           console.error("Unable to load library counts", err);
         }
