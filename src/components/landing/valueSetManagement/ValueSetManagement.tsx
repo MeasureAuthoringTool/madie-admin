@@ -226,7 +226,7 @@ export default function ValueSetManagement() {
             inputProps={{
               "data-testid": `vs-list-search-input`,
             }}
-            data-testid="test-case-list-search"
+            data-testid="vs-search"
             name="searchField"
             value={searchText}
             onChange={(e) => {
