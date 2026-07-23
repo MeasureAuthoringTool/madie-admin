@@ -104,6 +104,14 @@ const COMPONENT_DELETE_DISABLED_MSG =
   "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component.";
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
+const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model", "CMS ID"];
+
+const LIBRARY_FILTER_MAP = new Map<string, string>([
+  ["Library", "library"],
+  ["Version", "version"],
+  ["Model", "model"],
+  ["CMS ID", "cmsId"],
+]);
 
 const MEASURE_FILTER_MAP = new Map<string, string>([
   ["Measure", "measure"],
@@ -272,6 +280,8 @@ const UserProfile = () => {
 
   const [activeTab, setActiveTab] = useState(0);
   const activeOwnership = ownershipForTab(activeTab);
+  const isLibraryTab =
+    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY";
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
   const [currentSort, setCurrentSort] = useState("");
@@ -389,10 +399,7 @@ const UserProfile = () => {
     setLoading(true);
     setErrMsg("");
 
-    if (
-      activeOwnership === "OWNEDLIBRARY" ||
-      activeOwnership === "SHAREDLIBRARY"
-    ) {
+    if (isLibraryTab) {
       const sortInfo = currentSort
         ? `${currentSort},${currentDirection === "DESC"}`
         : "lastModifiedAt,false";
@@ -402,7 +409,7 @@ const UserProfile = () => {
           activeOwnership === "SHAREDLIBRARY" ? "SHARED" : "OWNED",
           currentLimit,
           currentPage - 1,
-          DEFAULT_SEARCH_CRITERIA,
+          searchCriteria,
           sortInfo,
           controller.signal
         )
@@ -504,6 +511,7 @@ const UserProfile = () => {
   }, [
     harpId,
     activeOwnership,
+    isLibraryTab,
     currentPage,
     currentLimit,
     currentSort,
@@ -905,33 +913,41 @@ const UserProfile = () => {
 
   const handlePageChange = useCallback(
     (_e: any, page: number) => {
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
         setSelectedExpandedRowIds([]);
       }
       setCurrentPage(page);
     },
-    [activeOwnership, table]
+    [isLibraryTab, table]
   );
 
   const handleSearchTrigger = useCallback(() => {
     finalizeSearchCriteria();
 
-    const selectedProperty = MEASURE_FILTER_MAP.get(filterBy);
+    const activeFilterMap = isLibraryTab
+      ? LIBRARY_FILTER_MAP
+      : MEASURE_FILTER_MAP;
+    const selectedProperty = activeFilterMap.get(filterBy);
     let optionalSearchProperties: string[] = [];
 
     if (filterBy && selectedProperty) {
       optionalSearchProperties = [selectedProperty];
     } else if (!filterBy && searchField) {
-      optionalSearchProperties = Array.from(MEASURE_FILTER_MAP.values());
+      optionalSearchProperties = isLibraryTab
+        ? Array.from(LIBRARY_FILTER_MAP.values())
+        : Array.from(MEASURE_FILTER_MAP.values());
     }
 
     setSearchCriteria({ searchField, optionalSearchProperties });
     handlePageChange(null, 1);
-  }, [finalizeSearchCriteria, filterBy, searchField, handlePageChange]);
+  }, [
+    finalizeSearchCriteria,
+    filterBy,
+    searchField,
+    isLibraryTab,
+    handlePageChange,
+  ]);
 
   const handleSearchClear = useCallback(() => {
     blankSearchCriteria();
@@ -941,15 +957,12 @@ const UserProfile = () => {
   const handleLimitChange = useCallback(
     (e: any) => {
       setCurrentLimit(Number(e.target.value));
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
       }
       setCurrentPage(1);
     },
-    [activeOwnership, table]
+    [isLibraryTab, table]
   );
 
   const handleSort = useCallback(
@@ -967,14 +980,11 @@ const UserProfile = () => {
       setCurrentSort(nextSort);
       setCurrentDirection(nextDirection);
       setCurrentPage(1);
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
       }
     },
-    [activeOwnership, currentSort, currentDirection, table]
+    [isLibraryTab, currentSort, currentDirection, table]
   );
 
   const toggleExpandedRowSelection = useCallback(
@@ -1058,26 +1068,17 @@ const UserProfile = () => {
     [expandedLibrarySetId, expandedLibraryRows, libraryTable]
   );
 
-  const activeTable =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? libraryTable
-      : table;
-  const activeExpandedRowRenderer =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? renderExpandedLibraryRow
-      : renderExpandedRow;
-  const activePage =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? librariesPage
-      : measuresPage;
-  const activeTableId =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? "userProfileLibrariesTable"
-      : "userProfileMeasuresTable";
-  const activeTableTestId =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? "user-profile-libraries-tbl"
-      : "user-profile-measures-tbl";
+  const activeTable = isLibraryTab ? libraryTable : table;
+  const activeExpandedRowRenderer = isLibraryTab
+    ? renderExpandedLibraryRow
+    : renderExpandedRow;
+  const activePage = isLibraryTab ? librariesPage : measuresPage;
+  const activeTableId = isLibraryTab
+    ? "userProfileLibrariesTable"
+    : "userProfileMeasuresTable";
+  const activeTableTestId = isLibraryTab
+    ? "user-profile-libraries-tbl"
+    : "user-profile-measures-tbl";
 
   /*
     Delete is enabled only when exactly one top-level (latest) measure is
@@ -1102,17 +1103,13 @@ const UserProfile = () => {
     : `version ${deleteTarget?.version}`;
 
   const openDeleteDialog = useCallback(() => {
-    if (
-      activeOwnership === "OWNEDLIBRARY" ||
-      activeOwnership === "SHAREDLIBRARY"
-    )
-      return;
+    if (isLibraryTab) return;
     const rows = table.getSelectedRowModel().rows;
     if (rows.length === 1 && selectedExpandedRowIds.length === 0) {
       setDeleteTarget(rows[0].original.actions);
       setDeleteDialogOpen(true);
     }
-  }, [activeOwnership, table, selectedExpandedRowIds]);
+  }, [isLibraryTab, table, selectedExpandedRowIds]);
 
   const closeDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -1182,32 +1179,29 @@ const UserProfile = () => {
               />
             </Tabs>
           </section>
-
-          {featureFlags?.AdminUserProfile &&
-            activeOwnership !== "OWNEDLIBRARY" &&
-            activeOwnership !== "SHAREDLIBRARY" && (
-              <div
-                className="search-filter-bar"
-                data-testid="search-filter-bar"
-              >
-                <SearchAndFilter
-                  filterBy={filterBy}
-                  searchField={searchField}
-                  onFilterChange={handleFilter}
-                  onSearchChange={handleSearch}
-                  onSearchTrigger={handleSearchTrigger}
-                  onSearchClear={handleSearchClear}
-                  filterByOpts={MEASURE_FILTER_OPTIONS}
-                  textFieldID="user-profile-measures"
-                />
+          {featureFlags?.AdminUserProfile && (
+            <div className="search-filter-bar" data-testid="search-filter-bar">
+              <SearchAndFilter
+                filterBy={filterBy}
+                searchField={searchField}
+                onFilterChange={handleFilter}
+                onSearchChange={handleSearch}
+                onSearchTrigger={handleSearchTrigger}
+                onSearchClear={handleSearchClear}
+                filterByOpts={
+                  isLibraryTab ? LIBRARY_FILTER_OPTIONS : MEASURE_FILTER_OPTIONS
+                }
+                textFieldID="user-profile-measures"
+              />
+              {!isLibraryTab && (
                 <ActionCenter
                   canDelete={canDelete}
                   onDelete={openDeleteDialog}
                   disabledReason={deleteDisabledReason}
                 />
-              </div>
-            )}
-
+              )}
+            </div>
+          )}
           {errMsg && !loading && (
             <p
               className="error-message"
