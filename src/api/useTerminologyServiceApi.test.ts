@@ -311,6 +311,36 @@ describe("TerminologyServiceApi", () => {
       );
     });
 
+    it("includes sortInfo when provided, and searchTermSupplied", async () => {
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 10,
+          numberOfElements: 0,
+        },
+      });
+
+      await terminologyService.getValueSets(1, 20, "lastUpdated,true", "test");
+
+      expect(axios.get).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/valuesets",
+        {
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          params: {
+            page: 1,
+            searchTerm: "test",
+            limit: 20,
+            sortInfo: "lastUpdated,true",
+          },
+        }
+      );
+    });
+
     it("does not include sortInfo when not provided", async () => {
       (axios.get as jest.Mock).mockResolvedValueOnce({
         data: {

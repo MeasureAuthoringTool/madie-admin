@@ -90,6 +90,25 @@ declare module "@madie/madie-util" {
 
   export function useMeasureServiceApi(): MeasureServiceApi;
 
+  export class CqlLibraryServiceApi {
+    constructor(baseUrl: string, getAccessToken: () => string);
+    fetchCqlLibraries(
+      ownershipType: string,
+      limit?: string | number,
+      page?: number,
+      searchCriteria?: any,
+      sortInfo?: string,
+      signal?: AbortSignal
+    ): Promise<any>;
+    getLibrariesByLibrarySetId(
+      librarySetId: string,
+      sortByLatestVersion?: boolean,
+      librarySearchCriteria?: any
+    ): Promise<any[]>;
+  }
+
+  export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;
+
   export interface ServiceConfig {
     terminologyService?: {
       baseUrl: string;

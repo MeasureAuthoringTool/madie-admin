@@ -10,6 +10,7 @@ import { useParams } from "react-router-dom";
 import {
   useUserServiceApi,
   useMeasureServiceApi,
+  useCqlLibraryServiceApi,
   adminUserStore,
   useFeatureFlags,
   ExportDialog,
@@ -49,8 +50,23 @@ import {
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 
-type Ownership = "OWNED" | "SHARED";
+type Ownership =
+  | "OWNED_MEASURE"
+  | "SHARED_MEASURE"
+  | "OWNED_LIBRARY"
+  | "SHARED_LIBRARY";
 type Direction = "ASC" | "DESC" | "";
+
+type SearchCriteria = {
+  searchField: string;
+  optionalSearchProperties: string[];
+};
+
+type RequestResult<T> = { ok: true; data: T } | { ok: false; reason: any };
+
+const isFailedRequestResult = <T,>(
+  result: RequestResult<T>
+): result is { ok: false; reason: any } => result.ok === false;
 
 type MeasureRow = {
   id: string;
@@ -61,6 +77,15 @@ type MeasureRow = {
   hasAssociatedMeasures: boolean;
 };
 
+type LibraryRow = {
+  id: string;
+  cqlLibraryName: string;
+  version: string;
+  model: string;
+  actions: any;
+  hasAssociatedLibraries: boolean;
+};
+
 type MeasuresPageState = {
   measures: any[];
   totalElements: number;
@@ -69,7 +94,15 @@ type MeasuresPageState = {
   offset: number;
 };
 
-const DEFAULT_SEARCH_CRITERIA = {
+type LibrariesPageState = {
+  libraries: any[];
+  totalElements: number;
+  visibleItems: number;
+  totalPages: number;
+  offset: number;
+};
+
+const DEFAULT_SEARCH_CRITERIA: SearchCriteria = {
   searchField: "",
   optionalSearchProperties: [],
 };
@@ -97,13 +130,49 @@ const EMPTY_MEASURES_PAGE: MeasuresPageState = {
   offset: 0,
 };
 
-const ownershipForTab = (tab: number): Ownership =>
-  tab === 1 ? "SHARED" : "OWNED";
+const EMPTY_LIBRARIES_PAGE: LibrariesPageState = {
+  libraries: [],
+  totalElements: 0,
+  visibleItems: 0,
+  totalPages: 0,
+  offset: 0,
+};
 
-const isAbortError = (err: unknown): boolean => {
+const ownershipForTab = (tab: number): Ownership => {
+  switch (tab) {
+    case 0:
+      return "OWNED_MEASURE";
+    case 1:
+      return "SHARED_MEASURE";
+    case 2:
+      return "OWNED_LIBRARY";
+    case 3:
+      return "SHARED_LIBRARY";
+    default:
+      return "OWNED_MEASURE";
+  }
+};
+
+const isLibraryOwnership = (ownership: Ownership): boolean =>
+  ownership === "OWNED_LIBRARY" || ownership === "SHARED_LIBRARY";
+
+const measureOwnershipForTab = (ownership: Ownership): "OWNED" | "SHARED" =>
+  ownership === "SHARED_MEASURE" ? "SHARED" : "OWNED";
+
+const cqlLibraryOwnershipForTab = (ownership: Ownership): "OWNED" | "SHARED" =>
+  ownership === "SHARED_LIBRARY" ? "SHARED" : "OWNED";
+
+const isAbortError = (err: any): boolean => {
   if (!err || typeof err !== "object") return false;
   const e = err as { name?: string; code?: string };
   return e.name === "AbortError" || e.code === "ERR_CANCELED";
+};
+
+const getErrorMessage = (err: any, fallback: string): string => {
+  if (err && typeof err === "object" && "message" in err) {
+    return String((err as { message?: any }).message || fallback);
+  }
+  return fallback;
 };
 
 const transformRow = (m: any): MeasureRow => ({
@@ -113,6 +182,15 @@ const transformRow = (m: any): MeasureRow => ({
   model: m?.model,
   actions: m,
   hasAssociatedMeasures: !!m?.hasAssociatedMeasures,
+});
+
+const transformLibraryRow = (library: any): LibraryRow => ({
+  id: library?.id,
+  cqlLibraryName: library?.cqlLibraryName,
+  version: library?.version,
+  model: library?.model,
+  actions: library,
+  hasAssociatedLibraries: !!library?.hasAssociatedLibraries,
 });
 
 function IndeterminateCheckbox({
@@ -196,6 +274,7 @@ const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
+  const cqlLibraryServiceApi = useRef(useCqlLibraryServiceApi()).current;
   const featureFlags = useFeatureFlags();
 
   const {
@@ -206,9 +285,13 @@ const UserProfile = () => {
     finalizeSearchCriteria,
     blankSearchCriteria,
   } = useFilterSearch();
-  const [searchCriteria, setSearchCriteria] = useState(DEFAULT_SEARCH_CRITERIA);
+  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>(
+    DEFAULT_SEARCH_CRITERIA
+  );
 
   const [activeTab, setActiveTab] = useState(0);
+  const activeOwnership = ownershipForTab(activeTab);
+  const isLibraryTab = isLibraryOwnership(activeOwnership);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
   const [currentSort, setCurrentSort] = useState("");
@@ -216,9 +299,13 @@ const UserProfile = () => {
 
   const [measuresPage, setMeasuresPage] =
     useState<MeasuresPageState>(EMPTY_MEASURES_PAGE);
+  const [librariesPage, setLibrariesPage] =
+    useState<LibrariesPageState>(EMPTY_LIBRARIES_PAGE);
   const [counts, setCounts] = useState<Record<Ownership, number>>({
-    OWNED: 0,
-    SHARED: 0,
+    OWNED_MEASURE: 0,
+    SHARED_MEASURE: 0,
+    OWNED_LIBRARY: 0,
+    SHARED_LIBRARY: 0,
   });
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
@@ -253,6 +340,17 @@ const UserProfile = () => {
   const [selectedExpandedRowIds, setSelectedExpandedRowIds] = useState<
     string[]
   >([]);
+  const [expandedLibrarySetId, setExpandedLibrarySetId] = useState<
+    string | null
+  >(null);
+  const [expandedLibraryRows, setExpandedLibraryRows] = useState<LibraryRow[]>(
+    []
+  );
+  const expandedLibrarySetIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    expandedLibrarySetIdRef.current = expandedLibrarySetId;
+  }, [expandedLibrarySetId]);
+
   const expandedMeasureSetIdRef = useRef<string | null>(null);
   useEffect(() => {
     expandedMeasureSetIdRef.current = expandedMeasureSetId;
@@ -264,55 +362,147 @@ const UserProfile = () => {
     setSelectedExpandedRowIds([]);
   }, []);
 
+  const clearLibraryExpansion = useCallback(() => {
+    setExpandedLibrarySetId(null);
+    setExpandedLibraryRows([]);
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     userServiceApi
       .getUser(harpId, controller.signal)
       .then((user) => adminUserStore.updateUser(user))
-      .catch((err: unknown) => {
+      .catch((err: any) => {
         if (!isAbortError(err)) adminUserStore.updateUser(null);
       });
     return () => controller.abort();
   }, [harpId, userServiceApi]);
 
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([
+      cqlLibraryServiceApi.fetchCqlLibraries(
+        "OWNED",
+        1,
+        0,
+        DEFAULT_SEARCH_CRITERIA,
+        "lastModifiedAt,false",
+        controller.signal
+      ),
+      cqlLibraryServiceApi.fetchCqlLibraries(
+        "SHARED",
+        1,
+        0,
+        DEFAULT_SEARCH_CRITERIA,
+        "lastModifiedAt,false",
+        controller.signal
+      ),
+    ])
+      .then(([ownedData, sharedData]: any[]) => {
+        setCounts((prev) => ({
+          ...prev,
+          OWNED_LIBRARY: ownedData?.totalElements ?? 0,
+          SHARED_LIBRARY: sharedData?.totalElements ?? 0,
+        }));
+      })
+      .catch((err: any) => {
+        if (!isAbortError(err)) {
+          console.error("Unable to load library counts", err);
+        }
+      });
+
+    return () => controller.abort();
+  }, [harpId, cqlLibraryServiceApi, refreshToken]);
+
   useEffect(() => {
     const controller = new AbortController();
     const requestId = ++requestIdRef.current;
-    const active = ownershipForTab(activeTab);
-    const inactive: Ownership = active === "OWNED" ? "SHARED" : "OWNED";
     setLoading(true);
     setErrMsg("");
 
-    const dataPromise = measureServiceApi.adminSearchMeasuresForUser(
-      harpId,
-      [active],
-      currentLimit,
-      currentPage - 1,
-      currentSort || "lastModifiedAt",
-      currentDirection || "DESC",
-      searchCriteria,
-      controller
-    );
-    const countPromise = measureServiceApi.adminSearchMeasuresForUser(
-      harpId,
-      [inactive],
-      1,
-      0,
-      "lastModifiedAt",
-      "DESC",
-      DEFAULT_SEARCH_CRITERIA,
-      controller
-    );
+    if (isLibraryOwnership(activeOwnership)) {
+      const sortInfo = currentSort
+        ? `${currentSort},${currentDirection === "DESC"}`
+        : "lastModifiedAt,false";
 
-    Promise.allSettled([dataPromise, countPromise]).then((results) => {
+      cqlLibraryServiceApi
+        .fetchCqlLibraries(
+          cqlLibraryOwnershipForTab(activeOwnership),
+          currentLimit,
+          currentPage - 1,
+          DEFAULT_SEARCH_CRITERIA,
+          sortInfo,
+          controller.signal
+        )
+        .then((d: any) => {
+          if (requestId !== requestIdRef.current) return;
+
+          const totalElements = d?.totalElements ?? 0;
+          setLibrariesPage({
+            libraries: d?.content ?? [],
+            totalElements,
+            totalPages: d?.totalPages ?? 0,
+            visibleItems: d?.numberOfElements ?? 0,
+            offset: d?.pageable?.offset ?? 0,
+          });
+          setCounts((prev) => ({
+            ...prev,
+            [activeOwnership]: totalElements,
+          }));
+          setLoading(false);
+        })
+        .catch((err: any) => {
+          if (requestId !== requestIdRef.current) return;
+          if (!isAbortError(err)) {
+            setErrMsg(err?.message || "Unable to load libraries");
+            setLibrariesPage(EMPTY_LIBRARIES_PAGE);
+          }
+          setLoading(false);
+        });
+
+      return () => controller.abort();
+    }
+
+    const active = activeOwnership;
+    const inactive: Ownership =
+      active === "OWNED_MEASURE" ? "SHARED_MEASURE" : "OWNED_MEASURE";
+
+    const dataPromise: Promise<RequestResult<any>> = measureServiceApi
+      .adminSearchMeasuresForUser(
+        harpId,
+        [measureOwnershipForTab(active)],
+        currentLimit,
+        currentPage - 1,
+        currentSort || "lastModifiedAt",
+        currentDirection || "DESC",
+        searchCriteria,
+        controller
+      )
+      .then((data): RequestResult<any> => ({ ok: true, data }))
+      .catch((reason): RequestResult<any> => ({ ok: false, reason }));
+
+    const countPromise: Promise<RequestResult<any>> = measureServiceApi
+      .adminSearchMeasuresForUser(
+        harpId,
+        [measureOwnershipForTab(inactive)],
+        1,
+        0,
+        "lastModifiedAt",
+        "DESC",
+        DEFAULT_SEARCH_CRITERIA,
+        controller
+      )
+      .then((data): RequestResult<any> => ({ ok: true, data }))
+      .catch((reason): RequestResult<any> => ({ ok: false, reason }));
+
+    Promise.all([dataPromise, countPromise]).then(([dataRes, countRes]) => {
       if (requestId !== requestIdRef.current) return;
-
-      const [dataRes, countRes] = results;
       let activeTotal = 0;
 
-      if (dataRes.status === "fulfilled") {
-        const d = dataRes.value;
+      if (dataRes.ok) {
+        const d = dataRes.data;
         activeTotal = d?.totalElements ?? 0;
         setMeasuresPage({
           measures: d?.content ?? [],
@@ -321,15 +511,17 @@ const UserProfile = () => {
           visibleItems: d?.numberOfElements ?? 0,
           offset: d?.pageable?.offset ?? 0,
         });
-      } else if (!isAbortError(dataRes.reason)) {
-        setErrMsg(dataRes.reason?.message || "Unable to load measures");
+      } else if (
+        isFailedRequestResult(dataRes) &&
+        !isAbortError(dataRes.reason)
+      ) {
+        setErrMsg(getErrorMessage(dataRes.reason, "Unable to load measures"));
         setMeasuresPage(EMPTY_MEASURES_PAGE);
       }
 
-      const inactiveTotal =
-        countRes.status === "fulfilled"
-          ? countRes.value?.totalElements ?? 0
-          : undefined;
+      const inactiveTotal = countRes.ok
+        ? countRes.data?.totalElements ?? 0
+        : undefined;
 
       setCounts((prev) => ({
         ...prev,
@@ -342,19 +534,25 @@ const UserProfile = () => {
     return () => controller.abort();
   }, [
     harpId,
-    activeTab,
+    activeOwnership,
     currentPage,
     currentLimit,
     currentSort,
     currentDirection,
     searchCriteria,
     measureServiceApi,
+    cqlLibraryServiceApi,
     refreshToken,
   ]);
 
   const data = useMemo<MeasureRow[]>(
     () => measuresPage.measures.map(transformRow),
     [measuresPage.measures]
+  );
+
+  const libraryData = useMemo<LibraryRow[]>(
+    () => librariesPage.libraries.map(transformLibraryRow),
+    [librariesPage.libraries]
   );
 
   const toggleExpansion = useCallback(
@@ -381,6 +579,32 @@ const UserProfile = () => {
       }
     },
     [measureServiceApi, clearExpansion]
+  );
+
+  const toggleLibraryExpansion = useCallback(
+    async (parent: any) => {
+      const librarySetId = parent?.librarySetId;
+      if (!librarySetId) return;
+      if (expandedLibrarySetIdRef.current === librarySetId) {
+        clearLibraryExpansion();
+        return;
+      }
+      try {
+        const results = await cqlLibraryServiceApi.getLibrariesByLibrarySetId(
+          librarySetId,
+          true,
+          DEFAULT_SEARCH_CRITERIA
+        );
+        const nested = (results ?? []).filter((r: any) => r?.id !== parent?.id);
+        setExpandedLibrarySetId(librarySetId);
+        setExpandedLibraryRows(nested.map(transformLibraryRow));
+      } catch (err) {
+        if (isAbortError(err)) return;
+        clearLibraryExpansion();
+        setErrMsg("Unable to load related nested libraries");
+      }
+    },
+    [cqlLibraryServiceApi, clearLibraryExpansion]
   );
 
   const columns = useMemo<ColumnDef<MeasureRow>[]>(
@@ -549,23 +773,160 @@ const UserProfile = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const libraryColumns = useMemo<ColumnDef<LibraryRow>[]>(
+    () => [
+      {
+        header: "Library",
+        accessorKey: "cqlLibraryName",
+        cell: (info) => (
+          <TruncateText
+            text={info.row.original.cqlLibraryName}
+            maxLength={120}
+            dataTestId={`library-name-${info.row.original.id}`}
+          />
+        ),
+      },
+      {
+        header: "Version",
+        accessorKey: "version",
+        cell: (info) => (
+          <TruncateText
+            text={info.row.original.version}
+            maxLength={60}
+            dataTestId={`library-version-${info.row.original.id}`}
+          />
+        ),
+      },
+      {
+        sortDescFirst: false,
+        header: "Status",
+        accessorKey: "draft",
+        cell: (info) => (
+          <div>
+            {info.row.original.actions?.draft && (
+              <Chip className="chip-draft" label="Draft" />
+            )}
+          </div>
+        ),
+      },
+      {
+        header: "Model",
+        accessorKey: "model",
+        cell: (info) => (
+          <TruncateText
+            text={info.row.original.model}
+            maxLength={120}
+            dataTestId={`library-model-${info.row.original.id}`}
+          />
+        ),
+      },
+      {
+        sortDescFirst: false,
+        header: "Shared",
+        accessorKey: "librarySet.acls",
+        cell: (info) => {
+          const shared =
+            info.row.original.actions?.librarySet?.acls?.length > 0;
+          return (
+            <div
+              data-testid={`library-shared-${info.row.original.id}`}
+              aria-label={shared ? "Shared" : "Not shared"}
+            >
+              {shared && <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Updated",
+        accessorKey: "lastModifiedAt",
+        cell: (info) => {
+          const ts = info.row.original.actions?.lastModifiedAt;
+          return (
+            <span data-testid={`library-updated-${info.row.original.id}`}>
+              {ts ? new Date(ts).toLocaleDateString() : ""}
+            </span>
+          );
+        },
+      },
+      {
+        id: "action",
+        header: "",
+        enableSorting: false,
+        cell: (info) => (
+          <Button
+            variant="outline-filled"
+            data-testid={`library-action-${info.row.original.id}`}
+            aria-label={`View Library ${info.row.original.cqlLibraryName} ${info.row.original.version}`}
+            tabIndex={0}
+            role="button"
+          >
+            View
+          </Button>
+        ),
+      },
+      {
+        id: "expandArrow",
+        enableSorting: false,
+        header: () => <span aria-label="expandArrow" />,
+        cell: (info) => {
+          if (!info.row.original.hasAssociatedLibraries) return null;
+          const library = info.row.original.actions;
+          const isOpen = expandedLibrarySetId === library?.librarySetId;
+          const onActivate = () => toggleLibraryExpansion(library);
+          return (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={isOpen ? "Collapse versions" : "Expand versions"}
+              data-testid={`expand-library-toggle-${info.row.original.id}`}
+              onClick={onActivate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onActivate();
+              }}
+              style={{
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isOpen ? <CollapseIcon /> : <ExpandIcon />}
+            </span>
+          );
+        },
+      },
+    ],
+    [expandedLibrarySetId, toggleLibraryExpansion]
+  );
+
+  const libraryTable = useReactTable({
+    data: libraryData,
+    columns: libraryColumns,
+    getRowId: (row) => row.id,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   const handleTabChange = useCallback(
     (_e: any, nextTab: number) => {
       setActiveTab(nextTab);
       clearExpansion();
+      clearLibraryExpansion();
       table.toggleAllRowsSelected(false);
       setCurrentPage(1);
     },
-    [clearExpansion, table]
+    [clearExpansion, clearLibraryExpansion, table]
   );
 
   const handlePageChange = useCallback(
     (_e: any, page: number) => {
-      table.toggleAllRowsSelected(false);
-      setSelectedExpandedRowIds([]);
+      if (!isLibraryTab) {
+        table.toggleAllRowsSelected(false);
+        setSelectedExpandedRowIds([]);
+      }
       setCurrentPage(page);
     },
-    [table]
+    [isLibraryTab, table]
   );
 
   const handleSearchTrigger = useCallback(() => {
@@ -592,10 +953,12 @@ const UserProfile = () => {
   const handleLimitChange = useCallback(
     (e: any) => {
       setCurrentLimit(Number(e.target.value));
-      table.toggleAllRowsSelected(false);
+      if (!isLibraryTab) {
+        table.toggleAllRowsSelected(false);
+      }
       setCurrentPage(1);
     },
-    [table]
+    [isLibraryTab, table]
   );
 
   const handleSort = useCallback(
@@ -613,9 +976,11 @@ const UserProfile = () => {
       setCurrentSort(nextSort);
       setCurrentDirection(nextDirection);
       setCurrentPage(1);
-      table.toggleAllRowsSelected(false);
+      if (!isLibraryTab) {
+        table.toggleAllRowsSelected(false);
+      }
     },
-    [currentSort, currentDirection, table]
+    [isLibraryTab, currentSort, currentDirection, table]
   );
 
   const toggleExpandedRowSelection = useCallback(
@@ -673,6 +1038,44 @@ const UserProfile = () => {
     ]
   );
 
+  const renderExpandedLibraryRow = useCallback(
+    (parentRow: any) =>
+      expandedLibrarySetId === parentRow.original.actions?.librarySetId &&
+      expandedLibraryRows.map((subRow) => (
+        <tr
+          key={subRow.id}
+          className="expanded-row"
+          data-testid={`expanded-library-row-${subRow.id}`}
+        >
+          {libraryTable.getAllLeafColumns().map((col) => {
+            const key = `${subRow.id}-${col.id}`;
+            if (col.id === "expandArrow") return <td key={key} />;
+            return (
+              <td key={key}>
+                {flexRender(col.columnDef.cell, {
+                  row: { original: subRow },
+                  getValue: () => (subRow as any)[col.id],
+                } as any)}
+              </td>
+            );
+          })}
+        </tr>
+      )),
+    [expandedLibrarySetId, expandedLibraryRows, libraryTable]
+  );
+
+  const activeTable = isLibraryTab ? libraryTable : table;
+  const activeExpandedRowRenderer = isLibraryTab
+    ? renderExpandedLibraryRow
+    : renderExpandedRow;
+  const activePage = isLibraryTab ? librariesPage : measuresPage;
+  const activeTableId = isLibraryTab
+    ? "userProfileLibrariesTable"
+    : "userProfileMeasuresTable";
+  const activeTableTestId = isLibraryTab
+    ? "user-profile-libraries-tbl"
+    : "user-profile-measures-tbl";
+
   /*
     Delete is enabled only when exactly one top-level (latest) measure is
     selected. Any expanded sub-row (older version) selection, or more than one
@@ -696,12 +1099,13 @@ const UserProfile = () => {
     : `version ${deleteTarget?.version}`;
 
   const openDeleteDialog = useCallback(() => {
+    if (isLibraryTab) return;
     const rows = table.getSelectedRowModel().rows;
     if (rows.length === 1 && selectedExpandedRowIds.length === 0) {
       setDeleteTarget(rows[0].original.actions);
       setDeleteDialogOpen(true);
     }
-  }, [table, selectedExpandedRowIds]);
+  }, [isLibraryTab, table, selectedExpandedRowIds]);
 
   const closeDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -846,18 +1250,23 @@ const UserProfile = () => {
             <Tabs value={activeTab} onChange={handleTabChange} type="B">
               <Tab
                 type="B"
-                label={`Owned Measures (${counts.OWNED})`}
+                label={`Owned Measures (${counts.OWNED_MEASURE})`}
                 data-testid="owned-measures-tab"
               />
               <Tab
                 type="B"
-                label={`Shared Measures (${counts.SHARED})`}
+                label={`Shared Measures (${counts.SHARED_MEASURE})`}
                 data-testid="shared-measures-tab"
+              />
+              <Tab
+                type="B"
+                label={`Owned Libraries (${counts.OWNED_LIBRARY})`}
+                data-testid="owned-libraries-tab"
               />
             </Tabs>
           </section>
 
-          {featureFlags?.AdminUserProfile && (
+          {featureFlags?.AdminUserProfile && !isLibraryTab && (
             <div className="search-filter-bar" data-testid="search-filter-bar">
               <SearchAndFilter
                 filterBy={filterBy}
@@ -897,29 +1306,29 @@ const UserProfile = () => {
           <div style={{ display: loading ? "none" : "block" }}>
             <div className="table">
               <MadieTable
-                table={table}
+                table={activeTable}
                 currentSort={currentSort}
                 currentDirection={currentDirection}
                 handleSort={handleSort}
-                id="userProfileMeasuresTable"
-                dataTestId="user-profile-measures-tbl"
-                renderExpandedRow={renderExpandedRow}
+                id={activeTableId}
+                dataTestId={activeTableTestId}
+                renderExpandedRow={activeExpandedRowRenderer}
               />
             </div>
 
             <div className="pagination-container">
               <Pagination
-                totalItems={measuresPage.totalElements}
-                visibleItems={measuresPage.visibleItems}
+                totalItems={activePage.totalElements}
+                visibleItems={activePage.visibleItems}
                 limitOptions={[10, 25, 50]}
-                offset={measuresPage.offset}
+                offset={activePage.offset}
                 handlePageChange={handlePageChange}
                 handleLimitChange={handleLimitChange}
                 page={currentPage}
                 limit={currentLimit}
-                count={measuresPage.totalPages}
+                count={activePage.totalPages}
                 shape="rounded"
-                hideNextButton={currentPage >= measuresPage.totalPages}
+                hideNextButton={currentPage >= activePage.totalPages}
                 hidePrevButton={currentPage <= 1}
               />
             </div>

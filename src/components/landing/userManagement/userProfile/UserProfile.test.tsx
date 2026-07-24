@@ -21,6 +21,8 @@ const mockAdminDeleteMeasure = jest.fn();
 const mockDeleteMeasure = jest.fn();
 const mockFetchMeasure = jest.fn();
 const mockExportMeasure = jest.fn();
+const mockFetchCqlLibraries = jest.fn();
+const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 
 jest.mock("@madie/madie-util", () => ({
@@ -37,6 +39,11 @@ jest.mock("@madie/madie-util", () => ({
     adminDeleteMeasure: (...args: unknown[]) => mockAdminDeleteMeasure(...args),
     deleteMeasure: (...args: unknown[]) => mockDeleteMeasure(...args),
     fetchMeasure: (...args: unknown[]) => mockFetchMeasure(...args),
+  })),
+  useCqlLibraryServiceApi: jest.fn(() => ({
+    fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
+    getLibrariesByLibrarySetId: (...args: unknown[]) =>
+      mockGetLibrariesByLibrarySetId(...args),
   })),
   useFeatureFlags: () => mockUseFeatureFlags(),
   adminUserStore: {
@@ -147,6 +154,21 @@ const sharedMeasure = {
   measureSet: { acls: [], cmsId: 7, owner: "other_user" },
 };
 
+const ownedLibrary = {
+  id: "lib1",
+  cqlLibraryName: "Owned Library A",
+  version: "1.0.000",
+  model: "QI-Core v4.1.1",
+  draft: true,
+  lastModifiedAt: "2026-05-11T12:00:00Z",
+  librarySet: {
+    librarySetId: "library-set-1",
+    acls: [{ userId: "x", roles: ["SHARED"] }],
+  },
+  librarySetId: "library-set-1",
+  hasAssociatedLibraries: true,
+};
+
 const pageWith = (rows: any[], totalElements: number = rows.length) => ({
   content: rows,
   totalPages: 1,
@@ -165,11 +187,15 @@ describe("UserProfile", () => {
     mockDeleteMeasure.mockReset();
     mockFetchMeasure.mockReset();
     mockExportMeasure.mockReset();
+    mockFetchCqlLibraries.mockReset();
+    mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
+    mockFetchCqlLibraries.mockResolvedValue(emptyPage);
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([]);
     mockAdminDeleteMeasure.mockResolvedValue({ status: 200 });
     mockDeleteMeasure.mockResolvedValue({ status: 200 });
     mockFetchMeasure.mockImplementation((id: string) =>
@@ -325,6 +351,88 @@ describe("UserProfile", () => {
         "Shared Measures (9)"
       );
     });
+  });
+
+  it("renders Owned Libraries tab with the library set count", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([], 5));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        1,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+    expect(screen.getByTestId("owned-libraries-tab")).toHaveTextContent(
+      "Owned Libraries (5)"
+    );
+  });
+
+  it("loads owned libraries on tab click using Updated DESC as default sort", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 3));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    mockFetchCqlLibraries.mockClear();
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    expect(
+      await screen.findByTestId("library-name-lib1-content")
+    ).toHaveTextContent("Owned Library A");
+    expect(screen.getByTestId("library-action-lib1")).toBeInTheDocument();
+  });
+
+  it("expands a library row and loads nested versions from library set hierarchy", async () => {
+    const nestedLibrary = {
+      ...ownedLibrary,
+      id: "lib1-prev",
+      version: "0.9.000",
+      draft: false,
+      hasAssociatedLibraries: false,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      ownedLibrary,
+      nestedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
+        "library-set-1",
+        true,
+        { searchField: "", optionalSearchProperties: [] }
+      );
+    });
+
+    expect(
+      await screen.findByTestId("expanded-library-row-lib1-prev")
+    ).toBeInTheDocument();
   });
 
   it("shows an error message when the search fails", async () => {
