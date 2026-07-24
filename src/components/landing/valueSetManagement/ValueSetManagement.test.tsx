@@ -62,7 +62,7 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalled();
     });
 
-    expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+    expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
   });
 
   it("shows empty state when no value sets are returned", async () => {
@@ -319,13 +319,13 @@ describe("ValueSetManagement", () => {
     render(<ValueSetManagement />);
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
     });
 
     await userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
     });
   });
 
@@ -357,7 +357,7 @@ describe("ValueSetManagement", () => {
     await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 10, "url,false");
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 10, "url,false", "");
     });
   });
 
@@ -391,7 +391,7 @@ describe("ValueSetManagement", () => {
     await userEvent.click(option25);
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false");
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false", "");
     });
   });
   it("toggles url sort from ASC to DESC", async () => {
@@ -420,7 +420,7 @@ describe("ValueSetManagement", () => {
     fireEvent.click(screen.getByTestId("header-url"));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,true");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,true", "");
     });
   });
   it("changes sort column to lastUpdated", async () => {
@@ -449,7 +449,113 @@ describe("ValueSetManagement", () => {
     fireEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "lastUpdated,false");
+      expect(mockGetValueSets).toHaveBeenCalledWith(
+        0,
+        10,
+        "lastUpdated,false",
+        ""
+      );
+    });
+  });
+  it("opens the VSE dialog when View Expansions is clicked", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+          valueSet: '{"resourceType":"ValueSet"}',
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    const button = await screen.findByRole("button", {
+      name: /view expansions/i,
+    });
+
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      expect(screen.getByText("Details")).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByTestId("close-button"));
+    await waitFor(() => {
+      expect(screen.queryByText("Details")).not.toBeInTheDocument();
+    });
+  });
+
+  it("searches value sets when search icon is clicked", async () => {
+    render(<ValueSetManagement />);
+
+    const searchInput = screen.getByTestId("vs-list-search-input");
+
+    await userEvent.type(searchInput, "diabetes");
+
+    await userEvent.click(screen.getByTestId("vs-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(
+        0,
+        10,
+        "url,false",
+        "diabetes"
+      );
+    });
+  });
+  it("searches value sets when Enter is pressed", async () => {
+    render(<ValueSetManagement />);
+
+    const searchInput = screen.getByTestId("vs-list-search-input");
+
+    await userEvent.type(searchInput, "diabetes");
+
+    fireEvent.keyPress(searchInput, {
+      key: "Enter",
+      code: "Enter",
+      charCode: 13,
+    });
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(
+        0,
+        10,
+        "url,false",
+        "diabetes"
+      );
+    });
+  });
+  it("clears the search text when clear button is clicked", async () => {
+    render(<ValueSetManagement />);
+
+    const searchInput = screen.getByTestId("vs-list-search-input");
+
+    await userEvent.type(searchInput, "diabetes");
+
+    await userEvent.click(screen.getByTestId("vs-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(
+        0,
+        10,
+        "url,false",
+        "diabetes"
+      );
+    });
+
+    await userEvent.click(screen.getByTestId("vs-clear-search"));
+
+    expect(searchInput).toHaveValue("");
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 10, "url,false", "");
     });
   });
 });

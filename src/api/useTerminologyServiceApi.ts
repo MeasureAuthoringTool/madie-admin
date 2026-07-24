@@ -25,6 +25,7 @@ export interface ValueSetDisplayForAdmin {
   url: string;
   lastUpdated: string;
   manuallyModified: boolean;
+  valueSet: string;
 }
 
 export class TerminologyServiceApi {
@@ -33,7 +34,8 @@ export class TerminologyServiceApi {
   async getValueSets(
     page = 0,
     limit = 10,
-    sortInfo?: string
+    sortInfo?: string,
+    searchTerm?: string
   ): Promise<Page<ValueSetDisplayForAdmin>> {
     const params: Record<string, string | number> = {
       page,
@@ -42,6 +44,10 @@ export class TerminologyServiceApi {
 
     if (sortInfo) {
       params.sortInfo = sortInfo;
+    }
+
+    if (searchTerm) {
+      params.searchTerm = searchTerm;
     }
 
     const response = await axios.get(
@@ -56,7 +62,6 @@ export class TerminologyServiceApi {
 
     return response.data;
   }
-
   async updateValueSets(ig?: string, version?: string): Promise<void> {
     try {
       await axios.get(
