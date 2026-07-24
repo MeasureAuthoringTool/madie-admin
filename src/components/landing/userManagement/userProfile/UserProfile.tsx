@@ -12,6 +12,13 @@ import {
   useMeasureServiceApi,
   adminUserStore,
   useFeatureFlags,
+  ExportDialog,
+  ViewHRModal,
+  ViewMeasureHistoryDialog,
+  CompareVersionsDialog,
+  ShareDialog,
+  exportMeasure as downloadMeasureExport,
+  formatCmsId,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -39,7 +46,6 @@ import {
   CollapseIcon,
   ExpandIcon,
 } from "../../../../icons/MeasureListTableRightArrowIcons";
-import { formatCmsId } from "../../../../utils/cmsIdFormatter";
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 
@@ -223,6 +229,19 @@ const UserProfile = () => {
   const [toastOpen, setToastOpen] = useState(false);
   const [toastType, setToastType] = useState<"success" | "danger">("success");
   const [toastMessage, setToastMessage] = useState("");
+
+  const [downloadState, setDownloadState] = useState<string | null>(null);
+  const [failureMessage, setFailureMessage] = useState<
+    string | string[] | null
+  >(null);
+  const abortController = useRef<AbortController | null>(null);
+  const targetMeasure = useRef<any>(null);
+  const [viewHRModalOpen, setViewHRModalOpen] = useState(false);
+  const [viewHistoryDialogOpen, setViewHistoryDialogOpen] = useState(false);
+  const [compareVersionsDialogOpen, setCompareVersionsDialogOpen] =
+    useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareOption, setShareOption] = useState("");
 
   // Retriggers useEffects after action performed
   const [refreshToken, setRefreshToken] = useState(0);
@@ -724,6 +743,101 @@ const UserProfile = () => {
     table,
   ]);
 
+  const selectedMeasures = useMemo(() => {
+    const topLevel = selectedTopLevelRows.map((row) => row.original.actions);
+    const expanded = expandedRows
+      .filter((row) => selectedExpandedRowIds.includes(row.id))
+      .map((row) => row.actions);
+    return [...topLevel, ...expanded];
+  }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
+
+  const handleContinueDialog = useCallback(() => {
+    setDownloadState(null);
+    setFailureMessage(null);
+  }, []);
+
+  const handleCancelDialog = useCallback(() => {
+    abortController.current && abortController.current.abort();
+    handleContinueDialog();
+  }, [handleContinueDialog]);
+
+  const exportMeasure = useCallback(
+    async (elmErrorSeverity: string) => {
+      setViewHRModalOpen(false);
+      try {
+        const measure = await measureServiceApi.fetchMeasure(
+          targetMeasure.current?.id
+        );
+        await downloadMeasureExport(
+          setFailureMessage,
+          setDownloadState,
+          abortController,
+          measure,
+          measureServiceApi,
+          setToastOpen,
+          setToastType as (type: string) => void,
+          setToastMessage,
+          elmErrorSeverity
+        );
+      } catch (error) {
+        console.error("Error fetching measure:", error);
+        setFailureMessage("Failed to fetch measure");
+      }
+    },
+    [measureServiceApi]
+  );
+
+  const handleExport = useCallback(
+    (exportType: string) => {
+      targetMeasure.current = selectedMeasures[0];
+      const elmErrorSeverity =
+        exportType === "Export for Publishing" ? "Error" : "Info";
+      exportMeasure(elmErrorSeverity);
+    },
+    [selectedMeasures, exportMeasure]
+  );
+
+  const handleViewHumanReadable = useCallback(() => {
+    targetMeasure.current = selectedMeasures[0];
+    setViewHRModalOpen(true);
+  }, [selectedMeasures]);
+
+  const handleViewHistory = useCallback(() => {
+    setViewHistoryDialogOpen(true);
+  }, []);
+
+  const handleCompareVersions = useCallback(() => {
+    setCompareVersionsDialogOpen(true);
+  }, []);
+
+  const handleShare = useCallback(
+    (option: string) => {
+      const resolvedOption =
+        option === "Unshare" && activeTab === 1 ? "UnshareFromMe" : option;
+      setShareOption(resolvedOption);
+      setShareDialogOpen(true);
+    },
+    [activeTab]
+  );
+
+  const handleShareDialogClose = useCallback(() => {
+    setShareDialogOpen(false);
+    setShareOption("");
+  }, []);
+
+  const handleShareDialogSave = useCallback(
+    ({ toastType = "danger", toastMessage = "", toastOpen = false } = {}) => {
+      handleShareDialogClose();
+      setToastType(toastType as "success" | "danger");
+      setToastMessage(toastMessage);
+      setToastOpen(toastOpen);
+      table.toggleAllRowsSelected(false);
+      clearExpansion();
+      setRefreshToken((t) => t + 1);
+    },
+    [handleShareDialogClose, table, clearExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -756,8 +870,15 @@ const UserProfile = () => {
                 textFieldID="user-profile-measures"
               />
               <ActionCenter
+                measures={selectedMeasures}
                 canDelete={canDelete}
+                activeTab={activeTab}
                 onDelete={openDeleteDialog}
+                onExport={handleExport}
+                onViewHumanReadable={handleViewHumanReadable}
+                onViewHistory={handleViewHistory}
+                onCompareVersions={handleCompareVersions}
+                onShare={handleShare}
                 disabledReason={deleteDisabledReason}
               />
             </div>
@@ -827,6 +948,43 @@ const UserProfile = () => {
             <span className="strong">{deleteTarget?.measureName}</span>
           </>
         }
+      />
+
+      <ExportDialog
+        failureMessage={failureMessage}
+        measureName={targetMeasure?.current?.measureName}
+        downloadState={downloadState}
+        open={Boolean(downloadState)}
+        handleContinueDialog={handleContinueDialog}
+        handleCancelDialog={handleCancelDialog}
+      />
+
+      <ViewHRModal
+        open={viewHRModalOpen}
+        onClose={() => setViewHRModalOpen(false)}
+        measureId={targetMeasure?.current?.id}
+        exportMeasure={exportMeasure}
+      />
+
+      <ViewMeasureHistoryDialog
+        measures={selectedMeasures}
+        open={viewHistoryDialogOpen}
+        onClose={() => setViewHistoryDialogOpen(false)}
+      />
+
+      <CompareVersionsDialog
+        measures={selectedMeasures}
+        open={compareVersionsDialogOpen}
+        onClose={() => setCompareVersionsDialogOpen(false)}
+      />
+
+      <ShareDialog
+        measures={selectedMeasures}
+        open={shareDialogOpen}
+        option={shareOption}
+        onClose={handleShareDialogClose}
+        onSave={handleShareDialogSave}
+        isAdmin
       />
 
       <Toast
