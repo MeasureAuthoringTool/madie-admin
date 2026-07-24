@@ -110,5 +110,10 @@
     "twin": {
       "preset": "styled-components"
     }
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.5.6": true,
+    "core-js@3.49.0": true,
+    "fsevents@2.3.3": true
   }
 }
