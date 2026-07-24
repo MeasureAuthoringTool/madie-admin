@@ -62,7 +62,7 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalled();
     });
 
-    expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
+    expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
   });
 
   it("shows empty state when no value sets are returned", async () => {
@@ -319,13 +319,13 @@ describe("ValueSetManagement", () => {
     render(<ValueSetManagement />);
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
     });
 
     await userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,false", "");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
     });
   });
 
@@ -357,7 +357,7 @@ describe("ValueSetManagement", () => {
     await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 10, "url,false", "");
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 25, "url,false", "");
     });
   });
 
@@ -386,12 +386,12 @@ describe("ValueSetManagement", () => {
 
     await userEvent.click(screen.getByRole("combobox"));
 
-    const option25 = await screen.findByText("25");
+    const option25 = await screen.findByText("50");
 
     await userEvent.click(option25);
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false", "");
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 50, "url,false", "");
     });
   });
   it("toggles url sort from ASC to DESC", async () => {
@@ -420,7 +420,7 @@ describe("ValueSetManagement", () => {
     fireEvent.click(screen.getByTestId("header-url"));
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenCalledWith(0, 10, "url,true", "");
+      expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,true", "");
     });
   });
   it("changes sort column to lastUpdated", async () => {
@@ -451,7 +451,7 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenCalledWith(
         0,
-        10,
+        25,
         "lastUpdated,false",
         ""
       );
@@ -504,7 +504,7 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(
         0,
-        10,
+        25,
         "url,false",
         "diabetes"
       );
@@ -526,7 +526,7 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(
         0,
-        10,
+        25,
         "url,false",
         "diabetes"
       );
@@ -544,7 +544,7 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(
         0,
-        10,
+        25,
         "url,false",
         "diabetes"
       );
@@ -555,7 +555,7 @@ describe("ValueSetManagement", () => {
     expect(searchInput).toHaveValue("");
 
     await waitFor(() => {
-      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 10, "url,false", "");
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false", "");
     });
   });
 });
