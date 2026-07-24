@@ -61,7 +61,6 @@ export default function VSEDialog(props: ModalProps) {
   const editorHeight = `${window.innerHeight - 375}px`;
   return (
     <MadieDialog
-      form
       title="Details"
       sx={{
         "#modal-body": {
