@@ -56,3 +56,12 @@ export const ShareAction = ({ measures, activeTab, onClick }: any) => {
     </div>
   );
 };
+export const TransferAction = ({ measures, onClick }: any) => (
+  <button
+    data-testid="transfer-action-btn"
+    disabled={!measures?.length}
+    onClick={() => onClick && onClick()}
+  >
+    Transfer
+  </button>
+);

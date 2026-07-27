@@ -18,6 +18,7 @@ import {
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
   ShareDialog,
+  TransferDialog,
   exportMeasure as downloadMeasureExport,
   formatCmsId,
 } from "@madie/madie-util";
@@ -329,6 +330,7 @@ const UserProfile = () => {
     useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareOption, setShareOption] = useState("");
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 
   // Retriggers useEffects after action performed
   const [refreshToken, setRefreshToken] = useState(0);
@@ -1242,6 +1244,27 @@ const UserProfile = () => {
     [handleShareDialogClose, table, clearExpansion]
   );
 
+  const handleTransfer = useCallback(() => {
+    setTransferDialogOpen(true);
+  }, []);
+
+  // TransferDialog signals both cancel and success/failure via onClose; refresh
+  // the list only when a transfer actually happened (when toastType is "success").
+  const handleTransferDialogClose = useCallback(
+    ({ toastType = "danger", toastMessage = "", toastOpen = false } = {}) => {
+      setTransferDialogOpen(false);
+      setToastType(toastType as "success" | "danger");
+      setToastMessage(toastMessage);
+      setToastOpen(toastOpen);
+      if (toastType === "success") {
+        table.toggleAllRowsSelected(false);
+        clearExpansion();
+        setRefreshToken((t) => t + 1);
+      }
+    },
+    [table, clearExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1288,6 +1311,7 @@ const UserProfile = () => {
                 onViewHistory={handleViewHistory}
                 onCompareVersions={handleCompareVersions}
                 onShare={handleShare}
+                onTransfer={handleTransfer}
                 disabledReason={deleteDisabledReason}
               />
             </div>
@@ -1394,6 +1418,14 @@ const UserProfile = () => {
         onClose={handleShareDialogClose}
         onSave={handleShareDialogSave}
         isAdmin
+      />
+
+      <TransferDialog
+        measures={selectedMeasures}
+        open={transferDialogOpen}
+        onClose={handleTransferDialogClose}
+        setStatusHandler={() => {}}
+        isAdminTransfer
       />
 
       <Toast
