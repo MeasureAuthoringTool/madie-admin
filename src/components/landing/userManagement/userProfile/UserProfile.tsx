@@ -44,7 +44,11 @@ import { formatCmsId } from "../../../../utils/cmsIdFormatter";
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 
-type Ownership = "OWNED" | "SHARED" | "OWNEDLIBRARY" | "SHAREDLIBRARY";
+type Ownership =
+  | "OWNED_MEASURE"
+  | "SHARED_MEASURE"
+  | "OWNED_LIBRARY"
+  | "SHARED_LIBRARY";
 type Direction = "ASC" | "DESC" | "";
 
 type SearchCriteria = {
@@ -131,15 +135,15 @@ const EMPTY_LIBRARIES_PAGE: LibrariesPageState = {
 const ownershipForTab = (tab: number): Ownership => {
   switch (tab) {
     case 0:
-      return "OWNED";
+      return "OWNED_MEASURE";
     case 1:
-      return "SHARED";
+      return "SHARED_MEASURE";
     case 2:
-      return "OWNEDLIBRARY";
+      return "OWNED_LIBRARY";
     case 3:
-      return "SHAREDLIBRARY";
+      return "SHARED_LIBRARY";
     default:
-      return "OWNED";
+      return "OWNED_MEASURE";
   }
 };
 
@@ -282,10 +286,10 @@ const UserProfile = () => {
   const [librariesPage, setLibrariesPage] =
     useState<LibrariesPageState>(EMPTY_LIBRARIES_PAGE);
   const [counts, setCounts] = useState<Record<Ownership, number>>({
-    OWNED: 0,
-    SHARED: 0,
-    OWNEDLIBRARY: 0,
-    SHAREDLIBRARY: 0,
+    OWNED_MEASURE: 0,
+    SHARED_MEASURE: 0,
+    OWNED_LIBRARY: 0,
+    SHARED_LIBRARY: 0,
   });
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
@@ -370,8 +374,8 @@ const UserProfile = () => {
       .then(([ownedData, sharedData]: any[]) => {
         setCounts((prev) => ({
           ...prev,
-          OWNEDLIBRARY: ownedData?.totalElements ?? 0,
-          SHAREDLIBRARY: sharedData?.totalElements ?? 0,
+          OWNED_LIBRARY: ownedData?.totalElements ?? 0,
+          SHARED_LIBRARY: sharedData?.totalElements ?? 0,
         }));
       })
       .catch((err: any) => {
@@ -436,12 +440,13 @@ const UserProfile = () => {
     }
 
     const active = activeOwnership;
-    const inactive: Ownership = active === "OWNED" ? "SHARED" : "OWNED";
+    const inactive: Ownership =
+      active === "OWNED_MEASURE" ? "SHARED_MEASURE" : "OWNED_MEASURE";
 
     const dataPromise: Promise<RequestResult<any>> = measureServiceApi
       .adminSearchMeasuresForUser(
         harpId,
-        [active],
+        [measureOwnershipForTab(active)],
         currentLimit,
         currentPage - 1,
         currentSort || "lastModifiedAt",
@@ -455,7 +460,7 @@ const UserProfile = () => {
     const countPromise: Promise<RequestResult<any>> = measureServiceApi
       .adminSearchMeasuresForUser(
         harpId,
-        [inactive],
+        [measureOwnershipForTab(inactive)],
         1,
         0,
         "lastModifiedAt",
@@ -1162,17 +1167,17 @@ const UserProfile = () => {
             <Tabs value={activeTab} onChange={handleTabChange} type="B">
               <Tab
                 type="B"
-                label={`Owned Measures (${counts.OWNED})`}
+                label={`Owned Measures (${counts.OWNED_MEASURE})`}
                 data-testid="owned-measures-tab"
               />
               <Tab
                 type="B"
-                label={`Shared Measures (${counts.SHARED})`}
+                label={`Shared Measures (${counts.SHARED_MEASURE})`}
                 data-testid="shared-measures-tab"
               />
               <Tab
                 type="B"
-                label={`Owned Libraries (${counts.OWNEDLIBRARY})`}
+                label={`Owned Libraries (${counts.OWNED_LIBRARY})`}
                 data-testid="owned-libraries-tab"
               />
               <Tab
