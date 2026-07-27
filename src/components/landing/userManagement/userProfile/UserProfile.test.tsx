@@ -416,6 +416,90 @@ describe("UserProfile", () => {
     expect(screen.getByTestId("library-action-lib2")).toBeInTheDocument();
   });
 
+  it("sorts libraries by Library column ASC then DESC and reverts to Updated default", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockResolvedValue(pageWith([ownedLibrary], 3));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    await screen.findByTestId("library-name-lib1-content");
+
+    mockFetchCqlLibraries.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "cqlLibraryName,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "cqlLibraryName,true",
+        expect.any(AbortSignal)
+      );
+    });
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+  });
+
+  it("does not display library load error when library tab fetch is aborted", async () => {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockRejectedValueOnce(abortError);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+    expect(
+      screen.queryByTestId("measures-error-message")
+    ).not.toBeInTheDocument();
+  });
+
   it("logs an error when loading library counts fails", async () => {
     const consoleErrorSpy = jest
       .spyOn(console, "error")
