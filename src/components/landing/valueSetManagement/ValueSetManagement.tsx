@@ -4,8 +4,11 @@ import {
   Toast,
   Pagination,
   MadieTable,
+  TextField,
 } from "@madie/madie-design-system/dist/react";
-import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import useTerminologyServiceApi, {
+  type ValueSetDisplayForAdmin,
+} from "../../../api/useTerminologyServiceApi";
 import {
   getCoreRowModel,
   useReactTable,
@@ -15,13 +18,10 @@ import CheckIcon from "@mui/icons-material/Check";
 import "twin.macro";
 import "styled-components/macro";
 import "./ValueSetManagement.scss";
-
-interface ValueSetDisplayForAdmin {
-  id: string;
-  url: string;
-  lastUpdated: string;
-  manuallyModified: boolean;
-}
+import VSEDialog from "./VSEDialog";
+import { InputAdornment, IconButton } from "@mui/material";
+import ClearIcon from "@mui/icons-material/Clear";
+import SearchIcon from "@mui/icons-material/Search";
 
 export default function ValueSetManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
@@ -35,19 +35,24 @@ export default function ValueSetManagement() {
 
   // pagination
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(25);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [visibleItems, setVisibleItems] = useState<number>(0);
 
   // future search/filter implementation
-  // const [filterBy] = useState("");
-  // const [searchText] = useState("");
-  // const VALUE_SET_FILTER_OPTIONS = ["URL", "Last Updated", "Manually Modified"];
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
 
+  const onSearchTrigger = () => {
+    setAppliedSearchText(searchText.trim());
+    setPage(1);
+  };
   // MadieTable sorting
   const [currentSort, setCurrentSort] = useState<string>("url");
   const [currentDirection, setCurrentDirection] = useState<string>("ASC");
+
+  const [targetVSE, setTargetVSE] = useState<null | string>(null);
 
   useEffect(() => {
     const loadValueSets = async () => {
@@ -61,7 +66,8 @@ export default function ValueSetManagement() {
         const response = await terminologyServiceApi.getValueSets(
           page - 1,
           limit,
-          sortInfo
+          sortInfo,
+          appliedSearchText
         );
 
         setValueSets(response.content);
@@ -85,8 +91,14 @@ export default function ValueSetManagement() {
     loadValueSets().catch((error) => {
       console.error(error);
     });
-  }, [terminologyServiceApi, page, limit, currentSort, currentDirection]);
-
+  }, [
+    terminologyServiceApi,
+    page,
+    limit,
+    currentSort,
+    currentDirection,
+    appliedSearchText,
+  ]);
   const handleSort = (sort: string) => {
     let sortChange = "";
     let directionChange = "";
@@ -134,8 +146,16 @@ export default function ValueSetManagement() {
         header: "Action",
         accessorKey: "action",
         enableSorting: false,
-        cell: () => (
-          <Button variant="outline-secondary">View Expansions</Button>
+        cell: ({ row }) => (
+          <Button
+            variant="outline-secondary"
+            data-testId={`open-vs-${row.original.id}`}
+            onClick={() => {
+              setTargetVSE(row.original.valueSet);
+            }}
+          >
+            View Expansions
+          </Button>
         ),
       },
     ],
@@ -196,8 +216,60 @@ export default function ValueSetManagement() {
             position: "sticky",
             top: 0,
             zIndex: 20,
+            maxWidth: "500px",
           }}
-        ></div>
+        >
+          <TextField
+            id="search"
+            label="Search"
+            placeholder="Search"
+            inputProps={{
+              "data-testid": `vs-list-search-input`,
+            }}
+            data-testid="vs-search"
+            name="searchField"
+            value={searchText}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+            }}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSearchTrigger();
+              }
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment
+                    position="start"
+                    data-testid={`vs-trigger-search`}
+                    onClick={onSearchTrigger}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment
+                    data-testid={`vs-clear-search`}
+                    position="end"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setSearchText("");
+                      setAppliedSearchText("");
+                      setPage(1);
+                    }}
+                  >
+                    <IconButton>
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        </div>
 
         {loading ? (
           <p data-testid="loading-message" className="loading-message">
@@ -248,6 +320,13 @@ export default function ValueSetManagement() {
             No value sets found.
           </p>
         )}
+        <VSEDialog
+          open={!!targetVSE}
+          onClose={() => {
+            setTargetVSE(null);
+          }}
+          targetVSE={targetVSE}
+        />
 
         <Toast
           toastKey="value-set-management-toast"
