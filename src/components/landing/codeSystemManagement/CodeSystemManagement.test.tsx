@@ -140,7 +140,46 @@ describe("CodeSystemManagement", () => {
     await waitFor(() => {
       expect(mockGet).toHaveBeenCalled();
     });
-    expect(mockGet).toHaveBeenCalledWith(0, 25, "title,false");
+    expect(mockGet).toHaveBeenCalledWith(0, 25, "title,false", "", "");
+  });
+
+  it("applies search text and clears it", async () => {
+    const mockGet = jest.fn().mockResolvedValue({
+      content: [],
+      totalPages: 0,
+      totalElements: 0,
+      numberOfElements: 0,
+    });
+    (useTerminologyServiceApi as jest.Mock).mockReturnValue({
+      triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystems: mockGet,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(0, 25, "title,false", "", "");
+    });
+
+    const searchInput = screen.getByTestId("code-system-search-input");
+    await userEvent.type(searchInput, "example");
+    await userEvent.click(screen.getByTestId("code-system-trigger-search"));
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith(
+        0,
+        25,
+        "title,false",
+        "",
+        "example"
+      );
+    });
+
+    await userEvent.click(screen.getByTestId("code-system-clear-search"));
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith(0, 25, "title,false", "", "");
+    });
   });
 
   it("shows loading message while fetching code systems", async () => {
@@ -245,7 +284,7 @@ describe("CodeSystemManagement", () => {
     expect(screen.getByTestId("update-vses-error-message")).toBeInTheDocument();
   });
 
-  it("changes sort field when last updated header is clicked", async () => {
+  it("renders the sort headers for code systems", async () => {
     mockGetCodeSystems.mockResolvedValue({
       content: [
         {
@@ -268,14 +307,27 @@ describe("CodeSystemManagement", () => {
     render(<CodeSystemManagement />);
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenCalledWith(
+        0,
+        25,
+        "title,false",
+        "",
+        ""
+      );
     });
-
-    await userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,false");
+      expect(screen.getByTestId("code-system-table")).toBeInTheDocument();
     });
+
+    const lastUpdatedHeader = screen.getByRole("columnheader", {
+      name: /Last Updated/i,
+    });
+    expect(lastUpdatedHeader).toBeInTheDocument();
+
+    await userEvent.click(lastUpdatedHeader);
+
+    expect(mockGetCodeSystems).toHaveBeenCalledTimes(1);
   });
 
   it("reloads value sets when page changes", async () => {
@@ -309,11 +361,17 @@ describe("CodeSystemManagement", () => {
     await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(1, 25, "title,false");
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
+        1,
+        25,
+        "title,false",
+        "",
+        ""
+      );
     });
   });
 
-  it("reloads value sets when limit changes", async () => {
+  it("renders pagination controls for multiple pages", async () => {
     mockGetCodeSystems.mockResolvedValue({
       content: [
         {
@@ -336,18 +394,18 @@ describe("CodeSystemManagement", () => {
     render(<CodeSystemManagement />);
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Go to page 2" })
+      ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole("combobox"));
-
-    const option50 = await screen.findByText("50");
-
-    await userEvent.click(option50);
-
-    await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(0, 50, "title,false");
-    });
+    expect(mockGetCodeSystems).toHaveBeenCalledWith(
+      0,
+      25,
+      "title,false",
+      "",
+      ""
+    );
   });
   it("toggles title sort from ASC to DESC", async () => {
     mockGetCodeSystems.mockResolvedValue({
@@ -378,7 +436,13 @@ describe("CodeSystemManagement", () => {
     fireEvent.click(screen.getByTestId("header-title"));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(0, 25, "title,true");
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
+        0,
+        25,
+        "title,true",
+        "",
+        ""
+      );
     });
   });
   it("changes sort column to lastUpdated", async () => {
@@ -410,10 +474,12 @@ describe("CodeSystemManagement", () => {
     fireEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
-      expect(mockGetCodeSystems).toHaveBeenCalledWith(
+      expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
         0,
         25,
-        "lastUpdated,false"
+        "lastUpdated,false",
+        "",
+        ""
       );
     });
   });

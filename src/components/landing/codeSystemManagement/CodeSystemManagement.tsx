@@ -4,6 +4,8 @@ import {
   Toast,
   Pagination,
   MadieTable,
+  Select,
+  TextField,
 } from "@madie/madie-design-system/dist/react";
 import "./CodeSystemManagement.scss";
 import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
@@ -14,10 +16,18 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import CheckIcon from "@mui/icons-material/Check";
+import { IconButton, InputAdornment, MenuItem } from "@mui/material";
+import ClearIcon from "@mui/icons-material/Clear";
+import SearchIcon from "@mui/icons-material/Search";
+
+const filterByOptions = ["Title", "Name", "Version", "Full URL"];
 
 export default function CodeSystemManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
   const [codeSystems, setCodeSystems] = useState<CodeSystem[]>([]);
+  const [filterBy, setFilterBy] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
   const [toastOpen, setToastOpen] = useState<boolean>(false);
   const [toastType, setToastType] = useState<string>("success");
   const [toastMessage, setToastMessage] = useState<string>("");
@@ -30,10 +40,6 @@ export default function CodeSystemManagement() {
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [visibleItems, setVisibleItems] = useState<number>(0);
-
-  // future search/filter implementation
-  // const [filterBy] = useState("");
-  // const [searchText] = useState("");
 
   // MadieTable sorting
   const [currentSort, setCurrentSort] = useState<string>("title");
@@ -67,7 +73,9 @@ export default function CodeSystemManagement() {
         const response = await terminologyServiceApi.getCodeSystems(
           page - 1,
           limit,
-          sortInfo
+          sortInfo,
+          filterBy,
+          appliedSearchText
         );
 
         setCodeSystems(response.content);
@@ -91,7 +99,27 @@ export default function CodeSystemManagement() {
     loadCodeSystems().catch((error) => {
       console.error(error);
     });
-  }, [terminologyServiceApi, page, limit, currentSort, currentDirection]);
+  }, [
+    terminologyServiceApi,
+    page,
+    limit,
+    currentSort,
+    currentDirection,
+    appliedSearchText,
+    filterBy,
+  ]);
+
+  const onSearchTrigger = () => {
+    setAppliedSearchText(searchText.trim());
+    setPage(1);
+  };
+
+  const handleClear = () => {
+    setSearchText("");
+    setAppliedSearchText("");
+    setFilterBy("");
+    setPage(1);
+  };
 
   const handleSort = (sort: string) => {
     let sortChange = "";
@@ -179,6 +207,103 @@ export default function CodeSystemManagement() {
             zIndex: 20,
           }}
         ></div>
+
+        {/* Search / Filter row */}
+        <div
+          className="code-system-search-row"
+          style={{ paddingBottom: "16px" }}
+        >
+          <div
+            className="code-system-search-inner"
+            style={{
+              display: "flex",
+              gap: 16,
+              width: "50%",
+            }}
+          >
+            <div className="filter-by-wrapper" style={{ width: "50%" }}>
+              <Select
+                label="Filter By"
+                id="code-system-filter-by-select"
+                data-testid="code-system-filter-by-select"
+                inputProps={{ "data-testid": "code-system-filter-by-input" }}
+                placeHolder={{ name: "Filter By", value: "" }}
+                SelectDisplayProps={{ "aria-required": "true" }}
+                size="small"
+                name="filterBy"
+                value={filterBy}
+                onChange={(e) => {
+                  setFilterBy(e.target.value);
+                }}
+                options={[
+                  <MenuItem
+                    key="-"
+                    value=""
+                    data-testid="code-system-filter-by--"
+                  >
+                    -
+                  </MenuItem>,
+                  ...filterByOptions.map((option) => (
+                    <MenuItem
+                      key={option}
+                      value={option}
+                      data-testid={`code-system-filter-by-${option}`}
+                    >
+                      {option}
+                    </MenuItem>
+                  )),
+                ]}
+              />
+            </div>
+            <div className="search-wrapper" style={{ width: "50%" }}>
+              <TextField
+                id="code-system-search"
+                label="Search"
+                placeholder="Search"
+                fullWidth
+                inputProps={{ "data-testid": "code-system-search-input" }}
+                data-testid="code-system-search"
+                name="searchValue"
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSearchTrigger();
+                  }
+                }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment
+                        position="start"
+                        data-testid="code-system-trigger-search"
+                        style={{ cursor: "pointer" }}
+                        onClick={onSearchTrigger}
+                      >
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchText ? (
+                      <InputAdornment
+                        data-testid="code-system-clear-search"
+                        position="end"
+                        style={{ cursor: "pointer" }}
+                        onClick={handleClear}
+                      >
+                        <IconButton>
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
 
         {loading ? (
           <p data-testid="loading-message" className="loading-message">
