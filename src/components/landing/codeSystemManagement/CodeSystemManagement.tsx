@@ -265,7 +265,9 @@ export default function CodeSystemManagement() {
                 data-testid="code-system-search"
                 name="searchValue"
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                }}
                 onKeyPress={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
