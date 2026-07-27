@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import UserProfile from "./UserProfile";
+import UserProfile, { ownershipForTab } from "./UserProfile";
 
 const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
@@ -123,6 +123,10 @@ const pageWith = (rows: any[], totalElements: number = rows.length) => ({
 });
 
 describe("UserProfile", () => {
+  it("falls back to OWNED_MEASURE for unknown tab index", () => {
+    expect(ownershipForTab(99)).toBe("OWNED_MEASURE");
+  });
+
   beforeEach(() => {
     mockGetUser.mockReset();
     mockUpdateUser.mockReset();
@@ -526,6 +530,18 @@ describe("UserProfile", () => {
     });
   });
 
+  it("uses fallback message when measure search rejects without an Error object", async () => {
+    mockAdminSearchMeasures.mockRejectedValue("bad-request");
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load measures"
+      );
+    });
+  });
+
   it("sort Measure column in the direction of ASC → DESC → unsorted ", async () => {
     mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
 
@@ -716,6 +732,84 @@ describe("UserProfile", () => {
     });
     expect(
       screen.queryByTestId("expanded-row-m1-prev")
+    ).not.toBeInTheDocument();
+  });
+
+  it("collapses an expanded library row when the toggle is clicked again", async () => {
+    const nestedLibrary = {
+      ...ownedLibrary,
+      id: "lib1-prev",
+      version: "0.9.000",
+      draft: false,
+      hasAssociatedLibraries: false,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      ownedLibrary,
+      nestedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+    expect(
+      await screen.findByTestId("expanded-library-row-lib1-prev")
+    ).toBeInTheDocument();
+
+    mockGetLibrariesByLibrarySetId.mockClear();
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("expanded-library-row-lib1-prev")
+      ).not.toBeInTheDocument();
+    });
+    expect(mockGetLibrariesByLibrarySetId).not.toHaveBeenCalled();
+  });
+
+  it("does not call nested-library API when expanded row has no librarySetId", async () => {
+    const missingSetIdLibrary = {
+      ...ownedLibrary,
+      id: "lib-no-set",
+      librarySetId: undefined,
+      hasAssociatedLibraries: true,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([missingSetIdLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(
+      await screen.findByTestId("expand-library-toggle-lib-no-set")
+    );
+
+    expect(mockGetLibrariesByLibrarySetId).not.toHaveBeenCalled();
+  });
+
+  it("does not show nested-library error when nested fetch is aborted", async () => {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockRejectedValue(abortError);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalled();
+    });
+    expect(
+      screen.queryByText("Unable to load related nested libraries")
     ).not.toBeInTheDocument();
   });
 
@@ -1079,6 +1173,29 @@ describe("UserProfile", () => {
       expect(
         await screen.findByText("Measure successfully deleted")
       ).toBeInTheDocument();
+    });
+
+    it("closes the success toast when the close button is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await screen.findByTestId("delete-measure-success-message");
+      userEvent.click(screen.getByTestId("close-toast-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("delete-measure-success-message")
+        ).not.toBeInTheDocument();
+      });
     });
 
     it("shows version wording and deletes a versioned measure with the owner harpId", async () => {

@@ -132,7 +132,7 @@ const EMPTY_LIBRARIES_PAGE: LibrariesPageState = {
   offset: 0,
 };
 
-const ownershipForTab = (tab: number): Ownership => {
+export const ownershipForTab = (tab: number): Ownership => {
   switch (tab) {
     case 0:
       return "OWNED_MEASURE";
