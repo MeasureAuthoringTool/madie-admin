@@ -147,6 +147,15 @@ const ownershipForTab = (tab: number): Ownership => {
   }
 };
 
+const isLibraryOwnership = (ownership: Ownership): boolean =>
+  ownership === "OWNED_LIBRARY" || ownership === "SHARED_LIBRARY";
+
+const measureOwnershipForTab = (ownership: Ownership): "OWNED" | "SHARED" =>
+  ownership === "SHARED_MEASURE" ? "SHARED" : "OWNED";
+
+const cqlLibraryOwnershipForTab = (ownership: Ownership): "OWNED" | "SHARED" =>
+  ownership === "SHARED_LIBRARY" ? "SHARED" : "OWNED";
+
 const isAbortError = (err: any): boolean => {
   if (!err || typeof err !== "object") return false;
   const e = err as { name?: string; code?: string };
@@ -276,6 +285,7 @@ const UserProfile = () => {
 
   const [activeTab, setActiveTab] = useState(0);
   const activeOwnership = ownershipForTab(activeTab);
+  const isLibraryTab = isLibraryOwnership(activeOwnership);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
   const [currentSort, setCurrentSort] = useState("");
@@ -393,17 +403,14 @@ const UserProfile = () => {
     setLoading(true);
     setErrMsg("");
 
-    if (
-      activeOwnership === "OWNEDLIBRARY" ||
-      activeOwnership === "SHAREDLIBRARY"
-    ) {
+    if (isLibraryTab) {
       const sortInfo = currentSort
         ? `${currentSort},${currentDirection === "DESC"}`
         : "lastModifiedAt,false";
 
       cqlLibraryServiceApi
         .fetchCqlLibraries(
-          activeOwnership === "SHAREDLIBRARY" ? "SHARED" : "OWNED",
+          cqlLibraryOwnershipForTab(activeOwnership),
           currentLimit,
           currentPage - 1,
           DEFAULT_SEARCH_CRITERIA,
@@ -509,6 +516,7 @@ const UserProfile = () => {
   }, [
     harpId,
     activeOwnership,
+    isLibraryTab,
     currentPage,
     currentLimit,
     currentSort,
@@ -794,7 +802,7 @@ const UserProfile = () => {
           />
         ),
       },
-      ...(activeOwnership === "SHAREDLIBRARY"
+      ...(activeOwnership === "SHARED_LIBRARY"
         ? [
             {
               sortDescFirst: false,
@@ -910,16 +918,13 @@ const UserProfile = () => {
 
   const handlePageChange = useCallback(
     (_e: any, page: number) => {
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
         setSelectedExpandedRowIds([]);
       }
       setCurrentPage(page);
     },
-    [activeOwnership, table]
+    [isLibraryTab, table]
   );
 
   const handleSearchTrigger = useCallback(() => {
@@ -946,15 +951,12 @@ const UserProfile = () => {
   const handleLimitChange = useCallback(
     (e: any) => {
       setCurrentLimit(Number(e.target.value));
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
       }
       setCurrentPage(1);
     },
-    [activeOwnership, table]
+    [isLibraryTab, table]
   );
 
   const handleSort = useCallback(
@@ -972,14 +974,11 @@ const UserProfile = () => {
       setCurrentSort(nextSort);
       setCurrentDirection(nextDirection);
       setCurrentPage(1);
-      if (
-        activeOwnership !== "OWNEDLIBRARY" &&
-        activeOwnership !== "SHAREDLIBRARY"
-      ) {
+      if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
       }
     },
-    [activeOwnership, currentSort, currentDirection, table]
+    [isLibraryTab, currentSort, currentDirection, table]
   );
 
   const toggleExpandedRowSelection = useCallback(
@@ -1063,26 +1062,17 @@ const UserProfile = () => {
     [expandedLibrarySetId, expandedLibraryRows, libraryTable]
   );
 
-  const activeTable =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? libraryTable
-      : table;
-  const activeExpandedRowRenderer =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? renderExpandedLibraryRow
-      : renderExpandedRow;
-  const activePage =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? librariesPage
-      : measuresPage;
-  const activeTableId =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? "userProfileLibrariesTable"
-      : "userProfileMeasuresTable";
-  const activeTableTestId =
-    activeOwnership === "OWNEDLIBRARY" || activeOwnership === "SHAREDLIBRARY"
-      ? "user-profile-libraries-tbl"
-      : "user-profile-measures-tbl";
+  const activeTable = isLibraryTab ? libraryTable : table;
+  const activeExpandedRowRenderer = isLibraryTab
+    ? renderExpandedLibraryRow
+    : renderExpandedRow;
+  const activePage = isLibraryTab ? librariesPage : measuresPage;
+  const activeTableId = isLibraryTab
+    ? "userProfileLibrariesTable"
+    : "userProfileMeasuresTable";
+  const activeTableTestId = isLibraryTab
+    ? "user-profile-libraries-tbl"
+    : "user-profile-measures-tbl";
 
   /*
     Delete is enabled only when exactly one top-level (latest) measure is
@@ -1107,17 +1097,13 @@ const UserProfile = () => {
     : `version ${deleteTarget?.version}`;
 
   const openDeleteDialog = useCallback(() => {
-    if (
-      activeOwnership === "OWNEDLIBRARY" ||
-      activeOwnership === "SHAREDLIBRARY"
-    )
-      return;
+    if (isLibraryTab) return;
     const rows = table.getSelectedRowModel().rows;
     if (rows.length === 1 && selectedExpandedRowIds.length === 0) {
       setDeleteTarget(rows[0].original.actions);
       setDeleteDialogOpen(true);
     }
-  }, [activeOwnership, table, selectedExpandedRowIds]);
+  }, [isLibraryTab, table, selectedExpandedRowIds]);
 
   const closeDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -1182,36 +1168,31 @@ const UserProfile = () => {
               />
               <Tab
                 type="B"
-                label={`Shared Libraries (${counts.SHAREDLIBRARY})`}
+                label={`Shared Libraries (${counts.SHARED_LIBRARY})`}
                 data-testid="shared-libraries-tab"
               />
             </Tabs>
           </section>
 
-          {featureFlags?.AdminUserProfile &&
-            activeOwnership !== "OWNEDLIBRARY" &&
-            activeOwnership !== "SHAREDLIBRARY" && (
-              <div
-                className="search-filter-bar"
-                data-testid="search-filter-bar"
-              >
-                <SearchAndFilter
-                  filterBy={filterBy}
-                  searchField={searchField}
-                  onFilterChange={handleFilter}
-                  onSearchChange={handleSearch}
-                  onSearchTrigger={handleSearchTrigger}
-                  onSearchClear={handleSearchClear}
-                  filterByOpts={MEASURE_FILTER_OPTIONS}
-                  textFieldID="user-profile-measures"
-                />
-                <ActionCenter
-                  canDelete={canDelete}
-                  onDelete={openDeleteDialog}
-                  disabledReason={deleteDisabledReason}
-                />
-              </div>
-            )}
+          {featureFlags?.AdminUserProfile && !isLibraryTab && (
+            <div className="search-filter-bar" data-testid="search-filter-bar">
+              <SearchAndFilter
+                filterBy={filterBy}
+                searchField={searchField}
+                onFilterChange={handleFilter}
+                onSearchChange={handleSearch}
+                onSearchTrigger={handleSearchTrigger}
+                onSearchClear={handleSearchClear}
+                filterByOpts={MEASURE_FILTER_OPTIONS}
+                textFieldID="user-profile-measures"
+              />
+              <ActionCenter
+                canDelete={canDelete}
+                onDelete={openDeleteDialog}
+                disabledReason={deleteDisabledReason}
+              />
+            </div>
+          )}
 
           {errMsg && !loading && (
             <p
