@@ -560,7 +560,7 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
     await userEvent.click(
       await screen.findByTestId("expand-library-toggle-lib2")
     );
@@ -870,7 +870,7 @@ describe("UserProfile", () => {
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
     userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    userEvent.click(
+    await userEvent.click(
       await screen.findByTestId("expand-library-toggle-lib-no-set")
     );
 
