@@ -115,6 +115,27 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
+  TransferDialog: ({ open, onClose }: any) =>
+    open ? (
+      <div data-testid="transfer-dialog">
+        Transfer Dialog
+        <button
+          data-testid="transfer-save-btn"
+          onClick={() =>
+            onClose({
+              toastType: "success",
+              toastMessage: "Measure Successfully Transferred",
+              toastOpen: true,
+            })
+          }
+        >
+          Transfer
+        </button>
+        <button data-testid="transfer-close-btn" onClick={() => onClose()}>
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
 
 const renderAt = (initialEntry: string) =>
@@ -2115,6 +2136,82 @@ describe("UserProfile", () => {
         expect(
           screen.queryByTestId("close-toast-button")
         ).not.toBeInTheDocument()
+      );
+    });
+  });
+
+  describe("transfer action", () => {
+    const ownedMeasureRow = {
+      id: "m1",
+      measureName: "Owned Measure A",
+      version: "1.0.000",
+      model: "QI-Core v4.1.1",
+      measureSetId: "set-1",
+      lastModifiedAt: "2026-05-01T12:00:00Z",
+      measureMetaData: { draft: true },
+      measureSet: { acls: [], cmsId: 42, owner: "test_user" },
+    };
+
+    // Transfer behavior is unit-tested in @madie/madie-util; these cover only
+    // the admin wiring (icon per tab, open, save refresh, cancel).
+
+    it("shows the Transfer icon on the Owned tab when the flag is on", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(
+        await screen.findByTestId("transfer-action-btn")
+      ).toBeInTheDocument();
+    });
+
+    it("shows the Transfer icon on the Shared tab when the flag is on", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("shared-measures-tab"));
+      expect(
+        await screen.findByTestId("transfer-action-btn")
+      ).toBeInTheDocument();
+    });
+
+    it("does not render the Transfer icon when the flag is off", async () => {
+      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(await screen.findByTestId("user-profile")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("transfer-action-btn")
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens the transfer dialog from the Owned tab", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("transfer-action-btn"));
+      expect(await screen.findByTestId("transfer-dialog")).toBeInTheDocument();
+    });
+
+    it("refreshes the measure list after a successful transfer", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("transfer-action-btn"));
+      const callsBefore = mockAdminSearchMeasures.mock.calls.length;
+      userEvent.click(await screen.findByTestId("transfer-save-btn"));
+      await waitFor(() =>
+        expect(mockAdminSearchMeasures.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        )
+      );
+    });
+
+    it("closes the transfer dialog on cancel", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("transfer-action-btn"));
+      userEvent.click(await screen.findByTestId("transfer-close-btn"));
+      await waitFor(() =>
+        expect(screen.queryByTestId("transfer-dialog")).not.toBeInTheDocument()
       );
     });
   });

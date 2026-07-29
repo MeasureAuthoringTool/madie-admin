@@ -6,6 +6,7 @@ import {
   HistoryAction,
   CompareVersionsAction,
   ShareAction,
+  TransferAction,
 } from "@madie/madie-util";
 import DeleteAction from "./deleteAction/DeleteAction";
 
@@ -19,6 +20,7 @@ interface PropTypes {
   onViewHistory: () => void;
   onCompareVersions: () => void;
   onShare: (option: string) => void;
+  onTransfer: () => void;
   disabledReason?: string;
 }
 
@@ -32,6 +34,7 @@ export default function ActionCenter({
   onViewHistory,
   onCompareVersions,
   onShare,
+  onTransfer,
   disabledReason,
 }: PropTypes) {
   return (
@@ -53,6 +56,11 @@ export default function ActionCenter({
       <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
       <HistoryAction measures={measures} onClick={onViewHistory} />
       <CompareVersionsAction measures={measures} onClick={onCompareVersions} />
+      <TransferAction
+        measures={measures}
+        onClick={onTransfer}
+        activeTab={activeTab}
+      />
     </div>
   );
 }

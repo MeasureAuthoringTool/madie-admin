@@ -86,6 +86,11 @@ declare module "@madie/madie-util" {
     fetchMeasure(id: string): Promise<any>;
     deleteMeasure(id: string): Promise<Response>;
     adminDeleteMeasure(id: string, ownerHarpId: string): Promise<Response>;
+    transferMeasures(
+      measureIds: string[],
+      harpId: string,
+      retainShareAccess: boolean
+    ): Promise<any>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;
@@ -161,6 +166,11 @@ declare module "@madie/madie-util" {
     isSharedWithUser?: boolean;
     activeTab: number;
   }): JSX.Element;
+  export function TransferAction(props: {
+    measures: any[];
+    onClick: () => void;
+    activeTab: number;
+  }): JSX.Element;
 
   export function ExportDialog(props: {
     downloadState?: string | null;
@@ -193,6 +203,13 @@ declare module "@madie/madie-util" {
     onClose: (...args: any[]) => void;
     onSave: (...args: any[]) => void;
     isAdmin?: boolean;
+  }): JSX.Element | null;
+  export function TransferDialog(props: {
+    measures: any[];
+    open: boolean;
+    onClose: (...args: any[]) => void;
+    setStatusHandler: (...args: any[]) => void;
+    isAdminTransfer?: boolean;
   }): JSX.Element | null;
   export function exportMeasure(
     setFailureMessage: (msg: string | string[] | null) => void,
