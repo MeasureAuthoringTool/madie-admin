@@ -808,8 +808,7 @@ const UserProfile = () => {
               sortDescFirst: false,
               header: "Owner",
               accessorKey: "ownerDisplayName",
-              cell: (info: unknown) => {
-                //@ts-ignore
+              cell: (info: any) => {
                 const owner = info.row.original.actions?.ownerDisplayName;
                 return <span>{owner?.trim() ? owner.trim() : "-"}</span>;
               },
