@@ -249,7 +249,7 @@ describe("UserProfile", () => {
     mockAdminSearchMeasures.mockClear();
     mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 2));
 
-    await userEvent.click(screen.getByTestId("shared-measures-tab"));
+    userEvent.click(screen.getByTestId("shared-measures-tab"));
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -330,7 +330,7 @@ describe("UserProfile", () => {
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
     mockFetchCqlLibraries.mockClear();
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
 
     await waitFor(() => {
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
@@ -367,10 +367,8 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib1")
-    );
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
 
     await waitFor(() => {
       expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
@@ -396,7 +394,7 @@ describe("UserProfile", () => {
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
     mockFetchCqlLibraries.mockClear();
-    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    userEvent.click(screen.getByTestId("shared-libraries-tab"));
 
     await waitFor(() => {
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
@@ -428,7 +426,7 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
     await screen.findByTestId("library-name-lib1-content");
 
     mockFetchCqlLibraries.mockClear();
@@ -485,7 +483,7 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
 
     await waitFor(() => {
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
@@ -533,7 +531,7 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
 
     await waitFor(() => {
       expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
@@ -562,10 +560,8 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib2")
-    );
+    userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib2"));
 
     await waitFor(() => {
       expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
@@ -593,10 +589,8 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib1")
-    );
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
 
     await waitFor(() => {
       expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
@@ -712,7 +706,7 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
 
     const toggle = await screen.findByTestId("expand-toggle-m1");
-    await userEvent.click(toggle);
+    userEvent.click(toggle);
 
     await waitFor(() => {
       expect(mockGetMeasuresByMeasureSetId).toHaveBeenCalledWith(
@@ -751,13 +745,13 @@ describe("UserProfile", () => {
 
     renderAt("/admin/userProfile/test_user");
 
-    await userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
     expect(
       await screen.findByTestId("expanded-row-m1-prev")
     ).toBeInTheDocument();
 
     mockGetMeasuresByMeasureSetId.mockClear();
-    await userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
     await waitFor(() => {
       expect(
         screen.queryByTestId("expanded-row-m1-prev")
@@ -783,7 +777,7 @@ describe("UserProfile", () => {
 
     mockAdminSearchMeasures.mockClear();
     const page2 = await screen.findByRole("button", { name: /go to page 2/i });
-    await userEvent.click(page2);
+    userEvent.click(page2);
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -813,7 +807,7 @@ describe("UserProfile", () => {
 
     renderAt("/admin/userProfile/test_user");
 
-    await userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
 
     await waitFor(() => {
       expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
@@ -843,18 +837,14 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib1")
-    );
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
     expect(
       await screen.findByTestId("expanded-library-row-lib1-prev")
     ).toBeInTheDocument();
 
     mockGetLibrariesByLibrarySetId.mockClear();
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib1")
-    );
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
 
     await waitFor(() => {
       expect(
@@ -877,8 +867,8 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    await userEvent.click(
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(
       await screen.findByTestId("expand-library-toggle-lib-no-set")
     );
 
@@ -896,10 +886,8 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
-    await userEvent.click(
-      await screen.findByTestId("expand-library-toggle-lib1")
-    );
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
 
     await waitFor(() => {
       expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalled();
@@ -941,7 +929,7 @@ describe("UserProfile", () => {
 
       const toggle = await screen.findByTestId("expand-toggle-m1");
       toggle.focus();
-      await userEvent.type(toggle, keySeq);
+      userEvent.type(toggle, keySeq);
       expect(
         await screen.findByTestId("expanded-row-m1-prev")
       ).toBeInTheDocument();
@@ -973,16 +961,16 @@ describe("UserProfile", () => {
 
     renderAt("/admin/userProfile/test_user");
 
-    await userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+    userEvent.click(await screen.findByTestId("expand-toggle-m1"));
     const nestedCheckbox = (await screen.findByTestId(
       "checkbox-m1-prev"
     )) as HTMLInputElement;
     expect(nestedCheckbox.checked).toBe(false);
 
-    await userEvent.click(nestedCheckbox);
+    userEvent.click(nestedCheckbox);
     expect(nestedCheckbox.checked).toBe(true);
 
-    await userEvent.click(nestedCheckbox);
+    userEvent.click(nestedCheckbox);
     expect(nestedCheckbox.checked).toBe(false);
   });
 
@@ -1001,12 +989,12 @@ describe("UserProfile", () => {
         (el) => el.getAttribute("aria-labelledby") === "pagination-limit-select"
       );
     expect(limitSelect).toBeTruthy();
-    await userEvent.click(limitSelect!);
+    userEvent.click(limitSelect!);
     const option25 = (await screen.findAllByTestId("limit-option")).find(
       (el) => el.textContent === "25"
     );
     expect(option25).toBeTruthy();
-    await userEvent.click(option25!);
+    userEvent.click(option25!);
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -1035,21 +1023,19 @@ describe("UserProfile", () => {
     const filterByDropDown = within(filterBy).getByRole("combobox", {
       hidden: true,
     });
-    await userEvent.click(filterByDropDown);
+    userEvent.click(filterByDropDown);
 
     const optionsList = await screen.findAllByRole("option");
     expect(optionsList).toHaveLength(5); // placeholder "-" + 4 columns
 
-    await userEvent.click(screen.getByTestId("filter-by-Model"));
+    userEvent.click(screen.getByTestId("filter-by-Model"));
 
     const input = screen.getByTestId("user-profile-measures-list-search-input");
-    await userEvent.type(input, "QI-Core");
+    userEvent.type(input, "QI-Core");
     expect(input).toHaveValue("QI-Core");
 
     mockAdminSearchMeasures.mockClear();
-    await userEvent.click(
-      screen.getByTestId("user-profile-measures-trigger-search")
-    );
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -1075,12 +1061,10 @@ describe("UserProfile", () => {
     });
 
     const input = screen.getByTestId("user-profile-measures-list-search-input");
-    await userEvent.type(input, "Owned");
+    userEvent.type(input, "Owned");
 
     mockAdminSearchMeasures.mockClear();
-    await userEvent.click(
-      screen.getByTestId("user-profile-measures-trigger-search")
-    );
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -1109,13 +1093,11 @@ describe("UserProfile", () => {
     });
 
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
-    await userEvent.type(
+    userEvent.type(
       screen.getByTestId("user-profile-measures-list-search-input"),
       "zzzz"
     );
-    await userEvent.click(
-      screen.getByTestId("user-profile-measures-trigger-search")
-    );
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
 
     await waitFor(() => {
       expect(screen.getByText("No results were found")).toBeInTheDocument();
@@ -1135,10 +1117,8 @@ describe("UserProfile", () => {
     });
 
     const input = screen.getByTestId("user-profile-measures-list-search-input");
-    await userEvent.type(input, "Owned");
-    await userEvent.click(
-      screen.getByTestId("user-profile-measures-trigger-search")
-    );
+    userEvent.type(input, "Owned");
+    userEvent.click(screen.getByTestId("user-profile-measures-trigger-search"));
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -1154,9 +1134,7 @@ describe("UserProfile", () => {
     });
 
     mockAdminSearchMeasures.mockClear();
-    await userEvent.click(
-      screen.getByTestId("user-profile-measures-clear-search")
-    );
+    userEvent.click(screen.getByTestId("user-profile-measures-clear-search"));
 
     await waitFor(() => {
       expect(mockAdminSearchMeasures).toHaveBeenCalledWith(
@@ -1233,7 +1211,7 @@ describe("UserProfile", () => {
 
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       expect(deleteBtn).toBeDisabled();
-      await userEvent.hover(deleteBtn.parentElement as HTMLElement);
+      userEvent.hover(deleteBtn.parentElement as HTMLElement);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(
         "Select measure to delete"
       );
@@ -1244,10 +1222,10 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.hover(deleteBtn);
+      userEvent.hover(deleteBtn);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(
         "Delete measure"
       );
@@ -1258,10 +1236,10 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       const dialog = await screen.findByTestId("delete-dialog");
       expect(within(dialog).getByText("Delete Measure")).toBeInTheDocument();
@@ -1271,9 +1249,7 @@ describe("UserProfile", () => {
         within(dialog).getByText(/This action cannot be undone/i)
       ).toBeInTheDocument();
 
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
 
       // Drafts use the regular soft-delete endpoint, not the admin hard delete.
       await waitFor(() => expect(mockDeleteMeasure).toHaveBeenCalledWith("m1"));
@@ -1288,18 +1264,16 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       await screen.findByTestId("delete-dialog");
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
 
       await screen.findByTestId("delete-measure-success-message");
-      await userEvent.click(screen.getByTestId("close-toast-button"));
+      userEvent.click(screen.getByTestId("close-toast-button"));
 
       await waitFor(() => {
         expect(
@@ -1321,19 +1295,17 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-mv"));
+      userEvent.click(await screen.findByTestId("checkbox-mv"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       const dialog = await screen.findByTestId("delete-dialog");
       expect(
         within(dialog).getByText(/version 2\.0\.000 of/)
       ).toBeInTheDocument();
 
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
       await waitFor(() =>
         expect(mockAdminDeleteMeasure).toHaveBeenCalledWith("mv", "owner_x")
       );
@@ -1350,18 +1322,16 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-mdc"));
+      userEvent.click(await screen.findByTestId("checkbox-mdc"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       const dialog = await screen.findByTestId("delete-dialog");
       expect(within(dialog).getByText(/draft of/)).toBeInTheDocument();
       expect(within(dialog).getByText("Draft Composite")).toBeInTheDocument();
 
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
       await waitFor(() =>
         expect(mockDeleteMeasure).toHaveBeenCalledWith("mdc")
       );
@@ -1383,10 +1353,10 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-mvc"));
+      userEvent.click(await screen.findByTestId("checkbox-mvc"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       const dialog = await screen.findByTestId("delete-dialog");
       expect(
@@ -1396,9 +1366,7 @@ describe("UserProfile", () => {
         within(dialog).getByText("Versioned Composite")
       ).toBeInTheDocument();
 
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
       await waitFor(() =>
         expect(mockAdminDeleteMeasure).toHaveBeenCalledWith("mvc", "owner_z")
       );
@@ -1410,13 +1378,13 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       await screen.findByTestId("delete-dialog");
-      await userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+      userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
 
       await waitFor(() =>
         expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
@@ -1430,15 +1398,13 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
-      await userEvent.click(deleteBtn);
+      userEvent.click(deleteBtn);
 
       await screen.findByTestId("delete-dialog");
-      await userEvent.click(
-        screen.getByTestId("delete-dialog-continue-button")
-      );
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
 
       await waitFor(() => {
         expect(
@@ -1459,8 +1425,8 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-m1"));
-      await userEvent.click(await screen.findByTestId("checkbox-m3"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m3"));
 
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeDisabled());
@@ -1496,8 +1462,8 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("expand-toggle-m1"));
-      await userEvent.click(await screen.findByTestId("checkbox-m1-prev"));
+      userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1-prev"));
 
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeDisabled());
@@ -1518,11 +1484,11 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-mc"));
+      userEvent.click(await screen.findByTestId("checkbox-mc"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeDisabled());
 
-      await userEvent.hover(deleteBtn.parentElement as HTMLElement);
+      userEvent.hover(deleteBtn.parentElement as HTMLElement);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(
         "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component."
       );
@@ -1543,7 +1509,7 @@ describe("UserProfile", () => {
 
       renderAt("/admin/userProfile/test_user");
 
-      await userEvent.click(await screen.findByTestId("checkbox-mvn"));
+      userEvent.click(await screen.findByTestId("checkbox-mvn"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
     });
