@@ -1,4 +1,6 @@
+import * as mockCmsIdStubs from "../../../../__mocks__/cmsIdFormatterStubs";
 import * as React from "react";
+import * as mockMeasureActionStubs from "../../../../__mocks__/measureActionStubs";
 import "@testing-library/jest-dom";
 import {
   render,
@@ -17,11 +19,15 @@ const mockAdminSearchMeasures = jest.fn();
 const mockGetMeasuresByMeasureSetId = jest.fn();
 const mockAdminDeleteMeasure = jest.fn();
 const mockDeleteMeasure = jest.fn();
+const mockFetchMeasure = jest.fn();
+const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 
 jest.mock("@madie/madie-util", () => ({
+  ...mockCmsIdStubs,
+  ...mockMeasureActionStubs,
   useUserServiceApi: jest.fn(() => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
   })),
@@ -32,6 +38,7 @@ jest.mock("@madie/madie-util", () => ({
       mockGetMeasuresByMeasureSetId(...args),
     adminDeleteMeasure: (...args: unknown[]) => mockAdminDeleteMeasure(...args),
     deleteMeasure: (...args: unknown[]) => mockDeleteMeasure(...args),
+    fetchMeasure: (...args: unknown[]) => mockFetchMeasure(...args),
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
     fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
@@ -44,6 +51,70 @@ jest.mock("@madie/madie-util", () => ({
     updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
   },
+  exportMeasure: (...args: unknown[]) => mockExportMeasure(...args),
+  ExportDialog: ({ open, handleContinueDialog, handleCancelDialog }: any) =>
+    open ? (
+      <div data-testid="export-dialog">
+        Export Dialog
+        <button
+          data-testid="export-continue-btn"
+          onClick={handleContinueDialog}
+        >
+          Continue
+        </button>
+        <button data-testid="export-cancel-btn" onClick={handleCancelDialog}>
+          Cancel
+        </button>
+      </div>
+    ) : null,
+  ViewHRModal: ({ open, onClose }: any) =>
+    open ? (
+      <div data-testid="view-human-readable-modal">
+        View HR Modal
+        <button data-testid="view-hr-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
+  ViewMeasureHistoryDialog: ({ open, onClose }: any) =>
+    open ? (
+      <div data-testid="view-measure-history-dialog">
+        Measure History
+        <button data-testid="view-history-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
+  CompareVersionsDialog: ({ open, onClose }: any) =>
+    open ? (
+      <div data-testid="compare-versions-dialog">
+        Compare Versions
+        <button data-testid="compare-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
+  ShareDialog: ({ open, option, onSave, onClose }: any) =>
+    open ? (
+      <div data-testid="share-dialog" data-option={option}>
+        Share Dialog
+        <button
+          data-testid="share-save-btn"
+          onClick={() =>
+            onSave({
+              toastType: "success",
+              toastMessage: "Measure Successfully Shared",
+              toastOpen: true,
+            })
+          }
+        >
+          Save
+        </button>
+        <button data-testid="share-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
 
 const renderAt = (initialEntry: string) =>
@@ -114,6 +185,8 @@ describe("UserProfile", () => {
     mockGetMeasuresByMeasureSetId.mockReset();
     mockAdminDeleteMeasure.mockReset();
     mockDeleteMeasure.mockReset();
+    mockFetchMeasure.mockReset();
+    mockExportMeasure.mockReset();
     mockFetchCqlLibraries.mockReset();
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
@@ -125,6 +198,10 @@ describe("UserProfile", () => {
     mockGetLibrariesByLibrarySetId.mockResolvedValue([]);
     mockAdminDeleteMeasure.mockResolvedValue({ status: 200 });
     mockDeleteMeasure.mockResolvedValue({ status: 200 });
+    mockFetchMeasure.mockImplementation((id: string) =>
+      Promise.resolve({ id, measureName: "Owned Measure A" })
+    );
+    mockExportMeasure.mockResolvedValue(undefined);
   });
 
   it("renders the user-profile card structure", async () => {
@@ -359,13 +436,13 @@ describe("UserProfile", () => {
   });
 
   it("shows an error message when the search fails", async () => {
-    mockAdminSearchMeasures.mockRejectedValue(new Error("boom"));
+    mockAdminSearchMeasures.mockRejectedValue(new Error("failed"));
 
     renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
       expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
-        "boom"
+        "failed"
       );
     });
   });
@@ -981,6 +1058,34 @@ describe("UserProfile", () => {
       expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
     });
 
+    it("shows an error toast when the delete fails", async () => {
+      const draftMeasure = {
+        ...ownedMeasure,
+        id: "mdf",
+        measureName: "Draft Fail",
+        measureMetaData: { draft: true },
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockDeleteMeasure.mockRejectedValueOnce(new Error("delete failed"));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mdf"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() =>
+        expect(mockDeleteMeasure).toHaveBeenCalledWith("mdf")
+      );
+      expect(
+        await screen.findByTestId("delete-measure-error-message")
+      ).toHaveTextContent("delete failed");
+    });
+
     it("deletes a VERSIONED composite measure via the admin hard-delete endpoint", async () => {
       const versionedComposite = {
         ...ownedMeasure,
@@ -1134,6 +1239,300 @@ describe("UserProfile", () => {
       userEvent.click(await screen.findByTestId("checkbox-mvn"));
       const deleteBtn = await screen.findByTestId("delete-action-btn");
       await waitFor(() => expect(deleteBtn).toBeEnabled());
+    });
+  });
+
+  describe("export / view HR / history / compare actions", () => {
+    const draftMeasure = {
+      id: "m1",
+      measureName: "Owned Measure A",
+      version: "1.0.000",
+      model: "QI-Core v4.1.1",
+      measureSetId: "set-1",
+      lastModifiedAt: "2026-05-01T12:00:00Z",
+      measureMetaData: { draft: true },
+      measureSet: { acls: [], cmsId: 42, owner: "test_user" },
+    };
+    const sameSetSibling = {
+      ...draftMeasure,
+      id: "m1b",
+      measureName: "Owned Measure A v0.9",
+      version: "0.9.000",
+      measureSetId: "set-1",
+      measureMetaData: { draft: false },
+    };
+    const lastExportSeverity = () => {
+      const call = mockExportMeasure.mock.calls[0];
+      return call[call.length - 1];
+    };
+
+    it("shows the four action icons when the flag is on", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(
+        await screen.findByTestId("export-action-btn")
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("view-hr-action-btn")).toBeInTheDocument();
+      expect(screen.getByTestId("history-action-btn")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("compare-versions-action-btn")
+      ).toBeInTheDocument();
+    });
+
+    // Icon behavior is unit-tested in @madie/madie-util; these cover only
+    // the admin wiring.
+
+    it("exports the full package via the 'Export' option (Info severity)", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("export-action-btn"));
+      userEvent.click(await screen.findByTestId("export-option"));
+      await waitFor(() => expect(mockFetchMeasure).toHaveBeenCalledWith("m1"));
+      await waitFor(() => expect(mockExportMeasure).toHaveBeenCalled());
+      expect(lastExportSeverity()).toBe("Info");
+    });
+
+    it("exports without warnings via the 'Export for Publishing' option (Error severity)", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("export-action-btn"));
+      userEvent.click(await screen.findByTestId("export-publishing-option"));
+      await waitFor(() => expect(mockExportMeasure).toHaveBeenCalled());
+      expect(lastExportSeverity()).toBe("Error");
+    });
+
+    it("opens the View Human Readable dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("view-hr-action-btn"));
+      expect(
+        await screen.findByTestId("view-human-readable-modal")
+      ).toBeInTheDocument();
+    });
+
+    it("opens the View History dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("history-action-btn"));
+      expect(
+        await screen.findByTestId("view-measure-history-dialog")
+      ).toBeInTheDocument();
+    });
+
+    it("opens the Compare dialog for two selected instances", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([draftMeasure, sameSetSibling], 2)
+      );
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1b"));
+      userEvent.click(await screen.findByTestId("compare-versions-action-btn"));
+      expect(
+        await screen.findByTestId("compare-versions-dialog")
+      ).toBeInTheDocument();
+    });
+
+    it("shows a failure when the export measure fetch rejects", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockFetchMeasure.mockRejectedValueOnce(new Error("failed"));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("export-action-btn"));
+      userEvent.click(await screen.findByTestId("export-option"));
+      await waitFor(() => expect(mockFetchMeasure).toHaveBeenCalledWith("m1"));
+      // fetch failed, so the download flow is never reached
+      await waitFor(() => expect(mockExportMeasure).not.toHaveBeenCalled());
+    });
+
+    it("closes the export dialog when Continue is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockExportMeasure.mockImplementation(
+        (_setFailure: any, setDownloadState: any) => {
+          setDownloadState("failure");
+          return Promise.resolve();
+        }
+      );
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("export-action-btn"));
+      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("export-continue-btn"));
+      await waitFor(() =>
+        expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument()
+      );
+    });
+
+    it("aborts and closes the export dialog when Cancel is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockExportMeasure.mockImplementation(
+        (_setFailure: any, setDownloadState: any) => {
+          setDownloadState("failure");
+          return Promise.resolve();
+        }
+      );
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("export-action-btn"));
+      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("export-cancel-btn"));
+      await waitFor(() =>
+        expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument()
+      );
+    });
+
+    it("closes the View Human Readable dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("view-hr-action-btn"));
+      userEvent.click(await screen.findByTestId("view-hr-close-btn"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("view-human-readable-modal")
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it("closes the View History dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("history-action-btn"));
+      userEvent.click(await screen.findByTestId("view-history-close-btn"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("view-measure-history-dialog")
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it("closes the Compare dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([draftMeasure, sameSetSibling], 2)
+      );
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1b"));
+      userEvent.click(await screen.findByTestId("compare-versions-action-btn"));
+      userEvent.click(await screen.findByTestId("compare-close-btn"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("compare-versions-dialog")
+        ).not.toBeInTheDocument()
+      );
+    });
+  });
+
+  describe("share / unshare actions", () => {
+    const ownedMeasureRow = {
+      id: "m1",
+      measureName: "Owned Measure A",
+      version: "1.0.000",
+      model: "QI-Core v4.1.1",
+      measureSetId: "set-1",
+      lastModifiedAt: "2026-05-01T12:00:00Z",
+      measureMetaData: { draft: true },
+      measureSet: { acls: [], cmsId: 42, owner: "test_user" },
+    };
+
+    // Share behavior is unit-tested in @madie/madie-util; these cover only
+    // the admin wiring (option per tab, save refresh).
+
+    it("shows the Share/Unshare icon on the Owned tab when the flag is on", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(await screen.findByTestId("share-action-btn")).toBeInTheDocument();
+    });
+
+    it("does not render the Share/Unshare icon when the flag is off", async () => {
+      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(await screen.findByTestId("user-profile")).toBeInTheDocument();
+      expect(screen.queryByTestId("share-action-btn")).not.toBeInTheDocument();
+    });
+
+    it("opens the share dialog with the 'Share With' option from the Owned tab", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-share-with"));
+      expect(await screen.findByTestId("share-dialog")).toHaveAttribute(
+        "data-option",
+        "Share With"
+      );
+    });
+
+    it("opens the share dialog with the 'Unshare' option from the Owned tab", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-unshare"));
+      expect(await screen.findByTestId("share-dialog")).toHaveAttribute(
+        "data-option",
+        "Unshare"
+      );
+    });
+
+    it("opens the 'UnshareFromMe' confirmation from the Shared tab", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("shared-measures-tab"));
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-unshare"));
+      expect(await screen.findByTestId("share-dialog")).toHaveAttribute(
+        "data-option",
+        "UnshareFromMe"
+      );
+    });
+
+    it("refreshes the measure list after the share dialog saves", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-share-with"));
+      const callsBefore = mockAdminSearchMeasures.mock.calls.length;
+      userEvent.click(await screen.findByTestId("share-save-btn"));
+      await waitFor(() =>
+        expect(mockAdminSearchMeasures.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        )
+      );
+    });
+
+    it("closes the share dialog on cancel", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-share-with"));
+      userEvent.click(await screen.findByTestId("share-close-btn"));
+      await waitFor(() =>
+        expect(screen.queryByTestId("share-dialog")).not.toBeInTheDocument()
+      );
+    });
+
+    it("dismisses the toast via its close button", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("share-action-btn"));
+      userEvent.click(await screen.findByTestId("share-option-share-with"));
+      userEvent.click(await screen.findByTestId("share-save-btn"));
+      userEvent.click(await screen.findByTestId("close-toast-button"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("close-toast-button")
+        ).not.toBeInTheDocument()
+      );
     });
   });
 });

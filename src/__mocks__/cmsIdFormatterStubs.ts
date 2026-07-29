@@ -1,5 +1,10 @@
-export const CMS_ID_PAD_WIDTH = 4;
-export const FHIR_SUFFIX = "FHIR";
+// Shared jest stubs for @madie/madie-util's CMS-ID formatters. Bodies mirror
+// madie-util/src/util/cmsIdFormatter.ts. Import as a `mock`-prefixed namespace
+// and spread into an inline util mock factory:
+//   import * as mockCmsIdStubs from "<path>/__mocks__/cmsIdFormatterStubs";
+//   jest.mock("@madie/madie-util", () => ({ ...mockCmsIdStubs, ... }));
+const CMS_ID_PAD_WIDTH = 4;
+const FHIR_SUFFIX = "FHIR";
 
 export function padCmsId(cmsId: number | string | null | undefined): string {
   if (cmsId === null || cmsId === undefined || cmsId === "") {

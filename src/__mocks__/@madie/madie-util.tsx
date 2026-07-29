@@ -38,3 +38,5 @@ module.exports = {
   useUserServiceApi,
   useMeasureServiceApi,
 };
+
+export { formatCmsId, padCmsId } from "../cmsIdFormatterStubs";
