@@ -138,7 +138,7 @@ const EMPTY_LIBRARIES_PAGE: LibrariesPageState = {
   offset: 0,
 };
 
-const ownershipForTab = (tab: number): Ownership => {
+export const ownershipForTab = (tab: number): Ownership => {
   switch (tab) {
     case 0:
       return "OWNED_MEASURE";
@@ -422,7 +422,7 @@ const UserProfile = () => {
     setLoading(true);
     setErrMsg("");
 
-    if (isLibraryOwnership(activeOwnership)) {
+    if (isLibraryTab) {
       const sortInfo = currentSort
         ? `${currentSort},${currentDirection === "DESC"}`
         : "lastModifiedAt,false";
@@ -535,6 +535,7 @@ const UserProfile = () => {
   }, [
     harpId,
     activeOwnership,
+    isLibraryTab,
     currentPage,
     currentLimit,
     currentSort,
@@ -820,23 +821,39 @@ const UserProfile = () => {
           />
         ),
       },
-      {
-        sortDescFirst: false,
-        header: "Shared",
-        accessorKey: "librarySet.acls",
-        cell: (info) => {
-          const shared =
-            info.row.original.actions?.librarySet?.acls?.length > 0;
-          return (
-            <div
-              data-testid={`library-shared-${info.row.original.id}`}
-              aria-label={shared ? "Shared" : "Not shared"}
-            >
-              {shared && <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />}
-            </div>
-          );
-        },
-      },
+      ...(activeOwnership === "SHARED_LIBRARY"
+        ? [
+            {
+              sortDescFirst: false,
+              header: "Owner",
+              accessorKey: "ownerDisplayName",
+              cell: (info: any) => {
+                const owner = info.row.original.actions?.ownerDisplayName;
+                return <span>{owner?.trim() ? owner.trim() : "-"}</span>;
+              },
+            },
+          ]
+        : [
+            {
+              sortDescFirst: false,
+              header: "Shared",
+              accessorKey: "librarySet.acls",
+              cell: (info: any) => {
+                const shared =
+                  info.row.original.actions?.librarySet?.acls?.length > 0;
+                return (
+                  <div
+                    data-testid={`library-shared-${info.row.original.id}`}
+                    aria-label={shared ? "Shared" : "Not shared"}
+                  >
+                    {shared && (
+                      <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]),
       {
         header: "Updated",
         accessorKey: "lastModifiedAt",
@@ -897,7 +914,7 @@ const UserProfile = () => {
         },
       },
     ],
-    [expandedLibrarySetId, toggleLibraryExpansion]
+    [activeOwnership, expandedLibrarySetId, toggleLibraryExpansion]
   );
 
   const libraryTable = useReactTable({
@@ -1262,6 +1279,11 @@ const UserProfile = () => {
                 type="B"
                 label={`Owned Libraries (${counts.OWNED_LIBRARY})`}
                 data-testid="owned-libraries-tab"
+              />
+              <Tab
+                type="B"
+                label={`Shared Libraries (${counts.SHARED_LIBRARY})`}
+                data-testid="shared-libraries-tab"
               />
             </Tabs>
           </section>

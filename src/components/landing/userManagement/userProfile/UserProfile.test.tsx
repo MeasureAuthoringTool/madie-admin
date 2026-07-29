@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import UserProfile from "./UserProfile";
+import UserProfile, { ownershipForTab } from "./UserProfile";
 
 const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
@@ -169,6 +169,22 @@ const ownedLibrary = {
   hasAssociatedLibraries: true,
 };
 
+const sharedLibrary = {
+  id: "lib2",
+  cqlLibraryName: "Shared Library B",
+  version: "2.0.000",
+  model: "QDM v5.6",
+  draft: false,
+  ownerDisplayName: "Library Owner",
+  lastModifiedAt: "2026-05-09T12:00:00Z",
+  librarySet: {
+    librarySetId: "library-set-2",
+    acls: [],
+  },
+  librarySetId: "library-set-2",
+  hasAssociatedLibraries: true,
+};
+
 const pageWith = (rows: any[], totalElements: number = rows.length) => ({
   content: rows,
   totalPages: 1,
@@ -178,6 +194,10 @@ const pageWith = (rows: any[], totalElements: number = rows.length) => ({
 });
 
 describe("UserProfile", () => {
+  it("falls back to OWNED_MEASURE for unknown tab index", () => {
+    expect(ownershipForTab(99)).toBe("OWNED_MEASURE");
+  });
+
   beforeEach(() => {
     mockGetUser.mockReset();
     mockUpdateUser.mockReset();
@@ -355,7 +375,9 @@ describe("UserProfile", () => {
 
   it("renders Owned Libraries tab with the library set count", async () => {
     mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
-    mockFetchCqlLibraries.mockResolvedValue(pageWith([], 5));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2));
 
     renderAt("/admin/userProfile/test_user");
 
@@ -371,6 +393,9 @@ describe("UserProfile", () => {
     });
     expect(screen.getByTestId("owned-libraries-tab")).toHaveTextContent(
       "Owned Libraries (5)"
+    );
+    expect(screen.getByTestId("shared-libraries-tab")).toHaveTextContent(
+      "Shared Libraries (2)"
     );
   });
 
@@ -435,6 +460,255 @@ describe("UserProfile", () => {
     ).toBeInTheDocument();
   });
 
+  it("loads shared libraries on tab click using Updated DESC as default sort", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValueOnce(pageWith([sharedLibrary], 4));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    mockFetchCqlLibraries.mockClear();
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "SHARED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    expect(
+      await screen.findByTestId("library-name-lib2-content")
+    ).toHaveTextContent("Shared Library B");
+    expect(screen.getByText("Owner")).toBeInTheDocument();
+    expect(screen.getByText("Library Owner")).toBeInTheDocument();
+    expect(screen.queryByText("Shared")).not.toBeInTheDocument();
+    expect(screen.getByTestId("library-action-lib2")).toBeInTheDocument();
+  });
+
+  it("sorts libraries by Library column ASC then DESC and reverts to Updated default", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockResolvedValue(pageWith([ownedLibrary], 3));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    await screen.findByTestId("library-name-lib1-content");
+
+    mockFetchCqlLibraries.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "cqlLibraryName,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "cqlLibraryName,true",
+        expect.any(AbortSignal)
+      );
+    });
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+  });
+
+  it("uses shared ownership with non-default sortInfo when sorting Shared Libraries", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValue(pageWith([sharedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await screen.findByTestId("library-name-lib2-content");
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Version" }));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "SHARED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "version,false",
+        expect.any(AbortSignal)
+      );
+    });
+  });
+
+  it("does not display library load error when library tab fetch is aborted", async () => {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockRejectedValueOnce(abortError);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "OWNED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
+    });
+    expect(
+      screen.queryByTestId("measures-error-message")
+    ).not.toBeInTheDocument();
+  });
+
+  it("logs an error when loading library counts fails", async () => {
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockRejectedValueOnce(new Error("count failure"))
+      .mockResolvedValueOnce(pageWith([], 0));
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Unable to load library counts",
+        expect.any(Error)
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("shows a fallback error when library loading fails without an error message", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 1))
+      .mockResolvedValueOnce(pageWith([], 1))
+      .mockRejectedValueOnce({});
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load libraries"
+      );
+    });
+  });
+
+  it("expands a shared library row and loads nested versions from library set hierarchy", async () => {
+    const nestedSharedLibrary = {
+      ...sharedLibrary,
+      id: "lib2-prev",
+      version: "1.9.000",
+      hasAssociatedLibraries: false,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValueOnce(pageWith([sharedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      sharedLibrary,
+      nestedSharedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await userEvent.click(
+      await screen.findByTestId("expand-library-toggle-lib2")
+    );
+
+    await waitFor(() => {
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
+        "library-set-2",
+        true,
+        { searchField: "", optionalSearchProperties: [] }
+      );
+    });
+
+    expect(
+      await screen.findByTestId("expanded-library-row-lib2-prev")
+    ).toBeInTheDocument();
+  });
+
+  it("shows an error message when the nested-libraries fetch fails", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 2))
+      .mockResolvedValueOnce(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockRejectedValue(
+      new Error("nested library fetch failed")
+    );
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load related nested libraries"
+      );
+    });
+    expect(
+      screen.queryByTestId("expanded-library-row-lib1-prev")
+    ).not.toBeInTheDocument();
+  });
+
   it("shows an error message when the search fails", async () => {
     mockAdminSearchMeasures.mockRejectedValue(new Error("failed"));
 
@@ -443,6 +717,18 @@ describe("UserProfile", () => {
     await waitFor(() => {
       expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
         "failed"
+      );
+    });
+  });
+
+  it("uses fallback message when measure search rejects without an Error object", async () => {
+    mockAdminSearchMeasures.mockRejectedValue("bad-request");
+
+    renderAt("/admin/userProfile/test_user");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("measures-error-message")).toHaveTextContent(
+        "Unable to load measures"
       );
     });
   });
@@ -637,6 +923,84 @@ describe("UserProfile", () => {
     });
     expect(
       screen.queryByTestId("expanded-row-m1-prev")
+    ).not.toBeInTheDocument();
+  });
+
+  it("collapses an expanded library row when the toggle is clicked again", async () => {
+    const nestedLibrary = {
+      ...ownedLibrary,
+      id: "lib1-prev",
+      version: "0.9.000",
+      draft: false,
+      hasAssociatedLibraries: false,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      ownedLibrary,
+      nestedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+    expect(
+      await screen.findByTestId("expanded-library-row-lib1-prev")
+    ).toBeInTheDocument();
+
+    mockGetLibrariesByLibrarySetId.mockClear();
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("expanded-library-row-lib1-prev")
+      ).not.toBeInTheDocument();
+    });
+    expect(mockGetLibrariesByLibrarySetId).not.toHaveBeenCalled();
+  });
+
+  it("does not call nested-library API when expanded row has no librarySetId", async () => {
+    const missingSetIdLibrary = {
+      ...ownedLibrary,
+      id: "lib-no-set",
+      librarySetId: undefined,
+      hasAssociatedLibraries: true,
+    };
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([missingSetIdLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    await userEvent.click(
+      await screen.findByTestId("expand-library-toggle-lib-no-set")
+    );
+
+    expect(mockGetLibrariesByLibrarySetId).not.toHaveBeenCalled();
+  });
+
+  it("does not show nested-library error when nested fetch is aborted", async () => {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockRejectedValue(abortError);
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+
+    await waitFor(() => {
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalled();
+    });
+    expect(
+      screen.queryByText("Unable to load related nested libraries")
     ).not.toBeInTheDocument();
   });
 
@@ -1002,6 +1366,29 @@ describe("UserProfile", () => {
       ).toBeInTheDocument();
     });
 
+    it("closes the success toast when the close button is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await screen.findByTestId("delete-measure-success-message");
+      await userEvent.click(screen.getByTestId("close-toast-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("delete-measure-success-message")
+        ).not.toBeInTheDocument();
+      });
+    });
+
     it("shows version wording and deletes a versioned measure with the owner harpId", async () => {
       const versioned = {
         ...ownedMeasure,
@@ -1138,6 +1525,202 @@ describe("UserProfile", () => {
         expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
       );
       expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("shows a fallback delete error toast when delete fails without an error message", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockDeleteMeasure.mockRejectedValue({});
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("delete-measure-error-message")
+        ).toHaveTextContent("Unable to delete measure");
+      });
+    });
+
+    it("disables Delete when more than one measure is selected", async () => {
+      const second = {
+        ...ownedMeasure,
+        id: "m3",
+        measureName: "Owned Measure C",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([ownedMeasure, second], 2)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m3"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+    });
+
+    it("disables Delete when only an expanded (non-latest) version is selected", async () => {
+      const parentMeasure = {
+        ...ownedMeasure,
+        hasAssociatedMeasures: true,
+        measureSet: { ...ownedMeasure.measureSet, measureSetId: "set-1" },
+        measureSetId: "set-1",
+      };
+      const nestedMeasure = {
+        id: "m1-prev",
+        measureName: "Owned Measure A v0.9",
+        version: "0.9.000",
+        model: "QI-Core v4.1.1",
+        lastModifiedAt: "2026-04-01T12:00:00Z",
+        measureMetaData: { draft: false },
+        measureSet: {
+          acls: [],
+          cmsId: 42,
+          owner: "test_user",
+          measureSetId: "set-1",
+        },
+        measureSetId: "set-1",
+      };
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([parentMeasure], 1));
+      mockGetMeasuresByMeasureSetId.mockResolvedValue([
+        parentMeasure,
+        nestedMeasure,
+      ]);
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("expand-toggle-m1"));
+      userEvent.click(await screen.findByTestId("checkbox-m1-prev"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+    });
+
+    it("disables Delete with a composite tooltip when a single component measure is selected", async () => {
+      const componentMeasure = {
+        ...ownedMeasure,
+        id: "mc",
+        measureName: "Component Measure",
+        version: "1.0.000",
+        measureMetaData: { draft: false },
+        component: true,
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([componentMeasure], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mc"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeDisabled());
+
+      userEvent.hover(deleteBtn.parentElement as HTMLElement);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component."
+      );
+    });
+
+    it("keeps Delete enabled for a single versioned non-component measure", async () => {
+      const versionedNonComponent = {
+        ...ownedMeasure,
+        id: "mvn",
+        measureName: "Versioned Non-Component",
+        version: "2.0.000",
+        measureMetaData: { draft: false },
+        component: false,
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([versionedNonComponent], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mvn"));
+      expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("deletes a VERSIONED composite measure via the admin hard-delete endpoint", async () => {
+      const versionedComposite = {
+        ...ownedMeasure,
+        id: "mvc",
+        measureName: "Versioned Composite",
+        version: "3.0.000",
+        measureMetaData: { draft: false, composite: true },
+        measureSet: { ...ownedMeasure.measureSet, owner: "owner_z" },
+      };
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith([versionedComposite], 1)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-mvc"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+      expect(
+        within(dialog).getByText(/version 3\.0\.000 of/)
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Versioned Composite")
+      ).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+      await waitFor(() =>
+        expect(mockAdminDeleteMeasure).toHaveBeenCalledWith("mvc", "owner_z")
+      );
+      expect(mockDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("closes the dialog without deleting when Cancel is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
+      );
+      expect(mockAdminDeleteMeasure).not.toHaveBeenCalled();
+    });
+
+    it("shows a fallback delete error toast when delete fails without an error message", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockDeleteMeasure.mockRejectedValue({});
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("delete-measure-error-message")
+        ).toHaveTextContent("Unable to delete measure");
+      });
     });
 
     it("disables Delete when more than one measure is selected", async () => {
