@@ -394,7 +394,7 @@ describe("UserProfile", () => {
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
     mockFetchCqlLibraries.mockClear();
-    userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
 
     await waitFor(() => {
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
@@ -561,7 +561,9 @@ describe("UserProfile", () => {
     await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
 
     userEvent.click(screen.getByTestId("shared-libraries-tab"));
-    userEvent.click(await screen.findByTestId("expand-library-toggle-lib2"));
+    await userEvent.click(
+      await screen.findByTestId("expand-library-toggle-lib2")
+    );
 
     await waitFor(() => {
       expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
@@ -1273,7 +1275,7 @@ describe("UserProfile", () => {
       userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
 
       await screen.findByTestId("delete-measure-success-message");
-      userEvent.click(screen.getByTestId("close-toast-button"));
+      await userEvent.click(screen.getByTestId("close-toast-button"));
 
       await waitFor(() => {
         expect(
