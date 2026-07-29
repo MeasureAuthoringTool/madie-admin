@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
+  export function padCmsId(cmsId: number | string | null | undefined): string;
+  export function formatCmsId(
+    cmsId: number | string | null | undefined,
+    model: string | null | undefined
+  ): string;
+
   import type { AxiosError } from "axios";
 
   export interface FeatureFlags {
@@ -77,6 +83,7 @@ declare module "@madie/madie-util" {
       sortByLatestVersion?: boolean,
       searchCriteria?: MeasureSearchCriteria
     ): Promise<any[]>;
+    fetchMeasure(id: string): Promise<any>;
     deleteMeasure(id: string): Promise<Response>;
     adminDeleteMeasure(id: string, ownerHarpId: string): Promise<Response>;
   }
@@ -130,4 +137,72 @@ declare module "@madie/madie-util" {
   }
 
   export const adminUserStore: AdminUserStore;
+
+  export function ExportAction(props: {
+    measures: any[];
+    onClick: (exportType: string) => void;
+  }): JSX.Element;
+  export function ViewHRAction(props: {
+    measures: any[];
+    onClick: () => void;
+  }): JSX.Element;
+  export function HistoryAction(props: {
+    measures: any[];
+    onClick: () => void;
+  }): JSX.Element;
+  export function CompareVersionsAction(props: {
+    measures: any[];
+    onClick: () => void;
+  }): JSX.Element;
+  export function ShareAction(props: {
+    measures: any[];
+    onClick: (option: string) => void;
+    isOwner?: boolean;
+    isSharedWithUser?: boolean;
+    activeTab: number;
+  }): JSX.Element;
+
+  export function ExportDialog(props: {
+    downloadState?: string | null;
+    failureMessage?: string | string[] | null;
+    measureName?: string;
+    open: boolean;
+    handleContinueDialog?: () => void;
+    handleCancelDialog?: () => void;
+  }): JSX.Element | null;
+  export function ViewHRModal(props: {
+    open: boolean;
+    onClose: () => void;
+    exportMeasure?: (elmErrorSeverity: string) => void;
+    measureId: string;
+  }): JSX.Element | null;
+  export function ViewMeasureHistoryDialog(props: {
+    measures: any[];
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
+  export function CompareVersionsDialog(props: {
+    measures: any[] | null | undefined;
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
+  export function ShareDialog(props: {
+    measures: any[];
+    open: boolean;
+    option: string;
+    onClose: (...args: any[]) => void;
+    onSave: (...args: any[]) => void;
+    isAdmin?: boolean;
+  }): JSX.Element | null;
+  export function exportMeasure(
+    setFailureMessage: (msg: string | string[] | null) => void,
+    setDownloadState: (state: string | null) => void,
+    abortController: { current: AbortController | null },
+    measure: any,
+    measureServiceApi: MeasureServiceApi,
+    setToastOpen: (open: boolean) => void,
+    setToastType: (type: string) => void,
+    setToastMessage: (message: string) => void,
+    elmErrorSeverity: string
+  ): Promise<void>;
 }

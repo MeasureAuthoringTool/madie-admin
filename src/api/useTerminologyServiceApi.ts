@@ -110,11 +110,15 @@ export class TerminologyServiceApi {
   async getCodeSystems(
     page = 0,
     limit = 10,
-    sortInfo?: string
+    sortInfo?: string,
+    filterField?: string,
+    searchText?: string
   ): Promise<Page<CodeSystem>> {
     const params: Record<string, string | number> = {
       page,
       limit,
+      filterField,
+      searchText,
     };
 
     if (sortInfo) {
