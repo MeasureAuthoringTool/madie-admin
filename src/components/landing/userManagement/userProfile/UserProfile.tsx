@@ -115,6 +115,14 @@ const COMPONENT_DELETE_DISABLED_MSG =
   "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component.";
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
+const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model", "CMS ID"];
+
+const LIBRARY_FILTER_MAP = new Map<string, string>([
+  ["Library", "library"],
+  ["Version", "version"],
+  ["Model", "model"],
+  ["CMS ID", "cmsId"],
+]);
 
 const MEASURE_FILTER_MAP = new Map<string, string>([
   ["Measure", "measure"],
@@ -434,7 +442,7 @@ const UserProfile = () => {
           cqlLibraryOwnershipForTab(activeOwnership),
           currentLimit,
           currentPage - 1,
-          DEFAULT_SEARCH_CRITERIA,
+          searchCriteria,
           sortInfo,
           controller.signal
         )
@@ -951,18 +959,29 @@ const UserProfile = () => {
   const handleSearchTrigger = useCallback(() => {
     finalizeSearchCriteria();
 
-    const selectedProperty = MEASURE_FILTER_MAP.get(filterBy);
+    const activeFilterMap = isLibraryTab
+      ? LIBRARY_FILTER_MAP
+      : MEASURE_FILTER_MAP;
+    const selectedProperty = activeFilterMap.get(filterBy);
     let optionalSearchProperties: string[] = [];
 
     if (filterBy && selectedProperty) {
       optionalSearchProperties = [selectedProperty];
     } else if (!filterBy && searchField) {
-      optionalSearchProperties = Array.from(MEASURE_FILTER_MAP.values());
+      optionalSearchProperties = isLibraryTab
+        ? Array.from(LIBRARY_FILTER_MAP.values())
+        : Array.from(MEASURE_FILTER_MAP.values());
     }
 
     setSearchCriteria({ searchField, optionalSearchProperties });
     handlePageChange(null, 1);
-  }, [finalizeSearchCriteria, filterBy, searchField, handlePageChange]);
+  }, [
+    finalizeSearchCriteria,
+    filterBy,
+    searchField,
+    isLibraryTab,
+    handlePageChange,
+  ]);
 
   const handleSearchClear = useCallback(() => {
     blankSearchCriteria();
@@ -1310,8 +1329,7 @@ const UserProfile = () => {
               />
             </Tabs>
           </section>
-
-          {featureFlags?.AdminUserProfile && !isLibraryTab && (
+          {featureFlags?.AdminUserProfile && (
             <div className="search-filter-bar" data-testid="search-filter-bar">
               <SearchAndFilter
                 filterBy={filterBy}
@@ -1320,25 +1338,28 @@ const UserProfile = () => {
                 onSearchChange={handleSearch}
                 onSearchTrigger={handleSearchTrigger}
                 onSearchClear={handleSearchClear}
-                filterByOpts={MEASURE_FILTER_OPTIONS}
+                filterByOpts={
+                  isLibraryTab ? LIBRARY_FILTER_OPTIONS : MEASURE_FILTER_OPTIONS
+                }
                 textFieldID="user-profile-measures"
               />
-              <ActionCenter
-                measures={selectedMeasures}
-                canDelete={canDelete}
-                activeTab={activeTab}
-                onDelete={openDeleteDialog}
-                onExport={handleExport}
-                onViewHumanReadable={handleViewHumanReadable}
-                onViewHistory={handleViewHistory}
-                onCompareVersions={handleCompareVersions}
-                onShare={handleShare}
-                onTransfer={handleTransfer}
-                disabledReason={deleteDisabledReason}
-              />
+              {!isLibraryTab && (
+                <ActionCenter
+                  measures={selectedMeasures}
+                  canDelete={canDelete}
+                  activeTab={activeTab}
+                  onDelete={openDeleteDialog}
+                  onExport={handleExport}
+                  onViewHumanReadable={handleViewHumanReadable}
+                  onViewHistory={handleViewHistory}
+                  onCompareVersions={handleCompareVersions}
+                  onShare={handleShare}
+                  onTransfer={handleTransfer}
+                  disabledReason={deleteDisabledReason}
+                />
+              )}
             </div>
           )}
-
           {errMsg && !loading && (
             <p
               className="error-message"
