@@ -393,7 +393,8 @@ const UserProfile = () => {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      cqlLibraryServiceApi.fetchCqlLibraries(
+      cqlLibraryServiceApi.adminSearchCqlLibrariesForUser(
+        harpId,
         "OWNED",
         1,
         0,
@@ -401,7 +402,8 @@ const UserProfile = () => {
         "lastModifiedAt,false",
         controller.signal
       ),
-      cqlLibraryServiceApi.fetchCqlLibraries(
+      cqlLibraryServiceApi.adminSearchCqlLibrariesForUser(
+        harpId,
         "SHARED",
         1,
         0,
@@ -438,7 +440,8 @@ const UserProfile = () => {
         : "lastModifiedAt,false";
 
       cqlLibraryServiceApi
-        .fetchCqlLibraries(
+        .adminSearchCqlLibrariesForUser(
+          harpId,
           cqlLibraryOwnershipForTab(activeOwnership),
           currentLimit,
           currentPage - 1,
