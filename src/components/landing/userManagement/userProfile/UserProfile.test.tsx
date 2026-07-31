@@ -24,6 +24,7 @@ const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
+const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
 
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
@@ -46,6 +47,7 @@ jest.mock("@madie/madie-util", () => ({
       mockGetLibrariesByLibrarySetId(...args),
   })),
   useFeatureFlags: () => mockUseFeatureFlags(),
+  checkUserCanEdit: (...args: unknown[]) => mockCheckUserCanEdit(...args),
   adminUserStore: {
     state: null,
     updateUser: (...args: unknown[]) => mockUpdateUser(...args),
@@ -232,6 +234,8 @@ describe("UserProfile", () => {
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
+    mockCheckUserCanEdit.mockReset();
+    mockCheckUserCanEdit.mockReturnValue(false);
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
@@ -333,6 +337,126 @@ describe("UserProfile", () => {
     expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
       "Owned Measures (7)"
     );
+  });
+
+  describe("measure action button", () => {
+    it("renders Edit when the signed in admin can edit the draft measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Measure Owned Measure A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        "test_user",
+        ownedMeasure.measureSet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft"
+      );
+    });
+
+    it("renders View for a versioned measure even when the admin owns it", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m2");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Shared Measure B 2.1.000"
+      );
+    });
+
+    it("navigates to the measure details page in the Measures Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/measures/m1/edit/details/");
+      });
+
+      (window as any).location = originalLocation;
+    });
+  });
+
+  describe("library action button", () => {
+    const renderLibrariesTab = async () => {
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      renderAt("/admin/userProfile/test_user");
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+      return screen.findByTestId("library-action-lib1");
+    };
+
+    it("renders Edit when the signed in admin can edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Library Owned Library A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        undefined,
+        ownedLibrary.librarySet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Library Owned Library A 1.0.000 Draft"
+      );
+    });
+
+    it("navigates to the library details page in the CQL Library Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      const action = await renderLibrariesTab();
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/cql-libraries/lib1/edit/details");
+      });
+
+      (window as any).location = originalLocation;
+    });
   });
 
   it("switches to the Shared tab and re-queries with SHARED ownership", async () => {

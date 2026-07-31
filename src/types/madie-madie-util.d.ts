@@ -41,6 +41,11 @@ declare module "@madie/madie-util" {
     getUserName: () => string;
   };
   export function wafIntercept(error: AxiosError): Promise<never>;
+  export function checkUserCanEdit(
+    createdBy: string,
+    acls: any[],
+    draft?: boolean
+  ): boolean;
 
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);

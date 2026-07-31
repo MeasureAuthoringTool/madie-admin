@@ -21,6 +21,7 @@ import {
   TransferDialog,
   exportMeasure as downloadMeasureExport,
   formatCmsId,
+  checkUserCanEdit,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -721,17 +722,33 @@ const UserProfile = () => {
         id: "action",
         header: "",
         enableSorting: false,
-        cell: (info) => (
-          <Button
-            variant="outline-filled"
-            data-testid={`measure-action-${info.row.original.id}`}
-            aria-label={`View Measure ${info.row.original.measureName} ${info.row.original.version}`}
-            tabIndex={0}
-            role="button"
-          >
-            View
-          </Button>
-        ),
+        cell: (info) => {
+          const measure = info.row.original.actions;
+          const isDraft = !!measure?.measureMetaData?.draft;
+          const canEdit =
+            checkUserCanEdit(
+              measure?.measureSet?.owner,
+              measure?.measureSet?.acls
+            ) && isDraft;
+          const buttonText = canEdit ? "Edit" : "View";
+
+          return (
+            <Button
+              variant="outline-filled"
+              data-testid={`measure-action-${info.row.original.id}`}
+              aria-label={`${buttonText} Measure ${
+                info.row.original.measureName
+              } ${info.row.original.version}${isDraft ? " Draft" : ""}`}
+              tabIndex={0}
+              role="button"
+              onClick={() => {
+                window.location.href = `/measures/${info.row.original.id}/edit/details/`;
+              }}
+            >
+              {buttonText}
+            </Button>
+          );
+        },
       },
       {
         id: "expandArrow",
@@ -872,17 +889,31 @@ const UserProfile = () => {
         id: "action",
         header: "",
         enableSorting: false,
-        cell: (info) => (
-          <Button
-            variant="outline-filled"
-            data-testid={`library-action-${info.row.original.id}`}
-            aria-label={`View Library ${info.row.original.cqlLibraryName} ${info.row.original.version}`}
-            tabIndex={0}
-            role="button"
-          >
-            View
-          </Button>
-        ),
+        cell: (info) => {
+          const library = info.row.original.actions;
+          const canEdit = checkUserCanEdit(
+            library?.librarySet?.owner,
+            library?.librarySet?.acls
+          );
+          const buttonText = canEdit ? "Edit" : "View";
+
+          return (
+            <Button
+              variant="outline-filled"
+              data-testid={`library-action-${info.row.original.id}`}
+              aria-label={`${buttonText} Library ${
+                info.row.original.cqlLibraryName
+              } ${info.row.original.version}${library?.draft ? " Draft" : ""}`}
+              tabIndex={0}
+              role="button"
+              onClick={() => {
+                window.location.href = `/cql-libraries/${info.row.original.id}/edit/details`;
+              }}
+            >
+              {buttonText}
+            </Button>
+          );
+        },
       },
       {
         id: "expandArrow",
