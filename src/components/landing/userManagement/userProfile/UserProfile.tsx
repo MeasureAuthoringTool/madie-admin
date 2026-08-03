@@ -1442,6 +1442,7 @@ const UserProfile = () => {
     measureServiceApi,
     closeDeleteDialog,
     clearExpansion,
+    closeDeleteDialog,
     table,
   ]);
 
