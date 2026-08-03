@@ -51,6 +51,7 @@ declare module "@madie/madie-util" {
     constructor(baseUrl: string, getAccessToken: () => string);
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
     getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
+    getBulkUserDetails(harpIds: string[]): Promise<Record<string, UserDetails>>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
