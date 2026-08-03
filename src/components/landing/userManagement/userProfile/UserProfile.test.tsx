@@ -2751,7 +2751,9 @@ describe("UserProfile", () => {
       await waitFor(() =>
         expect(mockDeleteDraftLibrary).toHaveBeenCalledWith("lib1")
       );
-      await screen.findByText("Library successfully deleted");
+      expect(
+        await screen.findByText("Unable to delete library")
+      ).toBeInTheDocument();
     });
 
     it("selects and deselects an expanded library row with its checkbox", async () => {

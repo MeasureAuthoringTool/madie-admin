@@ -1452,43 +1452,51 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
+  const selectedLibraries = useMemo(() => {
+    const topLevel = libraryTable
+      .getSelectedRowModel()
+      .rows.map((row) => row.original.actions);
 
+    const expanded = expandedLibraryRows
+      .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
+      .map((row) => row.actions);
+
+    return [...topLevel, ...expanded];
+  }, [libraryTable, expandedLibraryRows, selectedExpandedLibraryRowIds]);
   const handleConfirmDeleteLibrary = useCallback(async () => {
-    const { id, draft } = deleteTarget;
-
     if (!deleteTarget) return;
+
+    const { id, draft } = deleteTarget;
 
     try {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        // it's a versioned library
         await cqlLibraryServiceApi.deleteLibrary(id, harpId);
       }
+
+      setToastType("success");
+      setToastMessage("Library successfully deleted");
+      setToastOpen(true);
+
+      closeDeleteDialog();
+      libraryTable.toggleAllRowsSelected(false);
+      clearLibraryExpansion();
+      setRefreshToken((t) => t + 1);
     } catch (error: any) {
       setToastType("danger");
       setToastMessage(error?.message || "Unable to delete library");
       setToastOpen(true);
       closeDeleteDialog();
-    } finally {
-      // successful delete condition
-      setToastType("success");
-      setToastMessage("Library successfully deleted");
-      setToastOpen(true);
-      closeDeleteDialog();
-      libraryTable.toggleAllRowsSelected(false);
-      clearExpansion();
-      setRefreshToken((t) => t + 1);
     }
   }, [
     deleteTarget,
     cqlLibraryServiceApi,
-    clearExpansion,
+    clearLibraryExpansion,
     closeDeleteDialog,
     libraryTable,
     harpId,
   ]);
-
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
     setFailureMessage(null);
@@ -1662,7 +1670,8 @@ const UserProfile = () => {
               data-testid="search-filter-bar"
             >
               <ActionCenter
-                measures={selectedMeasures}
+                target="library"
+                measures={selectedLibraries}
                 canDelete={canDelete}
                 activeTab={activeTab}
                 onDelete={openDeleteDialog}
