@@ -1480,7 +1480,7 @@ const UserProfile = () => {
       clearExpansion();
       setRefreshToken((t) => t + 1);
     }
-  }, [deleteTarget, isLibraryTab, cqlLibraryServiceApi]);
+  }, [deleteTarget, isLibraryTab, cqlLibraryServiceApi, clearExpansion]);
 
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);

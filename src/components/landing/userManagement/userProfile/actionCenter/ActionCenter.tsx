@@ -41,14 +41,12 @@ export default function ActionCenter({
 }: PropTypes) {
   return (
     <div className="action-center" data-testid="action-center">
-      {onDelete && (
-        <DeleteAction
-          deleteTarget={target}
-          disabled={!canDelete}
-          onClick={onDelete}
-          disabledReason={disabledReason}
-        />
-      )}
+      <DeleteAction
+        deleteTarget={target}
+        disabled={!canDelete}
+        onClick={onDelete}
+        disabledReason={disabledReason}
+      />
       {onExport && <ExportAction measures={measures} onClick={onExport} />}
       {/* isOwner/isSharedWithUser are unused for admins — the icon short-circuits on isAdmin */}
       {onShare && (
