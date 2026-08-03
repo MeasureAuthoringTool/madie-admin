@@ -1487,6 +1487,7 @@ const UserProfile = () => {
     clearExpansion,
     closeDeleteDialog,
     libraryTable,
+    harpId,
   ]);
 
   const handleContinueDialog = useCallback(() => {
