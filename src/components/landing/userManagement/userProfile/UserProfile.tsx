@@ -1482,11 +1482,11 @@ const UserProfile = () => {
     }
   }, [
     deleteTarget,
-    isLibraryTab,
     cqlLibraryServiceApi,
     clearExpansion,
     closeDeleteDialog,
     libraryTable,
+    harpId,
   ]);
 
   const handleContinueDialog = useCallback(() => {
