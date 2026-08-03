@@ -26,6 +26,8 @@ const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
 const mockGetBulkUserDetails = jest.fn();
+const mockDeleteDraftLibrary = jest.fn();
+const mockDeleteLibrary = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
@@ -45,6 +47,8 @@ jest.mock("@madie/madie-util", () => ({
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
     fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
+    deleteDraft: (...args: unknown[]) => mockDeleteDraftLibrary(...args),
+    deleteLibrary: (...args: unknown[]) => mockDeleteLibrary(...args),
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
       mockGetLibrariesByLibrarySetId(...args),
   })),
@@ -251,6 +255,10 @@ describe("UserProfile", () => {
       Promise.resolve({ id, measureName: "Owned Measure A" })
     );
     mockExportMeasure.mockResolvedValue(undefined);
+    mockDeleteDraftLibrary.mockReset();
+    mockDeleteLibrary.mockReset();
+    mockDeleteDraftLibrary.mockResolvedValue({ status: 200 });
+    mockDeleteLibrary.mockResolvedValue({ status: 200 });
   });
 
   it("renders the user-profile card structure", async () => {
@@ -2613,5 +2621,177 @@ describe("UserProfile", () => {
         expect(screen.queryByTestId("transfer-dialog")).not.toBeInTheDocument()
       );
     });
+  it("deletes a draft library and shows success toast", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+    userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+    const deleteBtn = await screen.findByTestId("delete-action-btn");
+    await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+    userEvent.click(deleteBtn);
+
+    const dialog = await screen.findByTestId("delete-dialog");
+
+    expect(within(dialog).getByText("Delete Library")).toBeInTheDocument();
+    expect(within(dialog).getByText(/draft of/i)).toBeInTheDocument();
+    expect(within(dialog).getByText("Owned Library A")).toBeInTheDocument();
+
+    userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+    await waitFor(() =>
+      expect(mockDeleteDraftLibrary).toHaveBeenCalledWith("lib1")
+    );
+
+    expect(mockDeleteLibrary).not.toHaveBeenCalled();
+
+    expect(
+      await screen.findByText("Library successfully deleted")
+    ).toBeInTheDocument();
+  });
+  it("deletes a versioned library and shows success toast", async () => {
+    const versionedLibrary = {
+      ...ownedLibrary,
+      id: "lib2",
+      cqlLibraryName: "Versioned Library",
+      draft: false,
+      version: "2.0.000",
+    };
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([versionedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+    userEvent.click(await screen.findByTestId("checkbox-lib2"));
+
+    const deleteBtn = await screen.findByTestId("delete-action-btn");
+    await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+    userEvent.click(deleteBtn);
+
+    const dialog = await screen.findByTestId("delete-dialog");
+
+    expect(
+      within(dialog).getByText(/version 2\.0\.000 of/i)
+    ).toBeInTheDocument();
+
+    expect(within(dialog).getByText("Versioned Library")).toBeInTheDocument();
+
+    userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+    await waitFor(() =>
+      expect(mockDeleteLibrary).toHaveBeenCalledWith("lib2", "test_user")
+    );
+
+    expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
+
+    expect(
+      await screen.findByText("Library successfully deleted")
+    ).toBeInTheDocument();
+  });
+
+  it("closes the delete library dialog when cancel is clicked", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+    userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+    const deleteBtn = await screen.findByTestId("delete-action-btn");
+    await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+    userEvent.click(deleteBtn);
+
+    await screen.findByTestId("delete-dialog");
+
+    userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
+    );
+
+    expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
+    expect(mockDeleteLibrary).not.toHaveBeenCalled();
+  });
+
+  it("delete library fails", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+    mockDeleteDraftLibrary.mockRejectedValueOnce(
+      new Error("Unable to delete library")
+    );
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+    userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+    const deleteBtn = await screen.findByTestId("delete-action-btn");
+    await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+    userEvent.click(deleteBtn);
+
+    await screen.findByTestId("delete-dialog");
+
+    userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+    await waitFor(() =>
+      expect(mockDeleteDraftLibrary).toHaveBeenCalledWith("lib1")
+    );
+    await screen.findByText("Library successfully deleted");
+  });
+
+  it("selects and deselects an expanded library row with its checkbox", async () => {
+    const nestedLibrary = {
+      ...ownedLibrary,
+      id: "lib1-prev",
+      version: "0.9.000",
+      draft: false,
+      hasAssociatedLibraries: false,
+    };
+
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+    mockGetLibrariesByLibrarySetId.mockResolvedValue([
+      ownedLibrary,
+      nestedLibrary,
+    ]);
+
+    renderAt("/admin/userProfile/test_user");
+
+    userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+    userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+    await waitFor(() =>
+      expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
+        "library-set-1",
+        true,
+        { searchField: "", optionalSearchProperties: [] }
+      )
+    );
+    const nestedCheckbox = (await screen.findByTestId(
+      "checkbox-lib1-prev"
+    )) as HTMLInputElement;
+
+    expect(nestedCheckbox.checked).toBe(false);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(true);
+
+    userEvent.click(nestedCheckbox);
+    expect(nestedCheckbox.checked).toBe(false);
   });
 });

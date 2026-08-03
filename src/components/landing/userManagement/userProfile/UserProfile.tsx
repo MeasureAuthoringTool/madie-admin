@@ -87,6 +87,7 @@ type LibraryRow = {
   model: string;
   actions: any;
   hasAssociatedLibraries: boolean;
+  draft: boolean;
 };
 
 type MeasuresPageState = {
@@ -205,6 +206,7 @@ const transformLibraryRow = (library: any): LibraryRow => ({
   model: library?.model,
   actions: library,
   hasAssociatedLibraries: !!library?.hasAssociatedLibraries,
+  draft: library.draft,
 });
 
 function IndeterminateCheckbox({
@@ -389,6 +391,8 @@ const UserProfile = () => {
   const [selectedExpandedRowIds, setSelectedExpandedRowIds] = useState<
     string[]
   >([]);
+  const [selectedExpandedLibraryRowIds, setSelectedExpandedLibraryRowIds] =
+    useState<string[]>([]);
   const [expandedLibrarySetId, setExpandedLibrarySetId] = useState<
     string | null
   >(null);
@@ -414,6 +418,7 @@ const UserProfile = () => {
   const clearLibraryExpansion = useCallback(() => {
     setExpandedLibrarySetId(null);
     setExpandedLibraryRows([]);
+    setSelectedExpandedLibraryRowIds([]);
   }, []);
 
   useEffect(() => {
@@ -914,6 +919,30 @@ const UserProfile = () => {
   const libraryColumns = useMemo<ColumnDef<LibraryRow>[]>(
     () => [
       {
+        id: "select",
+        enableSorting: false,
+        header: ({ table }) => (
+          <IndeterminateCheckbox
+            checked={table.getIsAllRowsSelected()}
+            indeterminate={table.getIsSomePageRowsSelected()}
+            onChange={table.getToggleAllPageRowsSelectedHandler()}
+            id="select-all-checkbox"
+          />
+        ),
+        cell: ({ row }) => {
+          return (
+            <IndeterminateCheckbox
+              checked={row.getIsSelected()}
+              disabled={!row.getCanSelect()}
+              indeterminate={row.getIsSomeSelected()}
+              onChange={row.getToggleSelectedHandler()}
+              id={row.original.id}
+              aria-label={`Select library ${row.original.cqlLibraryName}`}
+            />
+          );
+        },
+      },
+      {
         header: "Library",
         accessorKey: "cqlLibraryName",
         cell: (info) => (
@@ -1104,6 +1133,7 @@ const UserProfile = () => {
     data: libraryData,
     columns: libraryColumns,
     getRowId: (row) => row.id,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
   });
 
@@ -1113,6 +1143,7 @@ const UserProfile = () => {
       clearExpansion();
       clearLibraryExpansion();
       table.toggleAllRowsSelected(false);
+      libraryTable.toggleAllRowsSelected(false);
       setCurrentPage(1);
     },
     [clearExpansion, clearLibraryExpansion, table]
@@ -1123,10 +1154,13 @@ const UserProfile = () => {
       if (!isLibraryTab) {
         table.toggleAllRowsSelected(false);
         setSelectedExpandedRowIds([]);
+      } else {
+        libraryTable.toggleAllRowsSelected(false);
+        setSelectedExpandedLibraryRowIds([]);
       }
       setCurrentPage(page);
     },
-    [isLibraryTab, table]
+    [isLibraryTab, table, libraryTable]
   );
 
   const handleSearchTrigger = useCallback(() => {
@@ -1203,6 +1237,15 @@ const UserProfile = () => {
     []
   );
 
+  const toggleExpandedLibraryRowSelection = useCallback(
+    (id: string, checked: boolean) => {
+      setSelectedExpandedLibraryRowIds((prev) =>
+        checked ? [...prev, id] : prev.filter((x) => x !== id)
+      );
+    },
+    []
+  );
+
   const renderExpandedRow = useCallback(
     (parentRow: any) =>
       expandedMeasureSetId === parentRow.original.actions?.measureSetId &&
@@ -1261,6 +1304,23 @@ const UserProfile = () => {
           {libraryTable.getAllLeafColumns().map((col) => {
             const key = `${subRow.id}-${col.id}`;
             if (col.id === "expandArrow") return <td key={key} />;
+            if (col.id === "select") {
+              return (
+                <td key={key}>
+                  <IndeterminateCheckbox
+                    checked={selectedExpandedLibraryRowIds.includes(subRow.id)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      toggleExpandedLibraryRowSelection(
+                        subRow.id,
+                        e.target.checked
+                      )
+                    }
+                    id={subRow.id}
+                    aria-label={`Select library ${subRow.cqlLibraryName}`}
+                  />
+                </td>
+              );
+            }
             return (
               <td key={key}>
                 {flexRender(col.columnDef.cell, {
@@ -1272,7 +1332,13 @@ const UserProfile = () => {
           })}
         </tr>
       )),
-    [expandedLibrarySetId, expandedLibraryRows, libraryTable]
+    [
+      expandedLibrarySetId,
+      expandedLibraryRows,
+      libraryTable,
+      selectedExpandedLibraryRowIds,
+      toggleExpandedLibraryRowSelection,
+    ]
   );
 
   const activeTable = isLibraryTab ? libraryTable : table;
@@ -1293,9 +1359,14 @@ const UserProfile = () => {
     selection across the two rows disables it. A measure used as a
     component in one or more composite measures also cannot be deleted.
   */
-  const selectedTopLevelRows = table.getSelectedRowModel().rows;
+  const selectedTopLevelRows = isLibraryTab
+    ? libraryTable.getSelectedRowModel().rows
+    : table.getSelectedRowModel().rows;
   const totalSelected =
-    selectedTopLevelRows.length + selectedExpandedRowIds.length;
+    selectedTopLevelRows.length +
+    (isLibraryTab
+      ? selectedExpandedLibraryRowIds.length
+      : selectedExpandedRowIds.length);
   const singleTopSelected =
     totalSelected === 1 && selectedTopLevelRows.length === 1;
   const selectedIsComponent =
@@ -1309,14 +1380,30 @@ const UserProfile = () => {
     ? "draft"
     : `version ${deleteTarget?.version}`;
 
+  const libraryDraftOrVersionLabel = deleteTarget?.draft
+    ? "draft"
+    : `version ${deleteTarget?.version}`;
+
   const openDeleteDialog = useCallback(() => {
-    if (isLibraryTab) return;
-    const rows = table.getSelectedRowModel().rows;
-    if (rows.length === 1 && selectedExpandedRowIds.length === 0) {
+    const rows = isLibraryTab
+      ? libraryTable.getSelectedRowModel().rows
+      : table.getSelectedRowModel().rows;
+
+    const expandedSelectionCount = isLibraryTab
+      ? selectedExpandedLibraryRowIds.length
+      : selectedExpandedRowIds.length;
+
+    if (rows.length === 1 && expandedSelectionCount === 0) {
       setDeleteTarget(rows[0].original.actions);
       setDeleteDialogOpen(true);
     }
-  }, [isLibraryTab, table, selectedExpandedRowIds]);
+  }, [
+    isLibraryTab,
+    table,
+    libraryTable,
+    selectedExpandedRowIds,
+    selectedExpandedLibraryRowIds,
+  ]);
 
   const closeDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -1365,6 +1452,35 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
+
+  const handleConfirmDeleteLibrary = useCallback(async () => {
+    const { id, draft } = deleteTarget;
+
+    if (!deleteTarget) return;
+
+    try {
+      if (draft) {
+        await cqlLibraryServiceApi.deleteDraft(id);
+      } else {
+        // it's a versioned library
+        await cqlLibraryServiceApi.deleteLibrary(id, harpId);
+      }
+    } catch (error: any) {
+      setToastType("danger");
+      setToastMessage(error?.message || "Unable to delete library");
+      setToastOpen(true);
+      closeDeleteDialog();
+    } finally {
+      // successful delete condition
+      setToastType("success");
+      setToastMessage("Library successfully deleted");
+      setToastOpen(true);
+      closeDeleteDialog();
+      table.toggleAllRowsSelected(false);
+      clearExpansion();
+      setRefreshToken((t) => t + 1);
+    }
+  }, [deleteTarget, isLibraryTab, cqlLibraryServiceApi]);
 
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
@@ -1533,6 +1649,21 @@ const UserProfile = () => {
               )}
             </div>
           )}
+          {featureFlags?.AdminUserProfile && isLibraryTab && (
+            <div
+              className="search-filter-bar flex-end"
+              data-testid="search-filter-bar"
+            >
+              <ActionCenter
+                measures={selectedMeasures}
+                canDelete={canDelete}
+                activeTab={activeTab}
+                onDelete={openDeleteDialog}
+                disabledReason={deleteDisabledReason}
+              />
+            </div>
+          )}
+
           {errMsg && !loading && (
             <p
               className="error-message"
@@ -1588,13 +1719,25 @@ const UserProfile = () => {
       <MadieDeleteDialog
         open={deleteDialogOpen}
         onClose={closeDeleteDialog}
-        onContinue={handleConfirmDelete}
-        dialogTitle="Delete Measure"
+        onContinue={
+          isLibraryTab ? handleConfirmDeleteLibrary : handleConfirmDelete
+        }
+        dialogTitle={isLibraryTab ? "Delete Library" : "Delete Measure"}
         statement
         customDialogBody={
           <>
-            Are you sure you want to delete {draftOrVersionLabel} of{" "}
-            <span className="strong">{deleteTarget?.measureName}</span>
+            Are you sure you want to delete{" "}
+            {isLibraryTab ? (
+              <>
+                {libraryDraftOrVersionLabel} of{" "}
+                <span className="strong">{deleteTarget?.cqlLibraryName}</span>
+              </>
+            ) : (
+              <>
+                {draftOrVersionLabel} of{" "}
+                <span className="strong">{deleteTarget?.measureName}</span>
+              </>
+            )}
           </>
         }
       />

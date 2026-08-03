@@ -116,6 +116,8 @@ declare module "@madie/madie-util" {
       sortByLatestVersion?: boolean,
       librarySearchCriteria?: any
     ): Promise<any[]>;
+    deleteLibrary(id: string, harpId: string): Promise<any>[];
+    deleteDraft(id: string): Promise<any>[];
   }
 
   export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;

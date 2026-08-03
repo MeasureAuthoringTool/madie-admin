@@ -28,6 +28,10 @@
       align-items: flex-end;
       padding: 0 16px;
       margin-bottom: 16px;
+
+      &.flex-end {
+        justify-content: flex-end;
+      }
     }
 
     .table {

@@ -7,19 +7,20 @@ interface PropTypes {
   disabled: boolean;
   onClick: () => void;
   disabledReason?: string;
+  deleteTarget?: string;
 }
 
-export const DELETE_MEASURE = "Delete measure";
-export const NOTHING_SELECTED = "Select measure to delete";
-
 export default function DeleteAction({
+  deleteTarget = "measure",
   disabled,
   onClick,
   disabledReason,
 }: PropTypes) {
+  const DELETE_TOOLTIP = `Delete ${deleteTarget}`;
+  const NOTHING_SELECTED_TOOLTIP = `Select ${deleteTarget} to delete`;
   const tooltipMessage = disabled
-    ? disabledReason ?? NOTHING_SELECTED
-    : DELETE_MEASURE;
+    ? disabledReason ?? NOTHING_SELECTED_TOOLTIP
+    : DELETE_TOOLTIP;
   return (
     <Tooltip
       data-testid="delete-action-tooltip"
