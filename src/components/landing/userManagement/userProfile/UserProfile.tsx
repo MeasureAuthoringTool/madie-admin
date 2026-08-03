@@ -1442,7 +1442,6 @@ const UserProfile = () => {
     measureServiceApi,
     closeDeleteDialog,
     clearExpansion,
-    closeDeleteDialog,
     table,
   ]);
 
@@ -1477,11 +1476,18 @@ const UserProfile = () => {
       setToastMessage("Library successfully deleted");
       setToastOpen(true);
       closeDeleteDialog();
-      table.toggleAllRowsSelected(false);
+      libraryTable.toggleAllRowsSelected(false);
       clearExpansion();
       setRefreshToken((t) => t + 1);
     }
-  }, [deleteTarget, isLibraryTab, cqlLibraryServiceApi, clearExpansion]);
+  }, [
+    deleteTarget,
+    isLibraryTab,
+    cqlLibraryServiceApi,
+    clearExpansion,
+    closeDeleteDialog,
+    libraryTable,
+  ]);
 
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
