@@ -1795,6 +1795,7 @@ const UserProfile = () => {
         option={shareOption}
         onClose={handleShareDialogClose}
         onSave={handleShareDialogSave}
+        unshareFromUser={harpId}
         isAdmin
       />
 
