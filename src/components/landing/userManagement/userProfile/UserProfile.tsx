@@ -21,6 +21,7 @@ import {
   TransferDialog,
   exportMeasure as downloadMeasureExport,
   formatCmsId,
+  checkUserCanEdit,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -44,6 +45,7 @@ import {
 import { Chip, Tooltip } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import {
   CollapseIcon,
   ExpandIcon,
@@ -177,6 +179,9 @@ const isAbortError = (err: any): boolean => {
   return e.name === "AbortError" || e.code === "ERR_CANCELED";
 };
 
+const lockedBy = (item: any): string | undefined =>
+  item?.measureLock?.lockedBy || item?.cqlLibraryLock?.lockedBy;
+
 const getErrorMessage = (err: any, fallback: string): string => {
   if (err && typeof err === "object" && "message" in err) {
     return String((err as { message?: any }).message || fallback);
@@ -227,6 +232,40 @@ function IndeterminateCheckbox({
     />
   );
 }
+
+const LockedByTooltip = ({
+  lockedByDisplayName,
+  children,
+}: {
+  lockedByDisplayName: string;
+  children: React.ReactElement;
+}) => (
+  <Tooltip
+    title={
+      <>
+        Locked while being edited by
+        <br />
+        {lockedByDisplayName}
+      </>
+    }
+    arrow
+    slotProps={{
+      tooltip: {
+        sx: {
+          maxWidth: "none",
+          whiteSpace: "nowrap",
+          zIndex: 99,
+          backgroundColor: "#333",
+          "& .MuiTooltip-arrow": {
+            color: "#333",
+          },
+        },
+      },
+    }}
+  >
+    <span>{children}</span>
+  </Tooltip>
+);
 
 const MeasureStatusChips = ({ measure }: { measure: any }) => (
   <div
@@ -566,6 +605,53 @@ const UserProfile = () => {
     [librariesPage.libraries]
   );
 
+  const [lockedByDisplayNames, setLockedByDisplayNames] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    const lockedByHarpIds = Array.from(
+      new Set(
+        [
+          ...measuresPage.measures,
+          ...expandedRows.map((row) => row.actions),
+          ...librariesPage.libraries,
+          ...expandedLibraryRows.map((row) => row.actions),
+        ]
+          .map((item) => lockedBy(item))
+          .filter((id): id is string => !!id)
+      )
+    );
+    if (lockedByHarpIds.length === 0 || !userServiceApi) {
+      return;
+    }
+    userServiceApi
+      .getBulkUserDetails(lockedByHarpIds)
+      .then((userDetails) => {
+        setLockedByDisplayNames((prev) => {
+          const next = { ...prev };
+          Object.entries(userDetails || {}).forEach(
+            ([id, details]: [string, any]) => {
+              const name = [details?.firstName, details?.lastName]
+                .filter(Boolean)
+                .join(" ");
+              next[id] = name ? `${name} (${id})` : id;
+            }
+          );
+          return next;
+        });
+      })
+      .catch(() => {
+        // fall back to displaying the raw HARP ID if the lookup fails
+      });
+  }, [
+    measuresPage.measures,
+    expandedRows,
+    librariesPage.libraries,
+    expandedLibraryRows,
+    userServiceApi,
+  ]);
+
   const toggleExpansion = useCallback(
     async (parent: any) => {
       const measureSetId = parent?.measureSetId;
@@ -729,17 +815,58 @@ const UserProfile = () => {
         id: "action",
         header: "",
         enableSorting: false,
-        cell: (info) => (
-          <Button
-            variant="outline-filled"
-            data-testid={`measure-action-${info.row.original.id}`}
-            aria-label={`View Measure ${info.row.original.measureName} ${info.row.original.version}`}
-            tabIndex={0}
-            role="button"
-          >
-            View
-          </Button>
-        ),
+        cell: (info) => {
+          const measure = info.row.original.actions;
+          const canEdit =
+            checkUserCanEdit(
+              measure?.measureSet?.owner,
+              measure?.measureSet?.acls
+            ) && measure?.measureMetaData?.draft;
+          const lockHolder = lockedBy(measure);
+          const isLockedByOther = canEdit && !!lockHolder;
+          const lockedByDisplayName = lockHolder
+            ? lockedByDisplayNames[lockHolder] || lockHolder
+            : "";
+          const buttonText = isLockedByOther
+            ? "View"
+            : canEdit
+            ? "Edit"
+            : "View";
+
+          const buttonElement = (
+            <Button
+              variant="outline-filled"
+              data-testid={`measure-action-${info.row.original.id}`}
+              aria-label={`${buttonText} Measure ${
+                info.row.original.measureName
+              } ${info.row.original.version}${
+                measure?.measureMetaData?.draft ? " Draft" : ""
+              }${isLockedByOther ? ` (Locked by ${lockedByDisplayName})` : ""}`}
+              tabIndex={0}
+              role="button"
+              onClick={() => {
+                window.location.href = `/measures/${info.row.original.id}/edit/details/`;
+              }}
+            >
+              {isLockedByOther && (
+                <LockOutlinedIcon
+                  sx={{ fontSize: 16, marginRight: 0.5 }}
+                  data-testid={`measure-lock-icon-${info.row.original.id}`}
+                />
+              )}
+              {buttonText}
+            </Button>
+          );
+
+          if (isLockedByOther) {
+            return (
+              <LockedByTooltip lockedByDisplayName={lockedByDisplayName}>
+                {buttonElement}
+              </LockedByTooltip>
+            );
+          }
+          return buttonElement;
+        },
       },
       {
         id: "expandArrow",
@@ -773,7 +900,7 @@ const UserProfile = () => {
         },
       },
     ],
-    [expandedMeasureSetId, toggleExpansion]
+    [expandedMeasureSetId, toggleExpansion, lockedByDisplayNames]
   );
 
   const table = useReactTable({
@@ -880,17 +1007,58 @@ const UserProfile = () => {
         id: "action",
         header: "",
         enableSorting: false,
-        cell: (info) => (
-          <Button
-            variant="outline-filled"
-            data-testid={`library-action-${info.row.original.id}`}
-            aria-label={`View Library ${info.row.original.cqlLibraryName} ${info.row.original.version}`}
-            tabIndex={0}
-            role="button"
-          >
-            View
-          </Button>
-        ),
+        cell: (info) => {
+          const library = info.row.original.actions;
+          const canEdit =
+            checkUserCanEdit(
+              library?.librarySet?.owner,
+              library?.librarySet?.acls
+            ) && library?.draft;
+          const lockHolder = lockedBy(library);
+          const isLockedByOther = canEdit && !!lockHolder;
+          const lockedByDisplayName = lockHolder
+            ? lockedByDisplayNames[lockHolder] || lockHolder
+            : "";
+          const buttonText = isLockedByOther
+            ? "View"
+            : canEdit
+            ? "Edit"
+            : "View";
+
+          const buttonElement = (
+            <Button
+              variant="outline-filled"
+              data-testid={`library-action-${info.row.original.id}`}
+              aria-label={`${buttonText} Library ${
+                info.row.original.cqlLibraryName
+              } ${info.row.original.version}${library?.draft ? " Draft" : ""}${
+                isLockedByOther ? ` (Locked by ${lockedByDisplayName})` : ""
+              }`}
+              tabIndex={0}
+              role="button"
+              onClick={() => {
+                window.location.href = `/cql-libraries/${info.row.original.id}/edit/details`;
+              }}
+            >
+              {isLockedByOther && (
+                <LockOutlinedIcon
+                  sx={{ fontSize: 16, marginRight: 0.5 }}
+                  data-testid={`library-lock-icon-${info.row.original.id}`}
+                />
+              )}
+              {buttonText}
+            </Button>
+          );
+
+          if (isLockedByOther) {
+            return (
+              <LockedByTooltip lockedByDisplayName={lockedByDisplayName}>
+                {buttonElement}
+              </LockedByTooltip>
+            );
+          }
+          return buttonElement;
+        },
       },
       {
         id: "expandArrow",
@@ -924,7 +1092,12 @@ const UserProfile = () => {
         },
       },
     ],
-    [activeOwnership, expandedLibrarySetId, toggleLibraryExpansion]
+    [
+      activeOwnership,
+      expandedLibrarySetId,
+      toggleLibraryExpansion,
+      lockedByDisplayNames,
+    ]
   );
 
   const libraryTable = useReactTable({

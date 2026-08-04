@@ -24,12 +24,15 @@ const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
+const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
+const mockGetBulkUserDetails = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
   ...mockMeasureActionStubs,
   useUserServiceApi: jest.fn(() => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
+    getBulkUserDetails: (...args: unknown[]) => mockGetBulkUserDetails(...args),
   })),
   useMeasureServiceApi: jest.fn(() => ({
     adminSearchMeasuresForUser: (...args: unknown[]) =>
@@ -46,6 +49,7 @@ jest.mock("@madie/madie-util", () => ({
       mockGetLibrariesByLibrarySetId(...args),
   })),
   useFeatureFlags: () => mockUseFeatureFlags(),
+  checkUserCanEdit: (...args: unknown[]) => mockCheckUserCanEdit(...args),
   adminUserStore: {
     state: null,
     updateUser: (...args: unknown[]) => mockUpdateUser(...args),
@@ -232,6 +236,10 @@ describe("UserProfile", () => {
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
+    mockCheckUserCanEdit.mockReset();
+    mockCheckUserCanEdit.mockReturnValue(false);
+    mockGetBulkUserDetails.mockReset();
+    mockGetBulkUserDetails.mockResolvedValue({});
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
@@ -333,6 +341,218 @@ describe("UserProfile", () => {
     expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
       "Owned Measures (7)"
     );
+  });
+
+  describe("measure action button", () => {
+    it("renders Edit when the signed in admin can edit the draft measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Measure Owned Measure A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        "test_user",
+        ownedMeasure.measureSet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft"
+      );
+    });
+
+    it("renders View for a versioned measure even when the admin owns it", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m2");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Shared Measure B 2.1.000"
+      );
+    });
+
+    it("falls back to View with a lock icon when another user holds the measure lock", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+      mockGetBulkUserDetails.mockResolvedValue({
+        other_harp: { firstName: "Dana", lastName: "Reyes" },
+      });
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.getByTestId("measure-lock-icon-m1")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("measure-action-m1")).toHaveAttribute(
+          "aria-label",
+          "View Measure Owned Measure A 1.0.000 Draft (Locked by Dana Reyes (other_harp))"
+        );
+      });
+      expect(mockGetBulkUserDetails).toHaveBeenCalledWith(["other_harp"]);
+    });
+
+    it("falls back to the raw HARP ID when the lock owner lookup fails", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+      mockGetBulkUserDetails.mockRejectedValue(new Error("boom"));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft (Locked by other_harp)"
+      );
+    });
+
+    it("ignores the measure lock when the admin could not edit anyway", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.queryByTestId("measure-lock-icon-m1")).toBeNull();
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft"
+      );
+    });
+
+    it("navigates to the measure details page in the Measures Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/measures/m1/edit/details/");
+      });
+
+      (window as any).location = originalLocation;
+    });
+  });
+
+  describe("library action button", () => {
+    const renderLibrariesTab = async () => {
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      renderAt("/admin/userProfile/test_user");
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+      return screen.findByTestId("library-action-lib1");
+    };
+
+    it("renders Edit when the signed in admin can edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Library Owned Library A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        undefined,
+        ownedLibrary.librarySet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Library Owned Library A 1.0.000 Draft"
+      );
+    });
+
+    it("falls back to View with a lock icon when another user holds the library lock", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockGetBulkUserDetails.mockResolvedValue({
+        other_harp: { firstName: "Dana", lastName: "Reyes" },
+      });
+      mockFetchCqlLibraries.mockResolvedValue(
+        pageWith(
+          [{ ...ownedLibrary, cqlLibraryLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+
+      renderAt("/admin/userProfile/test_user");
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+      const action = await screen.findByTestId("library-action-lib1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.getByTestId("library-lock-icon-lib1")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("library-action-lib1")).toHaveAttribute(
+          "aria-label",
+          "View Library Owned Library A 1.0.000 Draft (Locked by Dana Reyes (other_harp))"
+        );
+      });
+    });
+
+    it("navigates to the library details page in the CQL Library Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      const action = await renderLibrariesTab();
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/cql-libraries/lib1/edit/details");
+      });
+
+      (window as any).location = originalLocation;
+    });
   });
 
   it("switches to the Shared tab and re-queries with SHARED ownership", async () => {
