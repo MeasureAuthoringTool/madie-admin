@@ -22,6 +22,7 @@ const mockDeleteMeasure = jest.fn();
 const mockFetchMeasure = jest.fn();
 const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
+const mockAdminSearchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
@@ -47,6 +48,8 @@ jest.mock("@madie/madie-util", () => ({
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
     fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
+    adminSearchCqlLibrariesForUser: (...args: unknown[]) =>
+      mockAdminSearchCqlLibraries(...args),
     deleteDraft: (...args: unknown[]) => mockDeleteDraftLibrary(...args),
     deleteLibrary: (...args: unknown[]) => mockDeleteLibrary(...args),
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
@@ -237,6 +240,10 @@ describe("UserProfile", () => {
     mockFetchMeasure.mockReset();
     mockExportMeasure.mockReset();
     mockFetchCqlLibraries.mockReset();
+    mockAdminSearchCqlLibraries.mockReset();
+    mockAdminSearchCqlLibraries.mockImplementation(
+      (_harpId: string, ...args: unknown[]) => mockFetchCqlLibraries(...args)
+    );
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
@@ -631,6 +638,15 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
+      expect(mockAdminSearchCqlLibraries).toHaveBeenCalledWith(
+        "test_user",
+        "OWNED",
+        1,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
         "OWNED",
         1,

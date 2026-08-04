@@ -111,6 +111,15 @@ declare module "@madie/madie-util" {
       sortInfo?: string,
       signal?: AbortSignal
     ): Promise<any>;
+    adminSearchCqlLibrariesForUser(
+      harpId: string,
+      ownershipType: string,
+      limit?: string | number,
+      page?: number,
+      searchCriteria?: any,
+      sortInfo?: string,
+      signal?: AbortSignal
+    ): Promise<any>;
     getLibrariesByLibrarySetId(
       librarySetId: string,
       sortByLatestVersion?: boolean,
