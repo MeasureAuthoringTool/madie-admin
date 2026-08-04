@@ -317,7 +317,7 @@ export default function ValueSetManagement() {
             data-testid="no-value-sets-message"
             className="no-value-sets-message"
           >
-            No value sets found.
+            No results found.
           </p>
         )}
         <VSEDialog
