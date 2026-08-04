@@ -41,11 +41,17 @@ declare module "@madie/madie-util" {
     getUserName: () => string;
   };
   export function wafIntercept(error: AxiosError): Promise<never>;
+  export function checkUserCanEdit(
+    createdBy: string,
+    acls: any[],
+    draft?: boolean
+  ): boolean;
 
   export class UserServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
     getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
+    getBulkUserDetails(harpIds: string[]): Promise<Record<string, UserDetails>>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
@@ -119,6 +125,8 @@ declare module "@madie/madie-util" {
       sortByLatestVersion?: boolean,
       librarySearchCriteria?: any
     ): Promise<any[]>;
+    deleteLibrary(id: string, harpId: string): Promise<any>[];
+    deleteDraft(id: string): Promise<any>[];
   }
 
   export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;

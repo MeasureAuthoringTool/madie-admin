@@ -25,12 +25,17 @@ const mockFetchCqlLibraries = jest.fn();
 const mockAdminSearchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
+const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
+const mockGetBulkUserDetails = jest.fn();
+const mockDeleteDraftLibrary = jest.fn();
+const mockDeleteLibrary = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
   ...mockMeasureActionStubs,
   useUserServiceApi: jest.fn(() => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
+    getBulkUserDetails: (...args: unknown[]) => mockGetBulkUserDetails(...args),
   })),
   useMeasureServiceApi: jest.fn(() => ({
     adminSearchMeasuresForUser: (...args: unknown[]) =>
@@ -45,10 +50,13 @@ jest.mock("@madie/madie-util", () => ({
     fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
     adminSearchCqlLibrariesForUser: (...args: unknown[]) =>
       mockAdminSearchCqlLibraries(...args),
+    deleteDraft: (...args: unknown[]) => mockDeleteDraftLibrary(...args),
+    deleteLibrary: (...args: unknown[]) => mockDeleteLibrary(...args),
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
       mockGetLibrariesByLibrarySetId(...args),
   })),
   useFeatureFlags: () => mockUseFeatureFlags(),
+  checkUserCanEdit: (...args: unknown[]) => mockCheckUserCanEdit(...args),
   adminUserStore: {
     state: null,
     updateUser: (...args: unknown[]) => mockUpdateUser(...args),
@@ -239,6 +247,10 @@ describe("UserProfile", () => {
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
+    mockCheckUserCanEdit.mockReset();
+    mockCheckUserCanEdit.mockReturnValue(false);
+    mockGetBulkUserDetails.mockReset();
+    mockGetBulkUserDetails.mockResolvedValue({});
     mockGetUser.mockResolvedValue(null);
     mockAdminSearchMeasures.mockResolvedValue(emptyPage);
     mockGetMeasuresByMeasureSetId.mockResolvedValue([]);
@@ -250,6 +262,10 @@ describe("UserProfile", () => {
       Promise.resolve({ id, measureName: "Owned Measure A" })
     );
     mockExportMeasure.mockResolvedValue(undefined);
+    mockDeleteDraftLibrary.mockReset();
+    mockDeleteLibrary.mockReset();
+    mockDeleteDraftLibrary.mockResolvedValue({ status: 200 });
+    mockDeleteLibrary.mockResolvedValue({ status: 200 });
   });
 
   it("renders the user-profile card structure", async () => {
@@ -340,6 +356,218 @@ describe("UserProfile", () => {
     expect(screen.getByTestId("owned-measures-tab")).toHaveTextContent(
       "Owned Measures (7)"
     );
+  });
+
+  describe("measure action button", () => {
+    it("renders Edit when the signed in admin can edit the draft measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Measure Owned Measure A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        "test_user",
+        ownedMeasure.measureSet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the measure", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft"
+      );
+    });
+
+    it("renders View for a versioned measure even when the admin owns it", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m2");
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Shared Measure B 2.1.000"
+      );
+    });
+
+    it("falls back to View with a lock icon when another user holds the measure lock", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+      mockGetBulkUserDetails.mockResolvedValue({
+        other_harp: { firstName: "Dana", lastName: "Reyes" },
+      });
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.getByTestId("measure-lock-icon-m1")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("measure-action-m1")).toHaveAttribute(
+          "aria-label",
+          "View Measure Owned Measure A 1.0.000 Draft (Locked by Dana Reyes (other_harp))"
+        );
+      });
+      expect(mockGetBulkUserDetails).toHaveBeenCalledWith(["other_harp"]);
+    });
+
+    it("falls back to the raw HARP ID when the lock owner lookup fails", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+      mockGetBulkUserDetails.mockRejectedValue(new Error("boom"));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft (Locked by other_harp)"
+      );
+    });
+
+    it("ignores the measure lock when the admin could not edit anyway", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+      mockAdminSearchMeasures.mockResolvedValue(
+        pageWith(
+          [{ ...ownedMeasure, measureLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.queryByTestId("measure-lock-icon-m1")).toBeNull();
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Measure Owned Measure A 1.0.000 Draft"
+      );
+    });
+
+    it("navigates to the measure details page in the Measures Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      const action = await screen.findByTestId("measure-action-m1");
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/measures/m1/edit/details/");
+      });
+
+      (window as any).location = originalLocation;
+    });
+  });
+
+  describe("library action button", () => {
+    const renderLibrariesTab = async () => {
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      renderAt("/admin/userProfile/test_user");
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+      return screen.findByTestId("library-action-lib1");
+    };
+
+    it("renders Edit when the signed in admin can edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("Edit");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "Edit Library Owned Library A 1.0.000 Draft"
+      );
+      expect(mockCheckUserCanEdit).toHaveBeenCalledWith(
+        undefined,
+        ownedLibrary.librarySet.acls
+      );
+    });
+
+    it("renders View when the signed in admin cannot edit the library", async () => {
+      mockCheckUserCanEdit.mockReturnValue(false);
+
+      const action = await renderLibrariesTab();
+
+      expect(action).toHaveTextContent("View");
+      expect(action).toHaveAttribute(
+        "aria-label",
+        "View Library Owned Library A 1.0.000 Draft"
+      );
+    });
+
+    it("falls back to View with a lock icon when another user holds the library lock", async () => {
+      mockCheckUserCanEdit.mockReturnValue(true);
+      mockGetBulkUserDetails.mockResolvedValue({
+        other_harp: { firstName: "Dana", lastName: "Reyes" },
+      });
+      mockFetchCqlLibraries.mockResolvedValue(
+        pageWith(
+          [{ ...ownedLibrary, cqlLibraryLock: { lockedBy: "other_harp" } }],
+          1
+        )
+      );
+
+      renderAt("/admin/userProfile/test_user");
+      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+
+      const action = await screen.findByTestId("library-action-lib1");
+      expect(action).toHaveTextContent("View");
+      expect(screen.getByTestId("library-lock-icon-lib1")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("library-action-lib1")).toHaveAttribute(
+          "aria-label",
+          "View Library Owned Library A 1.0.000 Draft (Locked by Dana Reyes (other_harp))"
+        );
+      });
+    });
+
+    it("navigates to the library details page in the CQL Library Workspace", async () => {
+      const originalLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = { ...originalLocation, href: "" };
+
+      const action = await renderLibrariesTab();
+      userEvent.click(action);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe("/cql-libraries/lib1/edit/details");
+      });
+
+      (window as any).location = originalLocation;
+    });
   });
 
   it("switches to the Shared tab and re-queries with SHARED ownership", async () => {
@@ -2408,6 +2636,181 @@ describe("UserProfile", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("transfer-dialog")).not.toBeInTheDocument()
       );
+    });
+    it("deletes a draft library and shows success toast", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+
+      expect(within(dialog).getByText("Delete Library")).toBeInTheDocument();
+      expect(within(dialog).getByText(/draft of/i)).toBeInTheDocument();
+      expect(within(dialog).getByText("Owned Library A")).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() =>
+        expect(mockDeleteDraftLibrary).toHaveBeenCalledWith("lib1")
+      );
+
+      expect(mockDeleteLibrary).not.toHaveBeenCalled();
+
+      expect(
+        await screen.findByText("Library successfully deleted")
+      ).toBeInTheDocument();
+    });
+    it("deletes a versioned library and shows success toast", async () => {
+      const versionedLibrary = {
+        ...ownedLibrary,
+        id: "lib2",
+        cqlLibraryName: "Versioned Library",
+        draft: false,
+        version: "2.0.000",
+      };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([versionedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("checkbox-lib2"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+      userEvent.click(deleteBtn);
+
+      const dialog = await screen.findByTestId("delete-dialog");
+
+      expect(
+        within(dialog).getByText(/version 2\.0\.000 of/i)
+      ).toBeInTheDocument();
+
+      expect(within(dialog).getByText("Versioned Library")).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() =>
+        expect(mockDeleteLibrary).toHaveBeenCalledWith("lib2", "test_user")
+      );
+
+      expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
+
+      expect(
+        await screen.findByText("Library successfully deleted")
+      ).toBeInTheDocument();
+    });
+
+    it("closes the delete library dialog when cancel is clicked", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+
+      userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument()
+      );
+
+      expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
+      expect(mockDeleteLibrary).not.toHaveBeenCalled();
+    });
+
+    it("delete library fails", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      mockDeleteDraftLibrary.mockRejectedValueOnce(
+        new Error("Unable to delete library")
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() =>
+        expect(mockDeleteDraftLibrary).toHaveBeenCalledWith("lib1")
+      );
+      expect(
+        await screen.findByText("Unable to delete library")
+      ).toBeInTheDocument();
+    });
+
+    it("selects and deselects an expanded library row with its checkbox", async () => {
+      const nestedLibrary = {
+        ...ownedLibrary,
+        id: "lib1-prev",
+        version: "0.9.000",
+        draft: false,
+        hasAssociatedLibraries: false,
+      };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      mockGetLibrariesByLibrarySetId.mockResolvedValue([
+        ownedLibrary,
+        nestedLibrary,
+      ]);
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("expand-library-toggle-lib1"));
+      await waitFor(() =>
+        expect(mockGetLibrariesByLibrarySetId).toHaveBeenCalledWith(
+          "library-set-1",
+          true,
+          { searchField: "", optionalSearchProperties: [] }
+        )
+      );
+      const nestedCheckbox = (await screen.findByTestId(
+        "checkbox-lib1-prev"
+      )) as HTMLInputElement;
+
+      expect(nestedCheckbox.checked).toBe(false);
+
+      userEvent.click(nestedCheckbox);
+      expect(nestedCheckbox.checked).toBe(true);
+
+      userEvent.click(nestedCheckbox);
+      expect(nestedCheckbox.checked).toBe(false);
     });
   });
 });
