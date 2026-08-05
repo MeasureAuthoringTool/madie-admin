@@ -6,7 +6,7 @@ import LibraryShareDialog, {
   LIBRARY_SHARING_EXPORT_SUCCESS,
   LIBRARY_SHARING_EXPORT_ERROR,
 } from "./LibraryShareDialog";
-import { CqlLibrary } from "@madie/madie-models";
+import { type CqlLibrary } from "@madie/madie-models";
 import userEvent from "@testing-library/user-event";
 import {
   useUserRoles,
@@ -99,7 +99,7 @@ const createMockUserServiceApi = (overrides = {}) => ({
     harpId: "madietestuser",
     firstName: "Madie",
     lastName: "Test",
-    email: "madie.test@semanticbits.com",
+    email: "nohid@example.com",
     userStatus: "ACTIVE",
   }),
   getBulkUserDetails: jest.fn().mockImplementation((ids: string[]) => {

@@ -22,7 +22,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { CqlLibrary } from "@madie/madie-models";
+import { type CqlLibrary } from "@madie/madie-models";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import tw from "twin.macro";
@@ -740,7 +740,7 @@ const LibraryShareDialog = ({
                         variant="outlined"
                         label={option}
                         {...getTagProps({ index })}
-                        key={index}
+                        key={`${index}-option`}
                         data-testid={`harp-id-chip-${index}`}
                         sx={{
                           opacity: "1.0 !important",

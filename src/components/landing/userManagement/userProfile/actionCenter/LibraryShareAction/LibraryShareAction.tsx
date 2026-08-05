@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
-import { CqlLibrary } from "@madie/madie-models";
+import { type CqlLibrary } from "@madie/madie-models";
 import ShareIcon from "./ShareIcon";
 
 interface PropTypes {

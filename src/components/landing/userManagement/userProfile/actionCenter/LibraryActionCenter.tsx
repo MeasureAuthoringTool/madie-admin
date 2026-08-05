@@ -1,5 +1,5 @@
 import React from "react";
-import { CqlLibrary } from "@madie/madie-models";
+import { type CqlLibrary } from "@madie/madie-models";
 
 import DeleteAction from "./deleteAction/DeleteAction";
 import AdminLibraryShareAction from "./LibraryShareAction/LibraryShareAction";
