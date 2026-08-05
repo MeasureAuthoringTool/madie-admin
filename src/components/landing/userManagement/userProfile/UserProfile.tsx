@@ -52,6 +52,9 @@ import {
 } from "../../../../icons/MeasureListTableRightArrowIcons";
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
+import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
+import LibraryShareDialog from "./actionCenter/LibraryShareDialog/LibraryShareDialog";
+import _ from "lodash";
 
 type Ownership =
   | "OWNED_MEASURE"
@@ -1456,17 +1459,15 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
-  const selectedLibraries = useMemo(() => {
-    const topLevel = libraryTable
+  const selectedLibraries = [
+    ...libraryTable
       .getSelectedRowModel()
-      .rows.map((row) => row.original.actions);
+      .rows.map((row) => row.original.actions),
 
-    const expanded = expandedLibraryRows
+    ...expandedLibraryRows
       .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
-      .map((row) => row.actions);
-
-    return [...topLevel, ...expanded];
-  }, [libraryTable, expandedLibraryRows, selectedExpandedLibraryRowIds]);
+      .map((row) => row.actions),
+  ];
   const handleConfirmDeleteLibrary = useCallback(async () => {
     if (!deleteTarget) return;
 
@@ -1609,6 +1610,35 @@ const UserProfile = () => {
     [table, clearExpansion]
   );
 
+  const [libraryShareDialogOpen, setLibraryShareDialogOpen] = useState(false);
+
+  const [libraryShareOption, setLibraryShareOption] = useState("");
+
+  const handleLibraryShare = useCallback((option: string) => {
+    setLibraryShareOption(option);
+    setLibraryShareDialogOpen(true);
+  }, []);
+
+  const handleLibraryShareDialogClose = useCallback(
+    (toastType?: "success" | "danger", toastMessage?: string) => {
+      setLibraryShareDialogOpen(false);
+      setLibraryShareOption("");
+
+      if (toastMessage) {
+        setToastType(toastType ?? "success");
+        setToastMessage(toastMessage);
+        setToastOpen(true);
+      }
+
+      if (toastType === "success") {
+        libraryTable.toggleAllRowsSelected(false);
+        clearLibraryExpansion();
+        setRefreshToken((t) => t + 1);
+      }
+    },
+    [libraryTable, clearLibraryExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1673,13 +1703,13 @@ const UserProfile = () => {
               className="search-filter-bar flex-end"
               data-testid="search-filter-bar"
             >
-              <ActionCenter
-                target="library"
-                measures={selectedLibraries}
-                canDelete={canDelete}
+              <LibraryActionCenter
+                libraries={selectedLibraries}
                 activeTab={activeTab}
                 onDelete={openDeleteDialog}
+                onShare={handleLibraryShare}
                 disabledReason={deleteDisabledReason}
+                canDelete={canDelete}
               />
             </div>
           )}
@@ -1798,6 +1828,12 @@ const UserProfile = () => {
         onSave={handleShareDialogSave}
         unshareFromUser={harpId}
         isAdmin
+      />
+      <LibraryShareDialog
+        libraries={selectedLibraries}
+        open={libraryShareDialogOpen}
+        option={libraryShareOption}
+        onClose={handleLibraryShareDialogClose}
       />
 
       <TransferDialog

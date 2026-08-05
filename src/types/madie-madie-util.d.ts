@@ -120,6 +120,8 @@ declare module "@madie/madie-util" {
       sortInfo?: string,
       signal?: AbortSignal
     ): Promise<any>;
+    getSharedLibraries(libraryIds: string[]): Promise<any>;
+    getRecentLibrariesByLibrarySetId(librarySetIds: string[]): Promise<any>;
     getLibrariesByLibrarySetId(
       librarySetId: string,
       sortByLatestVersion?: boolean,
@@ -127,6 +129,9 @@ declare module "@madie/madie-util" {
     ): Promise<any[]>;
     deleteLibrary(id: string, harpId: string): Promise<any>[];
     deleteDraft(id: string): Promise<any>[];
+    getSharedAccessReportForLibraries(ids: string[]): Promise<any>[];
+    unshareLibraries(libraryUserIdMap: Map<string, string[]>): Promise<any>;
+    shareLibraries(libraries: Map<string, string[]>): Promise<any>;
   }
 
   export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;
