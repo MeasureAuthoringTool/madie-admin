@@ -1006,7 +1006,7 @@ describe("UserProfile", () => {
         0,
         {
           searchField: "Owned",
-          optionalSearchProperties: ["library", "version", "model", "cmsId"],
+          optionalSearchProperties: ["library", "version", "model"],
         },
         "lastModifiedAt,false",
         expect.any(AbortSignal)
@@ -1094,7 +1094,7 @@ describe("UserProfile", () => {
         0,
         {
           searchField: "zzzz",
-          optionalSearchProperties: ["library", "version", "model", "cmsId"],
+          optionalSearchProperties: ["library", "version", "model"],
         },
         "lastModifiedAt,false",
         expect.any(AbortSignal)
@@ -1151,6 +1151,65 @@ describe("UserProfile", () => {
     expect(
       await screen.findByTestId("library-name-lib2-content")
     ).toBeInTheDocument();
+  });
+
+  it("does not show CMS ID as a library Filter By option", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    const filterBy = screen.getByTestId("filter-by-select");
+    const filterByDropDown = within(filterBy).getByRole("combobox", {
+      hidden: true,
+    });
+    await userEvent.click(filterByDropDown);
+
+    expect(screen.queryByTestId("filter-by-CMS ID")).not.toBeInTheDocument();
+  });
+
+  it("uses ownerDisplayName sortInfo when sorting Shared Libraries by Owner", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValue(pageWith([sharedLibrary], 2));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await screen.findByTestId("library-name-lib2-content");
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Owner" }));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "SHARED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "ownerDisplayName,false",
+        expect.any(AbortSignal)
+      );
+    });
+
+    mockFetchCqlLibraries.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Owner" }));
+
+    await waitFor(() => {
+      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
+        "SHARED",
+        10,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "ownerDisplayName,true",
+        expect.any(AbortSignal)
+      );
+    });
   });
 
   it("shows an error message when the search fails", async () => {
