@@ -105,9 +105,13 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
-  ShareDialog: ({ open, option, onSave, onClose }: any) =>
+  ShareDialog: ({ open, option, onSave, onClose, unshareFromUser }: any) =>
     open ? (
-      <div data-testid="share-dialog" data-option={option}>
+      <div
+        data-testid="share-dialog"
+        data-option={option}
+        data-unshare-from-user={unshareFromUser}
+      >
         Share Dialog
         <button
           data-testid="share-save-btn"
@@ -2514,9 +2518,11 @@ describe("UserProfile", () => {
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("share-action-btn"));
       userEvent.click(await screen.findByTestId("share-option-unshare"));
-      expect(await screen.findByTestId("share-dialog")).toHaveAttribute(
-        "data-option",
-        "UnshareFromMe"
+      const shareDialog = await screen.findByTestId("share-dialog");
+      expect(shareDialog).toHaveAttribute("data-option", "UnshareFromMe");
+      expect(shareDialog).toHaveAttribute(
+        "data-unshare-from-user",
+        "test_user"
       );
     });
 

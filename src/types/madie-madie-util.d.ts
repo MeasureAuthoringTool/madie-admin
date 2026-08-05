@@ -220,6 +220,7 @@ declare module "@madie/madie-util" {
     onClose: (...args: any[]) => void;
     onSave: (...args: any[]) => void;
     isAdmin?: boolean;
+    unshareFromUser?: string;
   }): JSX.Element | null;
   export function TransferDialog(props: {
     measures: any[];
