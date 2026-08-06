@@ -245,4 +245,21 @@ declare module "@madie/madie-util" {
     setToastMessage: (message: string) => void,
     elmErrorSeverity: string
   ): Promise<void>;
+
+  export function LibraryShareAction(props: {
+    libraries: any[];
+    canEdit: boolean;
+    userName: string;
+    isSharedWithUser: boolean;
+    activeTab: number;
+    owners: string[];
+
+    onClick: (option: string) => void;
+  }): JSX.Element | null;
+  export function LibraryShareDialog(props: {
+    libraries: any[];
+    open: boolean;
+    option: string;
+    onClose: Function;
+  }): JSX.Element | null;
 }

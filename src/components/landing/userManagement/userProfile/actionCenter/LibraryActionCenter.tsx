@@ -2,7 +2,7 @@ import React from "react";
 import { type CqlLibrary } from "@madie/madie-models";
 
 import DeleteAction from "./deleteAction/DeleteAction";
-import AdminLibraryShareAction from "./LibraryShareAction/LibraryShareAction";
+import { LibraryShareAction } from "@madie/madie-util";
 
 interface PropTypes {
   libraries: CqlLibrary[];
@@ -12,6 +12,7 @@ interface PropTypes {
   onShare?: (option: string) => void;
   disabledReason?: string;
   target?: string;
+  userName: string;
 }
 
 export default function LibraryActionCenter({
@@ -22,12 +23,18 @@ export default function LibraryActionCenter({
   onDelete,
   onShare,
   disabledReason,
+  userName,
 }: PropTypes) {
   return (
     <div className="action-center" data-testid="action-center">
-      <AdminLibraryShareAction
+      <LibraryShareAction
         libraries={libraries}
         onClick={onShare}
+        canEdit={true}
+        userName={userName}
+        owners={libraries.map((library) => library.librarySet?.owner)}
+        // doesn't matter
+        isSharedWithUser={false}
         activeTab={activeTab}
       />
       <DeleteAction

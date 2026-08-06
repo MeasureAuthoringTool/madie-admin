@@ -14,6 +14,7 @@ import {
   adminUserStore,
   useFeatureFlags,
   ExportDialog,
+  LibraryShareDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
@@ -22,6 +23,7 @@ import {
   exportMeasure as downloadMeasureExport,
   formatCmsId,
   checkUserCanEdit,
+  useOktaTokens,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -53,7 +55,6 @@ import {
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
-import LibraryShareDialog from "./actionCenter/LibraryShareDialog/LibraryShareDialog";
 import _ from "lodash";
 
 type Ownership =
@@ -326,6 +327,8 @@ const MeasureStatusChips = ({ measure }: { measure: any }) => (
 
 const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
+  const { getUserName } = useOktaTokens();
+  const userName = getUserName();
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
   const cqlLibraryServiceApi = useRef(useCqlLibraryServiceApi()).current;
@@ -424,7 +427,6 @@ const UserProfile = () => {
     setExpandedLibraryRows([]);
     setSelectedExpandedLibraryRowIds([]);
   }, []);
-
   useEffect(() => {
     const controller = new AbortController();
     userServiceApi
@@ -1477,7 +1479,7 @@ const UserProfile = () => {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        await cqlLibraryServiceApi.deleteLibrary(id, harpId);
+        await cqlLibraryServiceApi.deleteLibrary(id, userName);
       }
 
       setToastType("success");
@@ -1501,6 +1503,7 @@ const UserProfile = () => {
     closeDeleteDialog,
     libraryTable,
     harpId,
+    getUserName,
   ]);
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
@@ -1705,11 +1708,12 @@ const UserProfile = () => {
             >
               <LibraryActionCenter
                 libraries={selectedLibraries}
-                activeTab={activeTab}
+                activeTab={activeTab - 2}
                 onDelete={openDeleteDialog}
                 onShare={handleLibraryShare}
                 disabledReason={deleteDisabledReason}
                 canDelete={canDelete}
+                userName={getUserName()}
               />
             </div>
           )}
