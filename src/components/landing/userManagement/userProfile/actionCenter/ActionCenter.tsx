@@ -75,7 +75,7 @@ export default function ActionCenter({
         />
       )}
 
-      {(onViewHumanReadable || onViewHistory || onCompareVersions) && (
+      {((onViewHumanReadable ?? onViewHistory) || onCompareVersions) && (
         <PipeSeparator />
       )}
 
