@@ -85,6 +85,7 @@ type LibraryRow = {
   cqlLibraryName: string;
   version: string;
   model: string;
+  ownerDisplayName?: string;
   actions: any;
   hasAssociatedLibraries: boolean;
   draft: boolean;
@@ -118,13 +119,12 @@ const COMPONENT_DELETE_DISABLED_MSG =
   "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component.";
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
-const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model", "CMS ID"];
+const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model"];
 
 const LIBRARY_FILTER_MAP = new Map<string, string>([
   ["Library", "library"],
   ["Version", "version"],
   ["Model", "model"],
-  ["CMS ID", "cmsId"],
 ]);
 
 const MEASURE_FILTER_MAP = new Map<string, string>([
@@ -204,6 +204,7 @@ const transformLibraryRow = (library: any): LibraryRow => ({
   cqlLibraryName: library?.cqlLibraryName,
   version: library?.version,
   model: library?.model,
+  ownerDisplayName: library?.ownerDisplayName,
   actions: library,
   hasAssociatedLibraries: !!library?.hasAssociatedLibraries,
   draft: library.draft,
