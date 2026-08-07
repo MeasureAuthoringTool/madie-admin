@@ -1174,7 +1174,7 @@ describe("UserProfile", () => {
     expect(screen.queryByTestId("filter-by-CMS ID")).not.toBeInTheDocument();
   });
 
-  it("uses ownerDisplayName sortInfo when sorting Shared Libraries by Owner", async () => {
+  it("does not make Owner sortable in Shared Libraries", async () => {
     mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
     mockFetchCqlLibraries
       .mockResolvedValueOnce(pageWith([], 5))
@@ -1188,32 +1188,11 @@ describe("UserProfile", () => {
     await screen.findByTestId("library-name-lib2-content");
 
     mockFetchCqlLibraries.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Owner" }));
-
-    await waitFor(() => {
-      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
-        "SHARED",
-        10,
-        0,
-        { searchField: "", optionalSearchProperties: [] },
-        "ownerDisplayName,false",
-        expect.any(AbortSignal)
-      );
-    });
-
-    mockFetchCqlLibraries.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Owner" }));
-
-    await waitFor(() => {
-      expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
-        "SHARED",
-        10,
-        0,
-        { searchField: "", optionalSearchProperties: [] },
-        "ownerDisplayName,true",
-        expect.any(AbortSignal)
-      );
-    });
+    expect(screen.getByText("Owner", { exact: true })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Owner" })
+    ).not.toBeInTheDocument();
+    expect(mockFetchCqlLibraries).not.toHaveBeenCalled();
   });
 
   it("shows an error message when the search fails", async () => {
