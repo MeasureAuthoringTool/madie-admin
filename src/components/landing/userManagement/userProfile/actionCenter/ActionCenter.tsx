@@ -1,5 +1,5 @@
 import React from "react";
-import { Measure } from "@madie/madie-models";
+import { type Measure } from "@madie/madie-models";
 import {
   ExportAction,
   ViewHRAction,
@@ -15,12 +15,12 @@ interface PropTypes {
   canDelete: boolean;
   activeTab: number;
   onDelete: () => void;
-  onTransfer?: () => void;
-  onExport?: (exportType: string) => void;
-  onViewHumanReadable?: () => void;
-  onViewHistory?: () => void;
-  onCompareVersions?: () => void;
-  onShare?: (option: string) => void;
+  onTransfer: () => void;
+  onExport: (exportType: string) => void;
+  onViewHumanReadable: () => void;
+  onViewHistory: () => void;
+  onCompareVersions: () => void;
+  onShare: (option: string) => void;
   disabledReason?: string;
   target?: string;
 }
@@ -47,36 +47,23 @@ export default function ActionCenter({
         onClick={onDelete}
         disabledReason={disabledReason}
       />
-      {onExport && <ExportAction measures={measures} onClick={onExport} />}
+      <ExportAction measures={measures} onClick={onExport} />
       {/* isOwner/isSharedWithUser are unused for admins — the icon short-circuits on isAdmin */}
-      {onShare && (
-        <ShareAction
-          measures={measures}
-          onClick={onShare}
-          isOwner={false}
-          isSharedWithUser={false}
-          activeTab={activeTab}
-        />
-      )}
-      {onViewHumanReadable && (
-        <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
-      )}
-      {onViewHistory && (
-        <HistoryAction measures={measures} onClick={onViewHistory} />
-      )}
-      {onCompareVersions && (
-        <CompareVersionsAction
-          measures={measures}
-          onClick={onCompareVersions}
-        />
-      )}
-      {onTransfer && (
-        <TransferAction
-          measures={measures}
-          onClick={onTransfer}
-          activeTab={activeTab}
-        />
-      )}
+      <ShareAction
+        measures={measures}
+        onClick={onShare}
+        isOwner={false}
+        isSharedWithUser={false}
+        activeTab={activeTab}
+      />
+      <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
+      <HistoryAction measures={measures} onClick={onViewHistory} />
+      <CompareVersionsAction measures={measures} onClick={onCompareVersions} />
+      <TransferAction
+        measures={measures}
+        onClick={onTransfer}
+        activeTab={activeTab}
+      />
     </div>
   );
 }
