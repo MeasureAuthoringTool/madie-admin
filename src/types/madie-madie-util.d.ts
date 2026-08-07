@@ -260,6 +260,6 @@ declare module "@madie/madie-util" {
     libraries: any[];
     open: boolean;
     option: string;
-    onClose: Function;
+    onClose: () => void;
   }): JSX.Element | null;
 }

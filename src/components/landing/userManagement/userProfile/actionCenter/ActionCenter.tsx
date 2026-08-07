@@ -1,5 +1,5 @@
 import React from "react";
-import { Measure } from "@madie/madie-models";
+import { type Measure } from "@madie/madie-models";
 import {
   ExportAction,
   ViewHRAction,

@@ -9,7 +9,7 @@ interface PropTypes {
   canDelete: boolean;
   activeTab: number;
   onDelete: () => void;
-  onShare?: (option: string) => void;
+  onShare: (option: string) => void;
   disabledReason?: string;
   target?: string;
   userName: string;

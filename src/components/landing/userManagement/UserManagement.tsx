@@ -21,7 +21,7 @@ import ClearIcon from "@mui/icons-material/Clear";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { UserDetails, UserStatus } from "@madie/madie-models";
+import { type UserDetails, type UserStatus } from "@madie/madie-models";
 // @ts-ignore
 import { useFeatureFlags, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
