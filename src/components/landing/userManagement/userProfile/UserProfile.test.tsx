@@ -158,7 +158,7 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
-  LibraryShareDialog: () => (props: any) =>
+  LibraryShareDialog: (props: any) =>
     props.open ? (
       <div data-testid="library-share-dialog" data-option={props.option}>
         Library Share Dialog
@@ -2669,7 +2669,80 @@ describe("UserProfile", () => {
     });
   });
 
-  describe("library share actions", () => {});
+  describe("library share actions", () => {
+    it("opens the library share dialog with the selected option", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      const dialog = await screen.findByTestId("library-share-dialog");
+
+      expect(dialog).toHaveAttribute("data-option", "Share With");
+    });
+    it("refreshes libraries and shows success toast after successful library share", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      const callsBefore = mockFetchCqlLibraries.mock.calls.length;
+
+      await userEvent.click(
+        await screen.findByTestId("library-share-success-btn")
+      );
+
+      expect(
+        await screen.findByText("Library Successfully Shared")
+      ).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(mockFetchCqlLibraries.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        );
+      });
+
+      expect(
+        screen.queryByTestId("library-share-dialog")
+      ).not.toBeInTheDocument();
+    });
+    it("shows an error toast when library share fails", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      await userEvent.click(
+        await screen.findByTestId("library-share-danger-btn")
+      );
+
+      expect(
+        await screen.findByText("Unable to share library")
+      ).toBeInTheDocument();
+
+      expect(
+        screen.queryByTestId("library-share-dialog")
+      ).not.toBeInTheDocument();
+    });
+  });
 
   describe("transfer action", () => {
     const ownedMeasureRow = {
