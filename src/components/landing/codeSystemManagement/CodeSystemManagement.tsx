@@ -309,7 +309,7 @@ export default function CodeSystemManagement() {
           <p data-testid="loading-message" className="loading-message">
             Loading code systems...
           </p>
-        ) : table.getRowModel().rows.length > 0 ? (
+        ) : (
           <>
             <div
               style={{
@@ -346,13 +346,6 @@ export default function CodeSystemManagement() {
               }}
             />
           </>
-        ) : (
-          <p
-            data-testid="no-code-systems-message"
-            className="no-code-systems-message"
-          >
-            No code systems found.
-          </p>
         )}
 
         <Toast
