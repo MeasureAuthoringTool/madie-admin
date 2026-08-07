@@ -23,6 +23,11 @@
     justify-content: flex-start;
     align-items: flex-start;
     flex-direction: column;
+
+    > button + button {
+      margin-top: 12px;
+    }
+
     > div {
       > p {
         margin-top: 20px;

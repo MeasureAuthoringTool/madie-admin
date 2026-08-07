@@ -28,6 +28,18 @@ export interface ValueSetDisplayForAdmin {
   valueSet: string;
 }
 
+export interface CreateCodeSystemRequest {
+  title?: string;
+  name: string;
+  fullUrl: string;
+  oid?: string;
+  isLatestVersion: boolean;
+  version: {
+    fhirVersion: string;
+    vsacVersion?: string;
+  };
+}
+
 export class TerminologyServiceApi {
   constructor(private baseUrl: string, private getAccessToken: () => string) {}
 
@@ -73,7 +85,7 @@ export class TerminologyServiceApi {
           params: { ig, version },
         }
       );
-    } catch (error) {
+    } catch (error: any) {
       let message =
         "An error occurred while updating Value Sets. Please try again. If the error persists, please contact the help desk.";
       if (error.response?.data?.message) {
@@ -117,12 +129,18 @@ export class TerminologyServiceApi {
     const params: Record<string, string | number> = {
       page,
       limit,
-      filterField,
-      searchText,
     };
 
     if (sortInfo) {
       params.sortInfo = sortInfo;
+    }
+
+    if (filterField) {
+      params.filterField = filterField;
+    }
+
+    if (searchText) {
+      params.searchText = searchText;
     }
 
     const response = await axios.get(
@@ -135,6 +153,21 @@ export class TerminologyServiceApi {
       }
     );
 
+    return response.data;
+  }
+
+  async createCodeSystem(
+    codeSystem: CreateCodeSystemRequest
+  ): Promise<CodeSystem> {
+    const response = await axios.post(
+      `${this.baseUrl}/terminology/admin/code-system`,
+      codeSystem,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+      }
+    );
     return response.data;
   }
 }
