@@ -92,7 +92,8 @@
     "single-spa": "^5.9.3",
     "single-spa-react": "^4.2.0",
     "tailwindcss": "^3.4.1",
-    "twin.macro": "^3.4.1"
+    "twin.macro": "^3.4.1",
+    "yaml": "^2.9.0"
   },
   "types": "dist/madie-madie-admin.d.ts",
   "overrides": {
