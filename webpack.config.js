@@ -1,6 +1,8 @@
 /** @format */
 const { mergeWithRules } = require("webpack-merge");
 const singleSpaDefaults = require("webpack-config-single-spa-react-ts");
+const path = require("path");
+const CopyPlugin = require("copy-webpack-plugin");
 
 const merge = mergeWithRules({
   module: {
@@ -76,5 +78,18 @@ module.exports = (webpackConfigEnv, argv) => {
     },
   };
 
-  return merge(externalsConfig, defaultConfig, newCssRule);
+  const monacoAssetsConfig = {
+    plugins: [
+      new CopyPlugin({
+        patterns: [
+          {
+            from: path.dirname(require.resolve("monaco-editor/min/vs/loader.js")),
+            to: "vs",
+          },
+        ],
+      }),
+    ],
+  };
+
+  return merge(externalsConfig, defaultConfig, newCssRule, monacoAssetsConfig);
 };

@@ -19,6 +19,9 @@ import "twin.macro";
 import "styled-components/macro";
 import "./ValueSetManagement.scss";
 import VSEDialog from "./VSEDialog";
+import AddValueSetDialog, {
+  type AddValueSetFormValues,
+} from "./AddValueSetDialog";
 import { InputAdornment, IconButton } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
@@ -39,6 +42,7 @@ export default function ValueSetManagement() {
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [visibleItems, setVisibleItems] = useState<number>(0);
+  const [reloadCounter, setReloadCounter] = useState<number>(0);
 
   // future search/filter implementation
   const [searchText, setSearchText] = useState("");
@@ -53,6 +57,8 @@ export default function ValueSetManagement() {
   const [currentDirection, setCurrentDirection] = useState<string>("ASC");
 
   const [targetVSE, setTargetVSE] = useState<null | string>(null);
+  const [isAddValueSetDialogOpen, setIsAddValueSetDialogOpen] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const loadValueSets = async () => {
@@ -98,6 +104,7 @@ export default function ValueSetManagement() {
     currentSort,
     currentDirection,
     appliedSearchText,
+    reloadCounter,
   ]);
   const handleSort = (sort: string) => {
     let sortChange = "";
@@ -149,7 +156,7 @@ export default function ValueSetManagement() {
         cell: ({ row }) => (
           <Button
             variant="outline-secondary"
-            data-testId={`open-vs-${row.original.id}`}
+            data-testid={`open-vs-${row.original.id}`}
             onClick={() => {
               setTargetVSE(row.original.valueSet);
             }}
@@ -192,9 +199,51 @@ export default function ValueSetManagement() {
     setToastOpen(false);
   };
 
+  const handleAddValueSet = async ({
+    url,
+    version,
+    valueSet,
+  }: AddValueSetFormValues) => {
+    setToastOpen(false);
+
+    try {
+      await terminologyServiceApi.addValueSet({
+        url,
+        version: version || undefined,
+        valueSet,
+        lastUpdated: new Date().toISOString(),
+        manuallyModified: true,
+      });
+
+      setIsAddValueSetDialogOpen(false);
+      setToastType("success");
+      setToastMessage("Value set added successfully.");
+      setToastOpen(true);
+      setPage(1);
+      setReloadCounter((currentValue) => currentValue + 1);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An error occurred while adding the value set.";
+
+      setToastType("danger");
+      setToastMessage(errorMessage);
+      setToastOpen(true);
+    }
+  };
+
   return (
     <div className="value-set-management" data-testid="value-set-management">
       <div className="value-set-management-card">
+        <Button
+          data-testid="open-add-value-set-modal-button"
+          onClick={() => {
+            setIsAddValueSetDialogOpen(true);
+          }}
+        >
+          Add Value Set
+        </Button>
         <Button
           data-testid="update-vses-data-button"
           onClick={handleUpdateValueSets}
@@ -326,6 +375,14 @@ export default function ValueSetManagement() {
             setTargetVSE(null);
           }}
           targetVSE={targetVSE}
+        />
+
+        <AddValueSetDialog
+          open={isAddValueSetDialogOpen}
+          onClose={() => {
+            setIsAddValueSetDialogOpen(false);
+          }}
+          onSubmit={handleAddValueSet}
         />
 
         <Toast

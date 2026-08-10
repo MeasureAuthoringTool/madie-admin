@@ -7,8 +7,33 @@ import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
 
 jest.mock("../../../api/useTerminologyServiceApi");
 
+jest.mock("monaco-editor", () => ({}), { virtual: true });
+
+jest.mock("@monaco-editor/react", () => {
+  return {
+    __esModule: true,
+    loader: {
+      config: jest.fn(),
+      init: jest.fn().mockResolvedValue({}),
+    },
+    default: function MockMonacoEditor(props: {
+      value: string;
+      onChange?: (value: string) => void;
+    }) {
+      return (
+        <textarea
+          data-testid="mock-monaco-editor"
+          value={props.value}
+          onChange={(event) => props.onChange?.(event.target.value)}
+        />
+      );
+    },
+  };
+});
+
 const mockUpdateValueSets = jest.fn();
 const mockGetValueSets = jest.fn();
+const mockAddValueSet = jest.fn();
 
 describe("ValueSetManagement", () => {
   beforeEach(() => {
@@ -26,6 +51,7 @@ describe("ValueSetManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       updateValueSets: mockUpdateValueSets,
       getValueSets: mockGetValueSets,
+      addValueSet: mockAddValueSet,
     });
   });
 
@@ -53,6 +79,13 @@ describe("ValueSetManagement", () => {
     const button = screen.getByTestId("update-vses-data-button");
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent("Update VSES Data");
+  });
+
+  it("renders the Add Value Set button", () => {
+    render(<ValueSetManagement />);
+    const button = screen.getByTestId("open-add-value-set-modal-button");
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent("Add Value Set");
   });
 
   it("loads value sets on mount using default sorting", async () => {
@@ -557,5 +590,74 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false", "");
     });
+  });
+
+  it("opens and closes the add value set modal", async () => {
+    render(<ValueSetManagement />);
+
+    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    expect(screen.getByText("New Value Set")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("add-value-set-cancel-button"));
+    await waitFor(() => {
+      expect(screen.queryByText("New Value Set")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows JSON syntax validation in the add value set modal", async () => {
+    render(<ValueSetManagement />);
+
+    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+
+    await userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: "not valid json" },
+    });
+    fireEvent.blur(screen.getByTestId("mock-monaco-editor"));
+
+    await userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-value-set-json-error")).toHaveTextContent(
+        "Value set expansion JSON must be valid JSON."
+      );
+    });
+    expect(mockAddValueSet).not.toHaveBeenCalled();
+  });
+
+  it("submits a new value set and shows success toast", async () => {
+    mockAddValueSet.mockResolvedValueOnce(undefined);
+
+    render(<ValueSetManagement />);
+
+    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    await userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+    await userEvent.type(screen.getByTestId("add-value-set-version-input"), "1.0");
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: '{"resourceType":"ValueSet"}' },
+    });
+
+    await userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(mockAddValueSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "http://example.com/new-vs",
+          version: "1.0",
+          valueSet: '{"resourceType":"ValueSet"}',
+          manuallyModified: true,
+          lastUpdated: expect.any(String),
+        })
+      );
+    });
+
+    expect(screen.getByText("Value set added successfully.")).toBeInTheDocument();
   });
 });
