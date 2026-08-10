@@ -14,6 +14,7 @@ import {
   adminUserStore,
   useFeatureFlags,
   ExportDialog,
+  LibraryShareDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
@@ -22,6 +23,7 @@ import {
   exportMeasure as downloadMeasureExport,
   formatCmsId,
   checkUserCanEdit,
+  useOktaTokens,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -52,6 +54,8 @@ import {
 } from "../../../../icons/MeasureListTableRightArrowIcons";
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
+import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
+import _ from "lodash";
 
 type Ownership =
   | "OWNED_MEASURE"
@@ -323,6 +327,8 @@ const MeasureStatusChips = ({ measure }: { measure: any }) => (
 
 const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
+  const { getUserName } = useOktaTokens();
+  const userName = getUserName();
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
   const cqlLibraryServiceApi = useRef(useCqlLibraryServiceApi()).current;
@@ -421,7 +427,6 @@ const UserProfile = () => {
     setExpandedLibraryRows([]);
     setSelectedExpandedLibraryRowIds([]);
   }, []);
-
   useEffect(() => {
     const controller = new AbortController();
     userServiceApi
@@ -994,7 +999,7 @@ const UserProfile = () => {
       ...(activeOwnership === "SHARED_LIBRARY"
         ? [
             {
-              sortDescFirst: false,
+              enableSorting: false,
               header: "Owner",
               accessorKey: "ownerDisplayName",
               cell: (info: any) => {
@@ -1456,17 +1461,15 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
-  const selectedLibraries = useMemo(() => {
-    const topLevel = libraryTable
+  const selectedLibraries = [
+    ...libraryTable
       .getSelectedRowModel()
-      .rows.map((row) => row.original.actions);
+      .rows.map((row) => row.original.actions),
 
-    const expanded = expandedLibraryRows
+    ...expandedLibraryRows
       .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
-      .map((row) => row.actions);
-
-    return [...topLevel, ...expanded];
-  }, [libraryTable, expandedLibraryRows, selectedExpandedLibraryRowIds]);
+      .map((row) => row.actions),
+  ];
   const handleConfirmDeleteLibrary = useCallback(async () => {
     if (!deleteTarget) return;
 
@@ -1476,7 +1479,7 @@ const UserProfile = () => {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        await cqlLibraryServiceApi.deleteLibrary(id, harpId);
+        await cqlLibraryServiceApi.deleteLibrary(id, userName);
       }
 
       setToastType("success");
@@ -1500,6 +1503,7 @@ const UserProfile = () => {
     closeDeleteDialog,
     libraryTable,
     harpId,
+    getUserName,
   ]);
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
@@ -1609,6 +1613,35 @@ const UserProfile = () => {
     [table, clearExpansion]
   );
 
+  const [libraryShareDialogOpen, setLibraryShareDialogOpen] = useState(false);
+
+  const [libraryShareOption, setLibraryShareOption] = useState("");
+
+  const handleLibraryShare = useCallback((option: string) => {
+    setLibraryShareOption(option);
+    setLibraryShareDialogOpen(true);
+  }, []);
+
+  const handleLibraryShareDialogClose = useCallback(
+    (toastType?: "success" | "danger", toastMessage?: string) => {
+      setLibraryShareDialogOpen(false);
+      setLibraryShareOption("");
+
+      if (toastMessage) {
+        setToastType(toastType ?? "success");
+        setToastMessage(toastMessage);
+        setToastOpen(true);
+      }
+
+      if (toastType === "success") {
+        libraryTable.toggleAllRowsSelected(false);
+        clearLibraryExpansion();
+        setRefreshToken((t) => t + 1);
+      }
+    },
+    [libraryTable, clearLibraryExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1673,13 +1706,14 @@ const UserProfile = () => {
               className="search-filter-bar flex-end"
               data-testid="search-filter-bar"
             >
-              <ActionCenter
-                target="library"
-                measures={selectedLibraries}
-                canDelete={canDelete}
-                activeTab={activeTab}
+              <LibraryActionCenter
+                libraries={selectedLibraries}
+                activeTab={activeTab - 2}
                 onDelete={openDeleteDialog}
+                onShare={handleLibraryShare}
                 disabledReason={deleteDisabledReason}
+                canDelete={canDelete}
+                userName={getUserName()}
               />
             </div>
           )}
@@ -1798,6 +1832,12 @@ const UserProfile = () => {
         onSave={handleShareDialogSave}
         unshareFromUser={harpId}
         isAdmin
+      />
+      <LibraryShareDialog
+        libraries={selectedLibraries}
+        open={libraryShareDialogOpen}
+        option={libraryShareOption}
+        onClose={handleLibraryShareDialogClose}
       />
 
       <TransferDialog

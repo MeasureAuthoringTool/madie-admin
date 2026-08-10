@@ -1,5 +1,5 @@
 import React from "react";
-import { Measure } from "@madie/madie-models";
+import { type Measure } from "@madie/madie-models";
 import {
   ExportAction,
   ViewHRAction,
@@ -15,12 +15,12 @@ interface PropTypes {
   canDelete: boolean;
   activeTab: number;
   onDelete: () => void;
-  onTransfer?: () => void;
-  onExport?: (exportType: string) => void;
-  onViewHumanReadable?: () => void;
-  onViewHistory?: () => void;
-  onCompareVersions?: () => void;
-  onShare?: (option: string) => void;
+  onTransfer: () => void;
+  onExport: (exportType: string) => void;
+  onViewHumanReadable: () => void;
+  onViewHistory: () => void;
+  onCompareVersions: () => void;
+  onShare: (option: string) => void;
   disabledReason?: string;
   target?: string;
 }
@@ -56,7 +56,7 @@ export default function ActionCenter({
         onClick={onDelete}
         disabledReason={disabledReason}
       />
-      {onExport && <ExportAction measures={measures} onClick={onExport} />}
+      <ExportAction measures={measures} onClick={onExport} />
       {/* isOwner/isSharedWithUser are unused for admins — the icon short-circuits on isAdmin */}
       {onShare && (
         <ShareAction
