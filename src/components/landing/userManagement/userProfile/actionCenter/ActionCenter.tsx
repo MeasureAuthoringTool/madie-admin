@@ -39,6 +39,15 @@ export default function ActionCenter({
   onTransfer,
   disabledReason,
 }: PropTypes) {
+  const PipeSeparator = () => (
+    <span
+      aria-hidden="true"
+      style={{ color: "#8C8C8C", display: "inline-flex", alignItems: "center" }}
+    >
+      |
+    </span>
+  );
+
   return (
     <div className="action-center" data-testid="action-center">
       <DeleteAction
@@ -49,21 +58,39 @@ export default function ActionCenter({
       />
       <ExportAction measures={measures} onClick={onExport} />
       {/* isOwner/isSharedWithUser are unused for admins — the icon short-circuits on isAdmin */}
-      <ShareAction
-        measures={measures}
-        onClick={onShare}
-        isOwner={false}
-        isSharedWithUser={false}
-        activeTab={activeTab}
-      />
-      <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
-      <HistoryAction measures={measures} onClick={onViewHistory} />
-      <CompareVersionsAction measures={measures} onClick={onCompareVersions} />
-      <TransferAction
-        measures={measures}
-        onClick={onTransfer}
-        activeTab={activeTab}
-      />
+      {onShare && (
+        <ShareAction
+          measures={measures}
+          onClick={onShare}
+          isOwner={false}
+          isSharedWithUser={false}
+          activeTab={activeTab}
+        />
+      )}
+      {onTransfer && (
+        <TransferAction
+          measures={measures}
+          onClick={onTransfer}
+          activeTab={activeTab}
+        />
+      )}
+
+      {(onViewHumanReadable ?? onViewHistory ?? onCompareVersions) && (
+        <PipeSeparator />
+      )}
+
+      {onViewHumanReadable && (
+        <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
+      )}
+      {onViewHistory && (
+        <HistoryAction measures={measures} onClick={onViewHistory} />
+      )}
+      {onCompareVersions && (
+        <CompareVersionsAction
+          measures={measures}
+          onClick={onCompareVersions}
+        />
+      )}
     </div>
   );
 }
