@@ -1,9 +1,6 @@
 /** @format */
 const { mergeWithRules } = require("webpack-merge");
 const singleSpaDefaults = require("webpack-config-single-spa-react-ts");
-const path = require("path");
-const CopyPlugin = require("copy-webpack-plugin");
-
 const merge = mergeWithRules({
   module: {
     rules: {
@@ -13,7 +10,6 @@ const merge = mergeWithRules({
   },
   plugins: "append",
 });
-
 module.exports = (webpackConfigEnv, argv) => {
   const defaultConfig = singleSpaDefaults({
     orgName: "madie",
@@ -23,7 +19,6 @@ module.exports = (webpackConfigEnv, argv) => {
     disableHtmlGeneration: true,
     orgPackagesAsExternal: false,
   });
-
   const externalsConfig = {
     externals: [
       "@madie/madie-util",
@@ -33,7 +28,6 @@ module.exports = (webpackConfigEnv, argv) => {
       "styled-components",
     ],
   };
-
   // We need to override the css loading rule from the parent configuration
   // so that we can add postcss-loader to the chain
   const newCssRule = {
@@ -77,19 +71,5 @@ module.exports = (webpackConfigEnv, argv) => {
       ],
     },
   };
-
-  const monacoAssetsConfig = {
-    plugins: [
-      new CopyPlugin({
-        patterns: [
-          {
-            from: path.dirname(require.resolve("monaco-editor/min/vs/loader.js")),
-            to: "vs",
-          },
-        ],
-      }),
-    ],
-  };
-
-  return merge(externalsConfig, defaultConfig, newCssRule, monacoAssetsConfig);
+  return merge(externalsConfig, defaultConfig, newCssRule);
 };

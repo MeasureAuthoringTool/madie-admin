@@ -595,7 +595,9 @@ describe("ValueSetManagement", () => {
   it("opens and closes the add value set modal", async () => {
     render(<ValueSetManagement />);
 
-    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    await userEvent.click(
+      screen.getByTestId("open-add-value-set-modal-button")
+    );
     expect(screen.getByText("New Value Set")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("add-value-set-cancel-button"));
@@ -607,7 +609,9 @@ describe("ValueSetManagement", () => {
   it("shows JSON syntax validation in the add value set modal", async () => {
     render(<ValueSetManagement />);
 
-    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    await userEvent.click(
+      screen.getByTestId("open-add-value-set-modal-button")
+    );
 
     await userEvent.type(
       screen.getByTestId("add-value-set-url-input"),
@@ -634,12 +638,17 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    await userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    await userEvent.click(
+      screen.getByTestId("open-add-value-set-modal-button")
+    );
     await userEvent.type(
       screen.getByTestId("add-value-set-url-input"),
       "http://example.com/new-vs"
     );
-    await userEvent.type(screen.getByTestId("add-value-set-version-input"), "1.0");
+    await userEvent.type(
+      screen.getByTestId("add-value-set-version-input"),
+      "1.0"
+    );
     fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
       target: { value: '{"resourceType":"ValueSet"}' },
     });
@@ -658,6 +667,8 @@ describe("ValueSetManagement", () => {
       );
     });
 
-    expect(screen.getByText("Value set added successfully.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Value set added successfully.")
+    ).toBeInTheDocument();
   });
 });

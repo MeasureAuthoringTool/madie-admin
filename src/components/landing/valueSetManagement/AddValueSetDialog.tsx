@@ -2,51 +2,7 @@ import React, { useEffect } from "react";
 import { MadieDialog, TextField } from "@madie/madie-design-system/dist/react";
 import { DialogContent } from "@mui/material";
 import { useFormik } from "formik";
-import Editor, { loader } from "@monaco-editor/react";
-
-const webpackPublicPath =
-  typeof __webpack_public_path__ !== "undefined"
-    ? __webpack_public_path__
-    : "/";
-
-loader.config({
-  paths: {
-    vs: `${webpackPublicPath}vs`,
-  },
-});
-
-let monacoInitPromise: Promise<unknown> | null = null;
-
-const ensureMonacoLoaderInitialized = () => {
-  if (monacoInitPromise) {
-    return monacoInitPromise;
-  }
-
-  const globalWindow = window as Window & {
-    define?: ((...args: unknown[]) => unknown) & { amd?: unknown };
-    require?: unknown;
-  };
-
-  const hasForeignAmdDefine =
-    typeof globalWindow.require === "undefined" &&
-    typeof globalWindow.define === "function" &&
-    Boolean(globalWindow.define.amd);
-
-  const previousDefine = hasForeignAmdDefine ? globalWindow.define : undefined;
-
-  if (hasForeignAmdDefine) {
-    // Let Monaco bootstrap its own AMD loader when another loader defined only `define`.
-    delete globalWindow.define;
-  }
-
-  monacoInitPromise = loader.init().finally(() => {
-    if (previousDefine && typeof globalWindow.define === "undefined") {
-      globalWindow.define = previousDefine;
-    }
-  });
-
-  return monacoInitPromise;
-};
+import MonacoEditor from "@monaco-editor/react";
 
 export interface AddValueSetFormValues {
   url: string;
@@ -71,14 +27,6 @@ export default function AddValueSetDialog({
   onClose,
   onSubmit,
 }: AddValueSetDialogProps) {
-  useEffect(() => {
-    if (open) {
-      ensureMonacoLoaderInitialized().catch(() => {
-        // Keep UI responsive; loader errors surface through the editor itself.
-      });
-    }
-  }, [open]);
-
   const formik = useFormik<AddValueSetFormValues>({
     initialValues,
     validate: (values) => {
@@ -181,7 +129,7 @@ export default function AddValueSetDialog({
             data-testid="add-value-set-json-editor"
             style={{ border: "1px solid #8c8f94", marginTop: "8px" }}
           >
-            <Editor
+            <MonacoEditor
               height="350px"
               defaultLanguage="json"
               value={formik.values.valueSet}

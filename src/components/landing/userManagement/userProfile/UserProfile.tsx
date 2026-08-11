@@ -999,7 +999,7 @@ const UserProfile = () => {
       ...(activeOwnership === "SHARED_LIBRARY"
         ? [
             {
-              sortDescFirst: false,
+              enableSorting: false,
               header: "Owner",
               accessorKey: "ownerDisplayName",
               cell: (info: any) => {
