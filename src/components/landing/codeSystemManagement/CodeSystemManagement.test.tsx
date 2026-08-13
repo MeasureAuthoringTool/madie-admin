@@ -10,6 +10,7 @@ jest.mock("../../../api/useTerminologyServiceApi");
 describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
   const mockGetCodeSystems = jest.fn();
+  const mockCreateCodeSystem = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -22,10 +23,12 @@ describe("CodeSystemManagement", () => {
       size: 25,
       numberOfElements: 0,
     });
+    mockCreateCodeSystem.mockResolvedValue({});
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGetCodeSystems,
+      createCodeSystem: mockCreateCodeSystem,
     });
   });
 
@@ -481,6 +484,218 @@ describe("CodeSystemManagement", () => {
         "",
         ""
       );
+    });
+  });
+
+  it("opens add code system modal when add button is clicked", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+
+    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-title-input")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-name-input")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-fhir-version-input")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-vsac-version-input")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-full-url-input")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("add-code-system-oid-input")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-code-system-latest-checkbox")
+    ).toBeInTheDocument();
+  });
+
+  it("keeps save disabled until required fields are filled", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+
+    const saveButton = screen.getByTestId("add-code-system-save-button");
+    expect(saveButton).toBeDisabled();
+
+    await userEvent.type(
+      screen.getByTestId("add-code-system-name-input"),
+      "SNOMED"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-fhir-version-input"),
+      "4.0.1"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-full-url-input"),
+      "http://example.com"
+    );
+
+    expect(saveButton).toBeDisabled();
+
+    await userEvent.type(
+      screen.getByTestId("add-code-system-oid-input"),
+      "1.2.3"
+    );
+
+    expect(saveButton).toBeEnabled();
+  });
+
+  it("closes add code system modal on cancel", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("add-code-system-cancel-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Add New Codesystem Data")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("saves add code system modal data", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+
+    await userEvent.type(
+      screen.getByTestId("add-code-system-name-input"),
+      "SNOMED"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-fhir-version-input"),
+      "4.0.1"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-full-url-input"),
+      "http://example.com"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-oid-input"),
+      "1.2.3"
+    );
+
+    await userEvent.click(screen.getByTestId("add-code-system-save-button"));
+
+    await waitFor(() => {
+      expect(mockCreateCodeSystem).toHaveBeenCalled();
+    });
+  });
+
+  it("calls createCodeSystem API and shows success toast on save", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+    await userEvent.type(
+      screen.getByTestId("add-code-system-title-input"),
+      "Example"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-name-input"),
+      "SNOMED"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-fhir-version-input"),
+      "4.0.1"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-vsac-version-input"),
+      "2024"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-full-url-input"),
+      "http://example.com"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-oid-input"),
+      "1.2.3"
+    );
+    await userEvent.click(
+      screen.getByTestId("add-code-system-latest-checkbox")
+    );
+
+    await userEvent.click(screen.getByTestId("add-code-system-save-button"));
+
+    await waitFor(() => {
+      expect(mockCreateCodeSystem).toHaveBeenCalledWith({
+        title: "Example",
+        name: "SNOMED",
+        fullUrl: "http://example.com",
+        oid: "1.2.3",
+        isLatestVersion: true,
+        version: {
+          fhirVersion: "4.0.1",
+          vsacVersion: "2024",
+        },
+      });
+    });
+
+    expect(
+      screen.getByText("Code System created successfully")
+    ).toBeInTheDocument();
+  });
+
+  it("shows error toast when createCodeSystem fails", async () => {
+    mockCreateCodeSystem.mockRejectedValueOnce({
+      response: {
+        data: {
+          message: "Unable to create code system",
+        },
+      },
+    });
+
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+    await userEvent.type(
+      screen.getByTestId("add-code-system-name-input"),
+      "SNOMED"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-fhir-version-input"),
+      "4.0.1"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-full-url-input"),
+      "http://example.com"
+    );
+    await userEvent.type(
+      screen.getByTestId("add-code-system-oid-input"),
+      "1.2.3"
+    );
+
+    await userEvent.click(screen.getByTestId("add-code-system-save-button"));
+
+    await waitFor(() => {
+      expect(mockCreateCodeSystem).toHaveBeenCalled();
+    });
+
+    expect(
+      screen.getByText("Unable to create code system")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+  });
+
+  it("closes add code system modal on X icon click", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("add-code-system-button"));
+    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", { name: /close/i });
+    await userEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Add New Codesystem Data")
+      ).not.toBeInTheDocument();
     });
   });
 });
