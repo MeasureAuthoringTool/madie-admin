@@ -85,7 +85,7 @@ describe("ValueSetManagement", () => {
     render(<ValueSetManagement />);
     const button = screen.getByTestId("open-add-value-set-modal-button");
     expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent("Add Value Set");
+    expect(button).toHaveTextContent("Add New Valueset Data");
   });
 
   it("loads value sets on mount using default sorting", async () => {
@@ -596,11 +596,15 @@ describe("ValueSetManagement", () => {
     render(<ValueSetManagement />);
 
     userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
-    expect(screen.getByText("New Value Set")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("add-value-set-url-input")
+    ).toBeInTheDocument();
 
     userEvent.click(screen.getByTestId("add-value-set-cancel-button"));
     await waitFor(() => {
-      expect(screen.queryByText("New Value Set")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("add-value-set-url-input")
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -694,7 +698,7 @@ describe("ValueSetManagement", () => {
       )
     ).toBeInTheDocument();
     // Dialog stays open so the user can correct the input.
-    expect(screen.getByText("New Value Set")).toBeInTheDocument();
+    expect(screen.getByTestId("add-value-set-url-input")).toBeInTheDocument();
   });
 
   it("falls back to a generic error message when the add failure is not an Error", async () => {

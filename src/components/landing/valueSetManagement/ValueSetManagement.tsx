@@ -242,7 +242,7 @@ export default function ValueSetManagement() {
             setIsAddValueSetDialogOpen(true);
           }}
         >
-          Add Value Set
+          Add New Valueset Data
         </Button>
         <Button
           data-testid="update-vses-data-button"

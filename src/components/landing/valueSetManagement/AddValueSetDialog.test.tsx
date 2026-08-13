@@ -75,7 +75,7 @@ describe("AddValueSetDialog", () => {
   it("renders the dialog fields when open", () => {
     renderDialog();
 
-    expect(screen.getByText("New Value Set")).toBeInTheDocument();
+    expect(screen.getByText("Add New Valueset Data")).toBeInTheDocument();
     expect(screen.getByTestId("add-value-set-url-input")).toBeInTheDocument();
     expect(
       screen.getByTestId("add-value-set-version-input")

@@ -1,9 +1,12 @@
 import React, { useEffect } from "react";
 import { MadieDialog, TextField } from "@madie/madie-design-system/dist/react";
-import { DialogContent } from "@mui/material";
+import { DialogContent, Typography } from "@mui/material";
+import { Box } from "@mui/system";
 import { useFormik } from "formik";
 import MonacoEditor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
+
+const REQUIRED_ASTERISK_COLOR = "rgb(174, 28, 28)";
 
 loader.config({ monaco });
 
@@ -74,10 +77,23 @@ export default function AddValueSetDialog({
     }
   }, [open, resetForm]);
 
+  const formikErrorHandler = (name: keyof AddValueSetFormValues) => {
+    if (formik.touched[name] && formik.errors[name]) {
+      return `${formik.errors[name]}`;
+    }
+    return "";
+  };
+
+  const formRow = {
+    display: "flex",
+    flexDirection: "row",
+    marginTop: "12px",
+  };
+
   return (
     <MadieDialog
       form
-      title="New Value Set"
+      title="Add New Valueset Data"
       dialogProps={{
         id: "add-value-set-modal",
         onClose,
@@ -100,34 +116,57 @@ export default function AddValueSetDialog({
       }}
     >
       <DialogContent>
-        <TextField
-          {...formik.getFieldProps("url")}
-          required
-          label="URL"
-          id="value-set-url"
-          data-testid="add-value-set-url-field"
-          inputProps={{
-            "data-testid": "add-value-set-url-input",
-          }}
-          error={formik.touched.url && Boolean(formik.errors.url)}
-          helperText={formik.touched.url ? formik.errors.url : ""}
-        />
+        <Box sx={formRow}>
+          <TextField
+            {...formik.getFieldProps("url")}
+            required
+            label="URL"
+            id="value-set-url"
+            data-testid="add-value-set-url-field"
+            size="small"
+            inputProps={{
+              "data-testid": "add-value-set-url-input",
+              "aria-describedby": "value-set-url-helper-text",
+              required: true,
+              "aria-required": true,
+            }}
+            error={formik.touched.url && Boolean(formik.errors.url)}
+            helperText={formikErrorHandler("url")}
+          />
+        </Box>
 
-        <div style={{ marginTop: "16px" }}>
+        <Box sx={formRow}>
           <TextField
             {...formik.getFieldProps("version")}
-            label="Version (Optional)"
+            label="Version"
             id="value-set-version"
             data-testid="add-value-set-version-field"
+            size="small"
             inputProps={{
               "data-testid": "add-value-set-version-input",
+              "aria-describedby": "value-set-version-helper-text",
             }}
             helperText="If this should be the latest version, leave blank"
           />
-        </div>
+        </Box>
 
-        <div style={{ marginTop: "16px" }}>
-          <label htmlFor="add-value-set-json-editor">Expansion JSON*</label>
+        <Box sx={formRow} style={{ flexDirection: "column" }}>
+          <Typography
+            component="label"
+            htmlFor="add-value-set-json-editor"
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              fontFamily: "Rubik",
+              color: "#333",
+            }}
+          >
+            {" "}
+            <span style={{ color: REQUIRED_ASTERISK_COLOR, marginRight: 2 }}>
+              *
+            </span>
+            Expansion
+          </Typography>
           <div
             id="add-value-set-json-editor"
             data-testid="add-value-set-json-editor"
@@ -166,12 +205,17 @@ export default function AddValueSetDialog({
           {formik.touched.valueSet && formik.errors.valueSet && (
             <div
               data-testid="add-value-set-json-error"
-              style={{ color: "#d92f2f", marginTop: "8px" }}
+              style={{
+                color: REQUIRED_ASTERISK_COLOR,
+                fontSize: 14,
+                fontFamily: "Rubik",
+                marginTop: "8px",
+              }}
             >
               {formik.errors.valueSet}
             </div>
           )}
-        </div>
+        </Box>
       </DialogContent>
     </MadieDialog>
   );
