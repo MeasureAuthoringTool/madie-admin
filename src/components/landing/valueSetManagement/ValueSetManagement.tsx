@@ -400,7 +400,7 @@ export default function ValueSetManagement() {
           open={toastOpen}
           message={toastMessage}
           onClose={onToastClose}
-          autoHideDuration={6000}
+          autoHideDuration={toastType === "danger" ? null : 6000}
         />
       </div>
     </div>

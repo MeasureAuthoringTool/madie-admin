@@ -2,7 +2,10 @@ import React, { useEffect } from "react";
 import { MadieDialog, TextField } from "@madie/madie-design-system/dist/react";
 import { DialogContent } from "@mui/material";
 import { useFormik } from "formik";
-import MonacoEditor from "@monaco-editor/react";
+import MonacoEditor, { loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+
+loader.config({ monaco });
 
 export interface AddValueSetFormValues {
   url: string;
@@ -29,6 +32,7 @@ export default function AddValueSetDialog({
 }: AddValueSetDialogProps) {
   const formik = useFormik<AddValueSetFormValues>({
     initialValues,
+    validateOnMount: true,
     validate: (values) => {
       const errors: Partial<Record<keyof AddValueSetFormValues, string>> = {};
 
@@ -91,7 +95,7 @@ export default function AddValueSetDialog({
         variant: "cyan",
         type: "submit",
         continueText: "Add Value Set",
-        disabled: formik.isSubmitting,
+        disabled: formik.isSubmitting || !formik.isValid,
         "data-testid": "add-value-set-submit-button",
       }}
     >
@@ -139,6 +143,17 @@ export default function AddValueSetDialog({
               onMount={(editor) => {
                 editor.onDidBlurEditorText(() => {
                   formik.setFieldTouched("valueSet", true);
+                });
+                editor.onDidPaste(() => {
+                  const currentValue = editor.getValue();
+                  try {
+                    JSON.parse(currentValue);
+                  } catch {
+                    return;
+                  }
+                  setTimeout(() => {
+                    editor.getAction("editor.action.formatDocument")?.run();
+                  }, 0);
                 });
               }}
               options={{

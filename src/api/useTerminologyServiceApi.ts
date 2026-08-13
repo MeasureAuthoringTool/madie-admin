@@ -99,6 +99,12 @@ export class TerminologyServiceApi {
 
       return response.data;
     } catch (error: any) {
+      const apiValidationError =
+        error.response?.data?.validationErrors?.["/api"];
+      if (apiValidationError) {
+        throw new Error(apiValidationError);
+      }
+
       let message =
         "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk.";
 

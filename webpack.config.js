@@ -1,6 +1,8 @@
 /** @format */
 const { mergeWithRules } = require("webpack-merge");
 const singleSpaDefaults = require("webpack-config-single-spa-react-ts");
+const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
+
 const merge = mergeWithRules({
   module: {
     rules: {
@@ -71,5 +73,8 @@ module.exports = (webpackConfigEnv, argv) => {
       ],
     },
   };
-  return merge(externalsConfig, defaultConfig, newCssRule);
+  const monacoConfig = {
+    plugins: [new MonacoWebpackPlugin({ languages: ["json"] })],
+  };
+  return merge(externalsConfig, defaultConfig, newCssRule, monacoConfig);
 };
