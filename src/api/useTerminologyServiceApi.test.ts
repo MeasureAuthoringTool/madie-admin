@@ -440,6 +440,65 @@ describe("TerminologyServiceApi", () => {
     });
   });
 
+  describe("createCodeSystem", () => {
+    const request = {
+      title: "Example Title",
+      name: "example",
+      fullUrl: "http://example.com",
+      oid: "1.2.3",
+      isLatestVersion: true,
+      version: { fhirVersion: "4.0.1", vsacVersion: "2024" },
+    };
+
+    it("posts to the code-system endpoint and returns the created resource", async () => {
+      const created = {
+        id: "cs-new",
+        ...request,
+        lastUpdated: "2025-01-01T00:00:00Z",
+      };
+      (axios.post as jest.Mock).mockResolvedValueOnce({ data: created });
+
+      const result = await terminologyService.createCodeSystem(request);
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(axios.post).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/code-system",
+        request,
+        { headers: { Authorization: "Bearer test-token" } }
+      );
+      expect(result).toEqual(created);
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+      (axios.post as jest.Mock).mockResolvedValue({ data: { id: "cs-x" } });
+
+      await service.createCodeSystem(request);
+      await service.createCodeSystem(request);
+
+      expect(axios.post).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-1" },
+        })
+      );
+      expect(axios.post).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-2" },
+        })
+      );
+    });
+  });
+
   describe("getCodeSystems", () => {
     it("calls codesystems endpoint with default paging params", async () => {
       const responseData = {

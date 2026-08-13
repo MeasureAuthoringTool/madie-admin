@@ -19,6 +19,9 @@ import CheckIcon from "@mui/icons-material/Check";
 import { IconButton, InputAdornment, MenuItem } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
+import CreateCodeSystemDialog, {
+  type NewCodeSystemFormData,
+} from "./CreateCodeSystemDialog";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
 
@@ -31,6 +34,18 @@ export default function CodeSystemManagement() {
   const [toastOpen, setToastOpen] = useState<boolean>(false);
   const [toastType, setToastType] = useState<string>("success");
   const [toastMessage, setToastMessage] = useState<string>("");
+  const [isAddCodeSystemDialogOpen, setIsAddCodeSystemDialogOpen] =
+    useState<boolean>(false);
+  const [newCodeSystemFormData, setNewCodeSystemFormData] =
+    useState<NewCodeSystemFormData>({
+      title: "",
+      name: "",
+      fhirVersion: "",
+      vsacVersion: "",
+      fullUrl: "",
+      oid: "",
+      isLatestVersion: false,
+    });
 
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -57,45 +72,109 @@ export default function CodeSystemManagement() {
       setToastOpen(true);
     }
   };
+
+  const loadCodeSystems = async () => {
+    try {
+      setLoading(true);
+
+      const sortInfo = currentSort
+        ? `${currentSort},${currentDirection === "DESC"}`
+        : undefined;
+
+      const response = await terminologyServiceApi.getCodeSystems(
+        page - 1,
+        limit,
+        sortInfo,
+        filterBy,
+        appliedSearchText
+      );
+
+      setCodeSystems(response.content);
+      setTotalPages(response.totalPages);
+      setTotalItems(response.totalElements);
+      setVisibleItems(response.numberOfElements);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An error occurred while loading code systems.";
+
+      setToastType("danger");
+      setToastMessage(errorMessage);
+      setToastOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetNewCodeSystemFormData = () => {
+    setNewCodeSystemFormData({
+      title: "",
+      name: "",
+      fhirVersion: "",
+      vsacVersion: "",
+      fullUrl: "",
+      oid: "",
+      isLatestVersion: false,
+    });
+  };
+
+  const handleAddCodeSystem = () => {
+    setIsAddCodeSystemDialogOpen(true);
+  };
+
+  const handleCloseAddCodeSystemDialog = () => {
+    setIsAddCodeSystemDialogOpen(false);
+    resetNewCodeSystemFormData();
+  };
+
+  const handleNewCodeSystemFieldChange = (
+    field: keyof NewCodeSystemFormData,
+    value: string | boolean
+  ) => {
+    setNewCodeSystemFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveCodeSystem = async (
+    formData: NewCodeSystemFormData
+  ): Promise<void> => {
+    try {
+      await terminologyServiceApi.createCodeSystem({
+        title: formData.title.trim(),
+        name: formData.name.trim(),
+        fullUrl: formData.fullUrl.trim(),
+        oid: formData.oid.trim(),
+        isLatestVersion: formData.isLatestVersion,
+        version: {
+          fhirVersion: formData.fhirVersion.trim(),
+          vsacVersion: formData.vsacVersion.trim(),
+        },
+      });
+
+      await loadCodeSystems(); // Refresh table data
+
+      setToastType("success");
+      setToastMessage("Code System created successfully");
+      setToastOpen(true);
+      handleCloseAddCodeSystemDialog();
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ??
+        "An error occurred while creating the code system.";
+      setToastType("danger");
+      setToastMessage(errorMessage);
+      setToastOpen(true);
+    }
+  };
+
   const onToastClose = () => {
     setToastOpen(false);
   };
 
   useEffect(() => {
-    const loadCodeSystems = async () => {
-      try {
-        setLoading(true);
-
-        const sortInfo = currentSort
-          ? `${currentSort},${currentDirection === "DESC"}`
-          : undefined;
-
-        const response = await terminologyServiceApi.getCodeSystems(
-          page - 1,
-          limit,
-          sortInfo,
-          filterBy,
-          appliedSearchText
-        );
-
-        setCodeSystems(response.content);
-        setTotalPages(response.totalPages);
-        setTotalItems(response.totalElements);
-        setVisibleItems(response.numberOfElements);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "An error occurred while loading code systems.";
-
-        setToastType("danger");
-        setToastMessage(errorMessage);
-        setToastOpen(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadCodeSystems().catch((error) => {
       console.error(error);
     });
@@ -371,6 +450,12 @@ export default function CodeSystemManagement() {
         data-testid="code-system-management-card"
       >
         <Button
+          data-testid="add-code-system-button"
+          onClick={handleAddCodeSystem}
+        >
+          Add New Code System
+        </Button>
+        <Button
           data-testid="update-code-systems-button"
           onClick={handleUpdateCodeSystems}
         >
@@ -385,6 +470,14 @@ export default function CodeSystemManagement() {
           </p>
         </div>
       </div>
+
+      <CreateCodeSystemDialog
+        open={isAddCodeSystemDialogOpen}
+        formData={newCodeSystemFormData}
+        onClose={handleCloseAddCodeSystemDialog}
+        onSave={handleSaveCodeSystem}
+        onFieldChange={handleNewCodeSystemFieldChange}
+      />
     </div>
   );
 }
