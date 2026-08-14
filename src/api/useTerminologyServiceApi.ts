@@ -11,18 +11,18 @@ export interface Page<T> {
   numberOfElements: number;
 }
 
-export interface Page<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-  numberOfElements: number;
-}
-
 export interface ValueSetDisplayForAdmin {
   id: string;
   url: string;
+  version?: string;
+  lastUpdated: string;
+  manuallyModified: boolean;
+  valueSet: string;
+}
+
+export interface AddValueSetForAdmin {
+  url: string;
+  version?: string;
   lastUpdated: string;
   manuallyModified: boolean;
   valueSet: string;
@@ -94,6 +94,40 @@ export class TerminologyServiceApi {
       throw new Error(message);
     }
   }
+
+  async addValueSet(
+    valueSet: AddValueSetForAdmin
+  ): Promise<ValueSetDisplayForAdmin> {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/terminology/admin/value-set`,
+        valueSet,
+        {
+          headers: {
+            Authorization: `Bearer ${this.getAccessToken()}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      const apiValidationError =
+        error.response?.data?.validationErrors?.["/api"];
+      if (apiValidationError) {
+        throw new Error(apiValidationError);
+      }
+
+      let message =
+        "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk.";
+
+      if (error.response?.data?.message) {
+        message = `${message}: ${error.response.data.message}`;
+      }
+
+      throw new Error(message);
+    }
+  }
+
   async triggerUpdateCodeSystems(): Promise<void> {
     try {
       return await axios.post(

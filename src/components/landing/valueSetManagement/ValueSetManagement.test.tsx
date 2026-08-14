@@ -7,8 +7,33 @@ import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
 
 jest.mock("../../../api/useTerminologyServiceApi");
 
+jest.mock("monaco-editor", () => ({}), { virtual: true });
+
+jest.mock("@monaco-editor/react", () => {
+  return {
+    __esModule: true,
+    loader: {
+      config: jest.fn(),
+      init: jest.fn().mockResolvedValue({}),
+    },
+    default: function MockMonacoEditor(props: {
+      value: string;
+      onChange?: (value: string) => void;
+    }) {
+      return (
+        <textarea
+          data-testid="mock-monaco-editor"
+          value={props.value}
+          onChange={(event) => props.onChange?.(event.target.value)}
+        />
+      );
+    },
+  };
+});
+
 const mockUpdateValueSets = jest.fn();
 const mockGetValueSets = jest.fn();
+const mockAddValueSet = jest.fn();
 
 describe("ValueSetManagement", () => {
   beforeEach(() => {
@@ -26,6 +51,7 @@ describe("ValueSetManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       updateValueSets: mockUpdateValueSets,
       getValueSets: mockGetValueSets,
+      addValueSet: mockAddValueSet,
     });
   });
 
@@ -53,6 +79,13 @@ describe("ValueSetManagement", () => {
     const button = screen.getByTestId("update-vses-data-button");
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent("Update VSES Data");
+  });
+
+  it("renders the Add Value Set button", () => {
+    render(<ValueSetManagement />);
+    const button = screen.getByTestId("open-add-value-set-modal-button");
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent("Add New Valueset Data");
   });
 
   it("loads value sets on mount using default sorting", async () => {
@@ -322,7 +355,7 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
     });
 
-    await userEvent.click(screen.getByTestId("header-lastUpdated"));
+    userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
@@ -354,7 +387,7 @@ describe("ValueSetManagement", () => {
       ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+    userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 25, "url,false", "");
@@ -384,11 +417,11 @@ describe("ValueSetManagement", () => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole("combobox"));
+    userEvent.click(screen.getByRole("combobox"));
 
     const option25 = await screen.findByText("50");
 
-    await userEvent.click(option25);
+    userEvent.click(option25);
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 50, "url,false", "");
@@ -481,12 +514,12 @@ describe("ValueSetManagement", () => {
       name: /view expansions/i,
     });
 
-    await userEvent.click(button);
+    userEvent.click(button);
 
     await waitFor(() => {
       expect(screen.getByText("Details")).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByTestId("close-button"));
+    userEvent.click(screen.getByTestId("close-button"));
     await waitFor(() => {
       expect(screen.queryByText("Details")).not.toBeInTheDocument();
     });
@@ -497,9 +530,9 @@ describe("ValueSetManagement", () => {
 
     const searchInput = screen.getByTestId("vs-list-search-input");
 
-    await userEvent.type(searchInput, "diabetes");
+    userEvent.type(searchInput, "diabetes");
 
-    await userEvent.click(screen.getByTestId("vs-trigger-search"));
+    userEvent.click(screen.getByTestId("vs-trigger-search"));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(
@@ -515,7 +548,7 @@ describe("ValueSetManagement", () => {
 
     const searchInput = screen.getByTestId("vs-list-search-input");
 
-    await userEvent.type(searchInput, "diabetes");
+    userEvent.type(searchInput, "diabetes");
 
     fireEvent.keyPress(searchInput, {
       key: "Enter",
@@ -537,9 +570,9 @@ describe("ValueSetManagement", () => {
 
     const searchInput = screen.getByTestId("vs-list-search-input");
 
-    await userEvent.type(searchInput, "diabetes");
+    userEvent.type(searchInput, "diabetes");
 
-    await userEvent.click(screen.getByTestId("vs-trigger-search"));
+    userEvent.click(screen.getByTestId("vs-trigger-search"));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(
@@ -550,12 +583,144 @@ describe("ValueSetManagement", () => {
       );
     });
 
-    await userEvent.click(screen.getByTestId("vs-clear-search"));
+    userEvent.click(screen.getByTestId("vs-clear-search"));
 
     expect(searchInput).toHaveValue("");
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, "url,false", "");
+    });
+  });
+
+  it("opens and closes the add value set modal", async () => {
+    render(<ValueSetManagement />);
+
+    userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    expect(
+      await screen.findByTestId("add-value-set-url-input")
+    ).toBeInTheDocument();
+
+    userEvent.click(screen.getByTestId("add-value-set-cancel-button"));
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("add-value-set-url-input")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows JSON syntax validation in the add value set modal", async () => {
+    render(<ValueSetManagement />);
+
+    userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+
+    userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: "not valid json" },
+    });
+    fireEvent.blur(screen.getByTestId("mock-monaco-editor"));
+
+    userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-value-set-json-error")).toHaveTextContent(
+        "Value set expansion JSON must be valid JSON."
+      );
+    });
+    expect(mockAddValueSet).not.toHaveBeenCalled();
+  });
+
+  it("submits a new value set and shows success toast", async () => {
+    mockAddValueSet.mockResolvedValueOnce(undefined);
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+    userEvent.type(screen.getByTestId("add-value-set-version-input"), "1.0");
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: '{"resourceType":"ValueSet"}' },
+    });
+
+    userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(mockAddValueSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "http://example.com/new-vs",
+          version: "1.0",
+          valueSet: '{"resourceType":"ValueSet"}',
+          manuallyModified: true,
+          lastUpdated: expect.any(String),
+        })
+      );
+    });
+
+    expect(
+      screen.getByText("Value set added successfully.")
+    ).toBeInTheDocument();
+  });
+
+  it("shows an error toast when adding a value set fails", async () => {
+    mockAddValueSet.mockRejectedValueOnce(
+      new Error(
+        "The URL in the expansion JSON does not match the provided URL."
+      )
+    );
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: '{"resourceType":"ValueSet"}' },
+    });
+
+    userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(
+        "The URL in the expansion JSON does not match the provided URL."
+      )
+    ).toBeInTheDocument();
+    // Dialog stays open so the user can correct the input.
+    expect(screen.getByTestId("add-value-set-url-input")).toBeInTheDocument();
+  });
+
+  it("falls back to a generic error message when the add failure is not an Error", async () => {
+    mockAddValueSet.mockRejectedValueOnce("boom");
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(screen.getByTestId("open-add-value-set-modal-button"));
+    userEvent.type(
+      screen.getByTestId("add-value-set-url-input"),
+      "http://example.com/new-vs"
+    );
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: '{"resourceType":"ValueSet"}' },
+    });
+
+    userEvent.click(screen.getByTestId("add-value-set-submit-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("An error occurred while adding the value set.")
+      ).toBeInTheDocument();
     });
   });
 });
