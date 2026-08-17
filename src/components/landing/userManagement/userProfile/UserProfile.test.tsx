@@ -226,6 +226,7 @@ const sharedMeasure = {
   measureName: "Shared Measure B",
   version: "2.1.000",
   model: "QDM v5.6",
+  ownerDisplayName: "Owner First Last",
   lastModifiedAt: "2026-04-15T08:00:00Z",
   measureMetaData: { draft: false },
   measureSet: { acls: [], cmsId: 7, owner: "other_user" },
@@ -645,6 +646,9 @@ describe("UserProfile", () => {
     await waitFor(() => {
       expect(screen.getByTestId("measure-name-m2-content")).toHaveTextContent(
         "Shared Measure B"
+      );
+      expect(screen.getByTestId("measure-owner-m2")).toHaveTextContent(
+        "Owner First Last"
       );
       expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
         "Shared Measures (2)"
