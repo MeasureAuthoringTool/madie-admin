@@ -792,10 +792,9 @@ const UserProfile = () => {
               header: "Owner",
               accessorKey: "ownerDisplayName",
               cell: (info: any) => {
-                const owner = info.row.original.ownerDisplayName?.trim();
                 return (
                   <span data-testid={`measure-owner-${info.row.original.id}`}>
-                    {owner || ""}
+                    {info.row.original.ownerDisplayName?.trim() || ""}
                   </span>
                 );
               },
