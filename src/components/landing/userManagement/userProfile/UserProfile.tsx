@@ -80,6 +80,7 @@ type MeasureRow = {
   measureName: string;
   version: string;
   model: string;
+  ownerDisplayName?: string;
   actions: any;
   hasAssociatedMeasures: boolean;
 };
@@ -199,6 +200,7 @@ const transformRow = (m: any): MeasureRow => ({
   measureName: m?.measureName,
   version: m?.version,
   model: m?.model,
+  ownerDisplayName: m?.ownerDisplayName,
   actions: m,
   hasAssociatedMeasures: !!m?.hasAssociatedMeasures,
 });
@@ -783,22 +785,41 @@ const UserProfile = () => {
           />
         ),
       },
-      {
-        header: "Shared",
-        accessorKey: "measureSet.acls",
-        cell: (info) => {
-          const shared =
-            info.row.original.actions?.measureSet?.acls?.length > 0;
-          return (
-            <div
-              data-testid={`measure-shared-${info.row.original.id}`}
-              aria-label={shared ? "Shared" : "Not shared"}
-            >
-              {shared && <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />}
-            </div>
-          );
-        },
-      },
+      ...(activeOwnership === "SHARED_MEASURE"
+        ? [
+            {
+              enableSorting: false,
+              header: "Owner",
+              accessorKey: "ownerDisplayName",
+              cell: (info: any) => {
+                return (
+                  <span data-testid={`measure-owner-${info.row.original.id}`}>
+                    {info.row.original.ownerDisplayName?.trim() || ""}
+                  </span>
+                );
+              },
+            },
+          ]
+        : [
+            {
+              header: "Shared",
+              accessorKey: "measureSet.acls",
+              cell: (info) => {
+                const shared =
+                  info.row.original.actions?.measureSet?.acls?.length > 0;
+                return (
+                  <div
+                    data-testid={`measure-shared-${info.row.original.id}`}
+                    aria-label={shared ? "Shared" : "Not shared"}
+                  >
+                    {shared && (
+                      <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]),
       {
         header: "CMS ID",
         accessorKey: "measureSet.cmsId",
@@ -914,7 +935,12 @@ const UserProfile = () => {
         },
       },
     ],
-    [expandedMeasureSetId, toggleExpansion, lockedByDisplayNames]
+    [
+      activeOwnership,
+      expandedMeasureSetId,
+      toggleExpansion,
+      lockedByDisplayNames,
+    ]
   );
 
   const table = useReactTable({
