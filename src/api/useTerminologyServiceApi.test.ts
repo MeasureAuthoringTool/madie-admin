@@ -440,6 +440,161 @@ describe("TerminologyServiceApi", () => {
     });
   });
 
+  describe("createCodeSystem", () => {
+    const request = {
+      title: "Example Title",
+      name: "example",
+      fullUrl: "http://example.com",
+      oid: "1.2.3",
+      isLatestVersion: true,
+      version: { fhirVersion: "4.0.1", vsacVersion: "2024" },
+    };
+
+    it("posts to the code-system endpoint and returns the created resource", async () => {
+      const created = {
+        id: "cs-new",
+        ...request,
+        lastUpdated: "2025-01-01T00:00:00Z",
+      };
+      (axios.post as jest.Mock).mockResolvedValueOnce({ data: created });
+
+      const result = await terminologyService.createCodeSystem(request);
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(axios.post).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/code-system",
+        request,
+        { headers: { Authorization: "Bearer test-token" } }
+      );
+      expect(result).toEqual(created);
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+      (axios.post as jest.Mock).mockResolvedValue({ data: { id: "cs-x" } });
+
+      await service.createCodeSystem(request);
+      await service.createCodeSystem(request);
+
+      expect(axios.post).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-1" },
+        })
+      );
+      expect(axios.post).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-2" },
+        })
+      );
+    });
+  });
+
+  describe("addValueSet", () => {
+    const validValueSet = {
+      url: "http://example.org/fhir/ValueSet/test",
+      version: "1.0.0",
+      lastUpdated: "2026-08-13T16:54:04.022Z",
+      manuallyModified: true,
+      valueSet: '{"resourceType":"ValueSet"}',
+    };
+
+    it("posts the value set to the value-set endpoint and returns the data", async () => {
+      const created = { id: "vs-1", ...validValueSet };
+      (axios.post as jest.Mock).mockResolvedValueOnce({ data: created });
+
+      const result = await terminologyService.addValueSet(validValueSet);
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(axios.post).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/value-set",
+        validValueSet,
+        {
+          headers: { Authorization: "Bearer test-token" },
+        }
+      );
+      expect(result).toEqual(created);
+    });
+
+    it("throws only the validationErrors['/api'] message when present", async () => {
+      const apiMessage =
+        "The URL in the expansion JSON [http://example.org/fhir/ValueSet/test-1] does not match the provided URL [http://example.org/fhir/ValueSet/test].";
+      (axios.post as jest.Mock).mockRejectedValueOnce({
+        response: {
+          data: {
+            message: "Some other generic message",
+            validationErrors: {
+              "/api": apiMessage,
+            },
+          },
+        },
+      });
+
+      await expect(
+        terminologyService.addValueSet(validValueSet)
+      ).rejects.toThrow(apiMessage);
+    });
+
+    it("appends the server message when there is no validationErrors['/api']", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce({
+        response: { data: { message: "Value set already exists" } },
+      });
+
+      await expect(
+        terminologyService.addValueSet(validValueSet)
+      ).rejects.toThrow(
+        "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk.: Value set already exists"
+      );
+    });
+
+    it("throws the generic message when the response has no message or validationErrors", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce({ response: {} });
+
+      await expect(
+        terminologyService.addValueSet(validValueSet)
+      ).rejects.toThrow(
+        "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk."
+      );
+    });
+
+    it("falls back to the generic message when there is no response", async () => {
+      (axios.post as jest.Mock).mockRejectedValueOnce(
+        new Error("Network down")
+      );
+
+      await expect(
+        terminologyService.addValueSet(validValueSet)
+      ).rejects.toThrow(
+        "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk."
+      );
+    });
+
+    it("uses the latest access token on the request", async () => {
+      const tokenFn = jest.fn().mockReturnValue("fresh-token");
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+      (axios.post as jest.Mock).mockResolvedValueOnce({ data: {} });
+
+      await service.addValueSet(validValueSet);
+
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.any(String),
+        validValueSet,
+        expect.objectContaining({
+          headers: { Authorization: "Bearer fresh-token" },
+        })
+      );
+    });
+  });
+
   describe("getCodeSystems", () => {
     it("calls codesystems endpoint with default paging params", async () => {
       const responseData = {

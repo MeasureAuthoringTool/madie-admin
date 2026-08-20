@@ -1,7 +1,7 @@
 import React from "react";
 import { IconButton } from "@mui/material";
 import Tooltip from "@mui/material/Tooltip";
-import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
+import { Trash2 } from "lucide-react";
 
 interface PropTypes {
   disabled: boolean;
@@ -47,7 +47,7 @@ export default function DeleteAction({
           aria-label="Delete measure"
           className="DeleteClass"
         >
-          <DeleteOutlinedIcon />
+          <Trash2 size={20} />
         </IconButton>
       </span>
     </Tooltip>

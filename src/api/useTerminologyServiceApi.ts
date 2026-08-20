@@ -11,21 +11,33 @@ export interface Page<T> {
   numberOfElements: number;
 }
 
-export interface Page<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-  numberOfElements: number;
-}
-
 export interface ValueSetDisplayForAdmin {
   id: string;
   url: string;
+  version?: string;
   lastUpdated: string;
   manuallyModified: boolean;
   valueSet: string;
+}
+
+export interface AddValueSetForAdmin {
+  url: string;
+  version?: string;
+  lastUpdated: string;
+  manuallyModified: boolean;
+  valueSet: string;
+}
+
+export interface CreateCodeSystemRequest {
+  title?: string;
+  name: string;
+  fullUrl: string;
+  oid?: string;
+  isLatestVersion: boolean;
+  version: {
+    fhirVersion: string;
+    vsacVersion?: string;
+  };
 }
 
 export class TerminologyServiceApi {
@@ -73,7 +85,7 @@ export class TerminologyServiceApi {
           params: { ig, version },
         }
       );
-    } catch (error) {
+    } catch (error: any) {
       let message =
         "An error occurred while updating Value Sets. Please try again. If the error persists, please contact the help desk.";
       if (error.response?.data?.message) {
@@ -82,6 +94,40 @@ export class TerminologyServiceApi {
       throw new Error(message);
     }
   }
+
+  async addValueSet(
+    valueSet: AddValueSetForAdmin
+  ): Promise<ValueSetDisplayForAdmin> {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/terminology/admin/value-set`,
+        valueSet,
+        {
+          headers: {
+            Authorization: `Bearer ${this.getAccessToken()}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      const apiValidationError =
+        error.response?.data?.validationErrors?.["/api"];
+      if (apiValidationError) {
+        throw new Error(apiValidationError);
+      }
+
+      let message =
+        "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk.";
+
+      if (error.response?.data?.message) {
+        message = `${message}: ${error.response.data.message}`;
+      }
+
+      throw new Error(message);
+    }
+  }
+
   async triggerUpdateCodeSystems(): Promise<void> {
     try {
       return await axios.post(
@@ -117,12 +163,18 @@ export class TerminologyServiceApi {
     const params: Record<string, string | number> = {
       page,
       limit,
-      filterField,
-      searchText,
     };
 
     if (sortInfo) {
       params.sortInfo = sortInfo;
+    }
+
+    if (filterField) {
+      params.filterField = filterField;
+    }
+
+    if (searchText) {
+      params.searchText = searchText;
     }
 
     const response = await axios.get(
@@ -135,6 +187,21 @@ export class TerminologyServiceApi {
       }
     );
 
+    return response.data;
+  }
+
+  async createCodeSystem(
+    codeSystem: CreateCodeSystemRequest
+  ): Promise<CodeSystem> {
+    const response = await axios.post(
+      `${this.baseUrl}/terminology/admin/code-system`,
+      codeSystem,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+      }
+    );
     return response.data;
   }
 }

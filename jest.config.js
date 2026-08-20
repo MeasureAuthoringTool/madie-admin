@@ -11,6 +11,8 @@ module.exports = {
     "\\.(css|scss)$": "identity-obj-proxy",
     "single-spa-react/parcel": "single-spa-react/lib/cjs/parcel.cjs",
     "^@madie/madie-util$": "<rootDir>/__mocks__/@madie/madie-util.tsx",
+    "^monaco-editor$": "<rootDir>/__mocks__/monaco-editor.ts",
+    "^@monaco-editor/react$": "<rootDir>/__mocks__/@monaco-editor/react.tsx",
   },
   setupFilesAfterEnv: ["@testing-library/jest-dom"],
 };

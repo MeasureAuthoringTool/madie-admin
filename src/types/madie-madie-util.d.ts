@@ -111,6 +111,17 @@ declare module "@madie/madie-util" {
       sortInfo?: string,
       signal?: AbortSignal
     ): Promise<any>;
+    adminSearchCqlLibrariesForUser(
+      harpId: string,
+      ownershipType: string,
+      limit?: string | number,
+      page?: number,
+      searchCriteria?: any,
+      sortInfo?: string,
+      signal?: AbortSignal
+    ): Promise<any>;
+    getSharedLibraries(libraryIds: string[]): Promise<any>;
+    getRecentLibrariesByLibrarySetId(librarySetIds: string[]): Promise<any>;
     getLibrariesByLibrarySetId(
       librarySetId: string,
       sortByLatestVersion?: boolean,
@@ -118,6 +129,9 @@ declare module "@madie/madie-util" {
     ): Promise<any[]>;
     deleteLibrary(id: string, harpId: string): Promise<any>[];
     deleteDraft(id: string): Promise<any>[];
+    getSharedAccessReportForLibraries(ids: string[]): Promise<any>[];
+    unshareLibraries(libraryUserIdMap: Map<string, string[]>): Promise<any>;
+    shareLibraries(libraries: Map<string, string[]>): Promise<any>;
   }
 
   export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;
@@ -211,6 +225,7 @@ declare module "@madie/madie-util" {
     onClose: (...args: any[]) => void;
     onSave: (...args: any[]) => void;
     isAdmin?: boolean;
+    unshareFromUser?: string;
   }): JSX.Element | null;
   export function TransferDialog(props: {
     measures: any[];
@@ -230,4 +245,21 @@ declare module "@madie/madie-util" {
     setToastMessage: (message: string) => void,
     elmErrorSeverity: string
   ): Promise<void>;
+
+  export function LibraryShareAction(props: {
+    libraries: any[];
+    canEdit: boolean;
+    userName: string;
+    isSharedWithUser: boolean;
+    activeTab: number;
+    owners: string[];
+
+    onClick: (option: string) => void;
+  }): JSX.Element | null;
+  export function LibraryShareDialog(props: {
+    libraries: any[];
+    open: boolean;
+    option: string;
+    onClose: () => void;
+  }): JSX.Element | null;
 }

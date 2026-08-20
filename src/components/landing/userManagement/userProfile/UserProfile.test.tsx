@@ -22,6 +22,7 @@ const mockDeleteMeasure = jest.fn();
 const mockFetchMeasure = jest.fn();
 const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
+const mockAdminSearchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
 const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
@@ -36,6 +37,13 @@ jest.mock("@madie/madie-util", () => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
     getBulkUserDetails: (...args: unknown[]) => mockGetBulkUserDetails(...args),
   })),
+  useOktaTokens: jest.fn().mockReturnValue({
+    getAccessToken: () => "test-token",
+    getUserName: () => "test_user",
+  }),
+  useUserRoles: jest
+    .fn()
+    .mockReturnValue({ roles: ["MADiE-Admin"], isAdmin: true }),
   useMeasureServiceApi: jest.fn(() => ({
     adminSearchMeasuresForUser: (...args: unknown[]) =>
       mockAdminSearchMeasures(...args),
@@ -47,6 +55,8 @@ jest.mock("@madie/madie-util", () => ({
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
     fetchCqlLibraries: (...args: unknown[]) => mockFetchCqlLibraries(...args),
+    adminSearchCqlLibrariesForUser: (...args: unknown[]) =>
+      mockAdminSearchCqlLibraries(...args),
     deleteDraft: (...args: unknown[]) => mockDeleteDraftLibrary(...args),
     deleteLibrary: (...args: unknown[]) => mockDeleteLibrary(...args),
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
@@ -102,9 +112,13 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
-  ShareDialog: ({ open, option, onSave, onClose }: any) =>
+  ShareDialog: ({ open, option, onSave, onClose, unshareFromUser }: any) =>
     open ? (
-      <div data-testid="share-dialog" data-option={option}>
+      <div
+        data-testid="share-dialog"
+        data-option={option}
+        data-unshare-from-user={unshareFromUser}
+      >
         Share Dialog
         <button
           data-testid="share-save-btn"
@@ -144,6 +158,40 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
+  LibraryShareDialog: (props: any) =>
+    props.open ? (
+      <div data-testid="library-share-dialog" data-option={props.option}>
+        Library Share Dialog
+        <button
+          data-testid="library-share-success-btn"
+          onClick={() =>
+            props.onClose("success", "Library Successfully Shared")
+          }
+        >
+          Success
+        </button>
+        <button
+          data-testid="library-share-danger-btn"
+          onClick={() => props.onClose("danger", "Unable to share library")}
+        >
+          Danger
+        </button>
+        <button
+          data-testid="library-share-close-btn"
+          onClick={() => props.onClose()}
+        >
+          Close
+        </button>
+      </div>
+    ) : null,
+  LibraryShareAction: jest.fn((props) => (
+    <button
+      data-testid="share-action-btn"
+      onClick={() => props.onClick?.("Share With")}
+    >
+      Share
+    </button>
+  )),
 }));
 
 const renderAt = (initialEntry: string) =>
@@ -178,6 +226,7 @@ const sharedMeasure = {
   measureName: "Shared Measure B",
   version: "2.1.000",
   model: "QDM v5.6",
+  ownerDisplayName: "Owner First Last",
   lastModifiedAt: "2026-04-15T08:00:00Z",
   measureMetaData: { draft: false },
   measureSet: { acls: [], cmsId: 7, owner: "other_user" },
@@ -237,6 +286,10 @@ describe("UserProfile", () => {
     mockFetchMeasure.mockReset();
     mockExportMeasure.mockReset();
     mockFetchCqlLibraries.mockReset();
+    mockAdminSearchCqlLibraries.mockReset();
+    mockAdminSearchCqlLibraries.mockImplementation(
+      (_harpId: string, ...args: unknown[]) => mockFetchCqlLibraries(...args)
+    );
     mockGetLibrariesByLibrarySetId.mockReset();
     mockUseFeatureFlags.mockReset();
     mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
@@ -594,6 +647,9 @@ describe("UserProfile", () => {
       expect(screen.getByTestId("measure-name-m2-content")).toHaveTextContent(
         "Shared Measure B"
       );
+      expect(screen.getByTestId("measure-owner-m2")).toHaveTextContent(
+        "Owner First Last"
+      );
       expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
         "Shared Measures (2)"
       );
@@ -631,6 +687,15 @@ describe("UserProfile", () => {
     renderAt("/admin/userProfile/test_user");
 
     await waitFor(() => {
+      expect(mockAdminSearchCqlLibraries).toHaveBeenCalledWith(
+        "test_user",
+        "OWNED",
+        1,
+        0,
+        { searchField: "", optionalSearchProperties: [] },
+        "lastModifiedAt,false",
+        expect.any(AbortSignal)
+      );
       expect(mockFetchCqlLibraries).toHaveBeenCalledWith(
         "OWNED",
         1,
@@ -990,7 +1055,7 @@ describe("UserProfile", () => {
         0,
         {
           searchField: "Owned",
-          optionalSearchProperties: ["library", "version", "model", "cmsId"],
+          optionalSearchProperties: ["library", "version", "model"],
         },
         "lastModifiedAt,false",
         expect.any(AbortSignal)
@@ -1078,7 +1143,7 @@ describe("UserProfile", () => {
         0,
         {
           searchField: "zzzz",
-          optionalSearchProperties: ["library", "version", "model", "cmsId"],
+          optionalSearchProperties: ["library", "version", "model"],
         },
         "lastModifiedAt,false",
         expect.any(AbortSignal)
@@ -1135,6 +1200,44 @@ describe("UserProfile", () => {
     expect(
       await screen.findByTestId("library-name-lib2-content")
     ).toBeInTheDocument();
+  });
+
+  it("does not show CMS ID as a library Filter By option", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("owned-libraries-tab"));
+    const filterBy = screen.getByTestId("filter-by-select");
+    const filterByDropDown = within(filterBy).getByRole("combobox", {
+      hidden: true,
+    });
+    await userEvent.click(filterByDropDown);
+
+    expect(screen.queryByTestId("filter-by-CMS ID")).not.toBeInTheDocument();
+  });
+
+  it("does not make Owner sortable in Shared Libraries", async () => {
+    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+    mockFetchCqlLibraries
+      .mockResolvedValueOnce(pageWith([], 5))
+      .mockResolvedValueOnce(pageWith([], 4))
+      .mockResolvedValue(pageWith([sharedLibrary], 2));
+
+    renderAt("/admin/userProfile/test_user");
+    await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByTestId("shared-libraries-tab"));
+    await screen.findByTestId("library-name-lib2-content");
+
+    mockFetchCqlLibraries.mockClear();
+    expect(screen.getByText("Owner", { exact: true })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Owner" })
+    ).not.toBeInTheDocument();
+    expect(mockFetchCqlLibraries).not.toHaveBeenCalled();
   });
 
   it("shows an error message when the search fails", async () => {
@@ -2498,9 +2601,11 @@ describe("UserProfile", () => {
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("share-action-btn"));
       userEvent.click(await screen.findByTestId("share-option-unshare"));
-      expect(await screen.findByTestId("share-dialog")).toHaveAttribute(
-        "data-option",
-        "UnshareFromMe"
+      const shareDialog = await screen.findByTestId("share-dialog");
+      expect(shareDialog).toHaveAttribute("data-option", "UnshareFromMe");
+      expect(shareDialog).toHaveAttribute(
+        "data-unshare-from-user",
+        "test_user"
       );
     });
 
@@ -2544,6 +2649,81 @@ describe("UserProfile", () => {
           screen.queryByTestId("close-toast-button")
         ).not.toBeInTheDocument()
       );
+    });
+  });
+
+  describe("library share actions", () => {
+    it("opens the library share dialog with the selected option", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      const dialog = await screen.findByTestId("library-share-dialog");
+
+      expect(dialog).toHaveAttribute("data-option", "Share With");
+    });
+    it("refreshes libraries and shows success toast after successful library share", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      const callsBefore = mockFetchCqlLibraries.mock.calls.length;
+
+      await userEvent.click(
+        await screen.findByTestId("library-share-success-btn")
+      );
+
+      expect(
+        await screen.findByText("Library Successfully Shared")
+      ).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(mockFetchCqlLibraries.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        );
+      });
+
+      expect(
+        screen.queryByTestId("library-share-dialog")
+      ).not.toBeInTheDocument();
+    });
+    it("shows an error toast when library share fails", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      await userEvent.click(await screen.findByTestId("share-action-btn"));
+
+      await userEvent.click(
+        await screen.findByTestId("library-share-danger-btn")
+      );
+
+      expect(
+        await screen.findByText("Unable to share library")
+      ).toBeInTheDocument();
+
+      expect(
+        screen.queryByTestId("library-share-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 

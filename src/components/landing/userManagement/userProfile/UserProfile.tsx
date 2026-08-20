@@ -14,6 +14,7 @@ import {
   adminUserStore,
   useFeatureFlags,
   ExportDialog,
+  LibraryShareDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
@@ -22,6 +23,7 @@ import {
   exportMeasure as downloadMeasureExport,
   formatCmsId,
   checkUserCanEdit,
+  useOktaTokens,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -52,6 +54,8 @@ import {
 } from "../../../../icons/MeasureListTableRightArrowIcons";
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
+import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
+import _ from "lodash";
 
 type Ownership =
   | "OWNED_MEASURE"
@@ -76,6 +80,7 @@ type MeasureRow = {
   measureName: string;
   version: string;
   model: string;
+  ownerDisplayName?: string;
   actions: any;
   hasAssociatedMeasures: boolean;
 };
@@ -85,6 +90,7 @@ type LibraryRow = {
   cqlLibraryName: string;
   version: string;
   model: string;
+  ownerDisplayName?: string;
   actions: any;
   hasAssociatedLibraries: boolean;
   draft: boolean;
@@ -118,13 +124,12 @@ const COMPONENT_DELETE_DISABLED_MSG =
   "This measure is used in a composite measure and cannot be deleted until it is removed from any composite measures for which it is a component.";
 
 const MEASURE_FILTER_OPTIONS = ["Measure", "Version", "Model", "CMS ID"];
-const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model", "CMS ID"];
+const LIBRARY_FILTER_OPTIONS = ["Library", "Version", "Model"];
 
 const LIBRARY_FILTER_MAP = new Map<string, string>([
   ["Library", "library"],
   ["Version", "version"],
   ["Model", "model"],
-  ["CMS ID", "cmsId"],
 ]);
 
 const MEASURE_FILTER_MAP = new Map<string, string>([
@@ -195,6 +200,7 @@ const transformRow = (m: any): MeasureRow => ({
   measureName: m?.measureName,
   version: m?.version,
   model: m?.model,
+  ownerDisplayName: m?.ownerDisplayName,
   actions: m,
   hasAssociatedMeasures: !!m?.hasAssociatedMeasures,
 });
@@ -204,6 +210,7 @@ const transformLibraryRow = (library: any): LibraryRow => ({
   cqlLibraryName: library?.cqlLibraryName,
   version: library?.version,
   model: library?.model,
+  ownerDisplayName: library?.ownerDisplayName,
   actions: library,
   hasAssociatedLibraries: !!library?.hasAssociatedLibraries,
   draft: library.draft,
@@ -322,6 +329,8 @@ const MeasureStatusChips = ({ measure }: { measure: any }) => (
 
 const UserProfile = () => {
   const { harpId } = useParams<{ harpId: string }>() as { harpId: string };
+  const { getUserName } = useOktaTokens();
+  const userName = getUserName();
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
   const cqlLibraryServiceApi = useRef(useCqlLibraryServiceApi()).current;
@@ -420,7 +429,6 @@ const UserProfile = () => {
     setExpandedLibraryRows([]);
     setSelectedExpandedLibraryRowIds([]);
   }, []);
-
   useEffect(() => {
     const controller = new AbortController();
     userServiceApi
@@ -437,7 +445,8 @@ const UserProfile = () => {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      cqlLibraryServiceApi.fetchCqlLibraries(
+      cqlLibraryServiceApi.adminSearchCqlLibrariesForUser(
+        harpId,
         "OWNED",
         1,
         0,
@@ -445,7 +454,8 @@ const UserProfile = () => {
         "lastModifiedAt,false",
         controller.signal
       ),
-      cqlLibraryServiceApi.fetchCqlLibraries(
+      cqlLibraryServiceApi.adminSearchCqlLibrariesForUser(
+        harpId,
         "SHARED",
         1,
         0,
@@ -482,7 +492,8 @@ const UserProfile = () => {
         : "lastModifiedAt,false";
 
       cqlLibraryServiceApi
-        .fetchCqlLibraries(
+        .adminSearchCqlLibrariesForUser(
+          harpId,
           cqlLibraryOwnershipForTab(activeOwnership),
           currentLimit,
           currentPage - 1,
@@ -774,22 +785,41 @@ const UserProfile = () => {
           />
         ),
       },
-      {
-        header: "Shared",
-        accessorKey: "measureSet.acls",
-        cell: (info) => {
-          const shared =
-            info.row.original.actions?.measureSet?.acls?.length > 0;
-          return (
-            <div
-              data-testid={`measure-shared-${info.row.original.id}`}
-              aria-label={shared ? "Shared" : "Not shared"}
-            >
-              {shared && <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />}
-            </div>
-          );
-        },
-      },
+      ...(activeOwnership === "SHARED_MEASURE"
+        ? [
+            {
+              enableSorting: false,
+              header: "Owner",
+              accessorKey: "ownerDisplayName",
+              cell: (info: any) => {
+                return (
+                  <span data-testid={`measure-owner-${info.row.original.id}`}>
+                    {info.row.original.ownerDisplayName?.trim() || ""}
+                  </span>
+                );
+              },
+            },
+          ]
+        : [
+            {
+              header: "Shared",
+              accessorKey: "measureSet.acls",
+              cell: (info) => {
+                const shared =
+                  info.row.original.actions?.measureSet?.acls?.length > 0;
+                return (
+                  <div
+                    data-testid={`measure-shared-${info.row.original.id}`}
+                    aria-label={shared ? "Shared" : "Not shared"}
+                  >
+                    {shared && (
+                      <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]),
       {
         header: "CMS ID",
         accessorKey: "measureSet.cmsId",
@@ -905,7 +935,12 @@ const UserProfile = () => {
         },
       },
     ],
-    [expandedMeasureSetId, toggleExpansion, lockedByDisplayNames]
+    [
+      activeOwnership,
+      expandedMeasureSetId,
+      toggleExpansion,
+      lockedByDisplayNames,
+    ]
   );
 
   const table = useReactTable({
@@ -990,7 +1025,7 @@ const UserProfile = () => {
       ...(activeOwnership === "SHARED_LIBRARY"
         ? [
             {
-              sortDescFirst: false,
+              enableSorting: false,
               header: "Owner",
               accessorKey: "ownerDisplayName",
               cell: (info: any) => {
@@ -1452,17 +1487,15 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
-  const selectedLibraries = useMemo(() => {
-    const topLevel = libraryTable
+  const selectedLibraries = [
+    ...libraryTable
       .getSelectedRowModel()
-      .rows.map((row) => row.original.actions);
+      .rows.map((row) => row.original.actions),
 
-    const expanded = expandedLibraryRows
+    ...expandedLibraryRows
       .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
-      .map((row) => row.actions);
-
-    return [...topLevel, ...expanded];
-  }, [libraryTable, expandedLibraryRows, selectedExpandedLibraryRowIds]);
+      .map((row) => row.actions),
+  ];
   const handleConfirmDeleteLibrary = useCallback(async () => {
     if (!deleteTarget) return;
 
@@ -1472,7 +1505,7 @@ const UserProfile = () => {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        await cqlLibraryServiceApi.deleteLibrary(id, harpId);
+        await cqlLibraryServiceApi.deleteLibrary(id, userName);
       }
 
       setToastType("success");
@@ -1496,6 +1529,7 @@ const UserProfile = () => {
     closeDeleteDialog,
     libraryTable,
     harpId,
+    getUserName,
   ]);
   const handleContinueDialog = useCallback(() => {
     setDownloadState(null);
@@ -1605,6 +1639,35 @@ const UserProfile = () => {
     [table, clearExpansion]
   );
 
+  const [libraryShareDialogOpen, setLibraryShareDialogOpen] = useState(false);
+
+  const [libraryShareOption, setLibraryShareOption] = useState("");
+
+  const handleLibraryShare = useCallback((option: string) => {
+    setLibraryShareOption(option);
+    setLibraryShareDialogOpen(true);
+  }, []);
+
+  const handleLibraryShareDialogClose = useCallback(
+    (toastType?: "success" | "danger", toastMessage?: string) => {
+      setLibraryShareDialogOpen(false);
+      setLibraryShareOption("");
+
+      if (toastMessage) {
+        setToastType(toastType ?? "success");
+        setToastMessage(toastMessage);
+        setToastOpen(true);
+      }
+
+      if (toastType === "success") {
+        libraryTable.toggleAllRowsSelected(false);
+        clearLibraryExpansion();
+        setRefreshToken((t) => t + 1);
+      }
+    },
+    [libraryTable, clearLibraryExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1669,13 +1732,14 @@ const UserProfile = () => {
               className="search-filter-bar flex-end"
               data-testid="search-filter-bar"
             >
-              <ActionCenter
-                target="library"
-                measures={selectedLibraries}
-                canDelete={canDelete}
-                activeTab={activeTab}
+              <LibraryActionCenter
+                libraries={selectedLibraries}
+                activeTab={activeTab - 2}
                 onDelete={openDeleteDialog}
+                onShare={handleLibraryShare}
                 disabledReason={deleteDisabledReason}
+                canDelete={canDelete}
+                userName={getUserName()}
               />
             </div>
           )}
@@ -1792,7 +1856,14 @@ const UserProfile = () => {
         option={shareOption}
         onClose={handleShareDialogClose}
         onSave={handleShareDialogSave}
+        unshareFromUser={harpId}
         isAdmin
+      />
+      <LibraryShareDialog
+        libraries={selectedLibraries}
+        open={libraryShareDialogOpen}
+        option={libraryShareOption}
+        onClose={handleLibraryShareDialogClose}
       />
 
       <TransferDialog
