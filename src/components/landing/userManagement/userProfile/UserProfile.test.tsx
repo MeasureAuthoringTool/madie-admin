@@ -2298,18 +2298,18 @@ describe("UserProfile", () => {
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("export-action-btn"));
-      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("executable-export-option"));
       await waitFor(() => expect(mockFetchMeasure).toHaveBeenCalledWith("m1"));
       await waitFor(() => expect(mockExportMeasure).toHaveBeenCalled());
       expect(lastExportSeverity()).toBe("Info");
     });
 
-    it("exports without warnings via the 'Export for Publishing' option (Error severity)", async () => {
+    it("exports without warnings via the 'Publishable Export' option (Error severity)", async () => {
       mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("export-action-btn"));
-      userEvent.click(await screen.findByTestId("export-publishing-option"));
+      userEvent.click(await screen.findByTestId("publishable-export-option"));
       await waitFor(() => expect(mockExportMeasure).toHaveBeenCalled());
       expect(lastExportSeverity()).toBe("Error");
     });
@@ -2353,7 +2353,7 @@ describe("UserProfile", () => {
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("export-action-btn"));
-      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("executable-export-option"));
       await waitFor(() => expect(mockFetchMeasure).toHaveBeenCalledWith("m1"));
       // fetch failed, so the download flow is never reached
       await waitFor(() => expect(mockExportMeasure).not.toHaveBeenCalled());
@@ -2370,7 +2370,7 @@ describe("UserProfile", () => {
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("export-action-btn"));
-      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("executable-export-option"));
       userEvent.click(await screen.findByTestId("export-continue-btn"));
       await waitFor(() =>
         expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument()
@@ -2388,7 +2388,7 @@ describe("UserProfile", () => {
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("checkbox-m1"));
       userEvent.click(await screen.findByTestId("export-action-btn"));
-      userEvent.click(await screen.findByTestId("export-option"));
+      userEvent.click(await screen.findByTestId("executable-export-option"));
       userEvent.click(await screen.findByTestId("export-cancel-btn"));
       await waitFor(() =>
         expect(screen.queryByTestId("export-dialog")).not.toBeInTheDocument()

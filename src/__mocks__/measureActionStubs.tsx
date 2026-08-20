@@ -7,16 +7,16 @@ export const ExportAction = ({ onClick }: any) => (
   <div>
     <button data-testid="export-action-btn">Export</button>
     <button
-      data-testid="export-option"
-      onClick={() => onClick && onClick("Export")}
+      data-testid="executable-export-option"
+      onClick={() => onClick && onClick("Executable Export")}
     >
-      Export
+      Executable Export
     </button>
     <button
-      data-testid="export-publishing-option"
-      onClick={() => onClick && onClick("Export for Publishing")}
+      data-testid="publishable-export-option"
+      onClick={() => onClick && onClick("Publishable Export")}
     >
-      Export for Publishing
+      Publishable Export
     </button>
   </div>
 );

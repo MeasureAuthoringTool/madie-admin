@@ -1537,7 +1537,7 @@ const UserProfile = () => {
     (exportType: string) => {
       targetMeasure.current = selectedMeasures[0];
       const elmErrorSeverity =
-        exportType === "Export for Publishing" ? "Error" : "Info";
+        exportType === "Publishable Export" ? "Error" : "Info";
       exportMeasure(elmErrorSeverity);
     },
     [selectedMeasures, exportMeasure]
