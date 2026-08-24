@@ -28,6 +28,10 @@ export interface AddValueSetForAdmin {
   valueSet: string;
 }
 
+export interface UpdateValueSetForAdmin extends AddValueSetForAdmin {
+  id: string;
+}
+
 export interface CreateCodeSystemRequest {
   title?: string;
   name: string;
@@ -119,6 +123,39 @@ export class TerminologyServiceApi {
 
       let message =
         "An error occurred while adding the value set. Please try again. If the error persists, please contact the help desk.";
+
+      if (error.response?.data?.message) {
+        message = `${message}: ${error.response.data.message}`;
+      }
+
+      throw new Error(message);
+    }
+  }
+
+  async updateValueSet(
+    valueSet: UpdateValueSetForAdmin
+  ): Promise<ValueSetDisplayForAdmin> {
+    try {
+      const response = await axios.put(
+        `${this.baseUrl}/terminology/admin/value-set`,
+        valueSet,
+        {
+          headers: {
+            Authorization: `Bearer ${this.getAccessToken()}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      const apiValidationError =
+        error.response?.data?.validationErrors?.["/api"];
+      if (apiValidationError) {
+        throw new Error(apiValidationError);
+      }
+
+      let message =
+        "An error occurred while updating the value set. Please try again. If the error persists, please contact the help desk.";
 
       if (error.response?.data?.message) {
         message = `${message}: ${error.response.data.message}`;

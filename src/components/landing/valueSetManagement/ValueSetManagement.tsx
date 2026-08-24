@@ -22,6 +22,7 @@ import VSEDialog from "./VSEDialog";
 import AddValueSetDialog, {
   type AddValueSetFormValues,
 } from "./AddValueSetDialog";
+import type { EditValueSetFormValues } from "./VSEDialog";
 import { InputAdornment, IconButton } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
@@ -56,7 +57,8 @@ export default function ValueSetManagement() {
   const [currentSort, setCurrentSort] = useState<string>("url");
   const [currentDirection, setCurrentDirection] = useState<string>("ASC");
 
-  const [targetVSE, setTargetVSE] = useState<null | string>(null);
+  const [targetValueSet, setTargetValueSet] =
+    useState<ValueSetDisplayForAdmin | null>(null);
   const [isAddValueSetDialogOpen, setIsAddValueSetDialogOpen] =
     useState<boolean>(false);
 
@@ -158,10 +160,10 @@ export default function ValueSetManagement() {
             variant="outline-secondary"
             data-testid={`open-vs-${row.original.id}`}
             onClick={() => {
-              setTargetVSE(row.original.valueSet);
+              setTargetValueSet(row.original);
             }}
           >
-            View Expansions
+            Edit Value Set
           </Button>
         ),
       },
@@ -226,6 +228,41 @@ export default function ValueSetManagement() {
         err instanceof Error
           ? err.message
           : "An error occurred while adding the value set.";
+
+      setToastType("danger");
+      setToastMessage(errorMessage);
+      setToastOpen(true);
+    }
+  };
+
+  const handleEditValueSet = async ({
+    id,
+    url,
+    version,
+    valueSet,
+  }: EditValueSetFormValues) => {
+    setToastOpen(false);
+
+    try {
+      await terminologyServiceApi.updateValueSet({
+        id,
+        url,
+        version: version || undefined,
+        valueSet,
+        lastUpdated: new Date().toISOString(),
+        manuallyModified: true,
+      });
+
+      setTargetValueSet(null);
+      setToastType("success");
+      setToastMessage("Value set updated successfully.");
+      setToastOpen(true);
+      setReloadCounter((currentValue) => currentValue + 1);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An error occurred while updating the value set.";
 
       setToastType("danger");
       setToastMessage(errorMessage);
@@ -370,11 +407,12 @@ export default function ValueSetManagement() {
           </p>
         )}
         <VSEDialog
-          open={!!targetVSE}
+          open={!!targetValueSet}
           onClose={() => {
-            setTargetVSE(null);
+            setTargetValueSet(null);
           }}
-          targetVSE={targetVSE}
+          targetValueSet={targetValueSet}
+          onSubmit={handleEditValueSet}
         />
 
         <AddValueSetDialog
