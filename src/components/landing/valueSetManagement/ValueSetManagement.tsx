@@ -18,11 +18,10 @@ import CheckIcon from "@mui/icons-material/Check";
 import "twin.macro";
 import "styled-components/macro";
 import "./ValueSetManagement.scss";
-import VSEDialog from "./VSEDialog";
+import VSEDialog, { EditValueSetFormValues } from "./VSEDialog";
 import AddValueSetDialog, {
   type AddValueSetFormValues,
 } from "./AddValueSetDialog";
-import type { EditValueSetFormValues } from "./VSEDialog";
 import { InputAdornment, IconButton } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
