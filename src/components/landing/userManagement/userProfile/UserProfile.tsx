@@ -785,6 +785,42 @@ const UserProfile = () => {
           />
         ),
       },
+      ...(activeOwnership !== "SHARED_MEASURE"
+        ? [
+            {
+              header: "Shared",
+              accessorKey: "measureSet.acls",
+              cell: (info: any) => {
+                const shared =
+                  info.row.original.actions?.measureSet?.acls?.length > 0;
+                return (
+                  <div
+                    data-testid={`measure-shared-${info.row.original.id}`}
+                    aria-label={shared ? "Shared" : "Not shared"}
+                  >
+                    {shared && (
+                      <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]
+        : []),
+      {
+        header: "CMS ID",
+        accessorKey: "measureSet.cmsId",
+        cell: (info) => (
+          <TruncateText
+            text={formatCmsId(
+              info.row.original.actions?.measureSet?.cmsId,
+              info.row.original.actions?.model
+            )}
+            maxLength={60}
+            dataTestId={`measure-cmsId-${info.row.original.id}`}
+          />
+        ),
+      },
       ...(activeOwnership === "SHARED_MEASURE"
         ? [
             {
@@ -800,40 +836,7 @@ const UserProfile = () => {
               },
             },
           ]
-        : [
-            {
-              header: "Shared",
-              accessorKey: "measureSet.acls",
-              cell: (info) => {
-                const shared =
-                  info.row.original.actions?.measureSet?.acls?.length > 0;
-                return (
-                  <div
-                    data-testid={`measure-shared-${info.row.original.id}`}
-                    aria-label={shared ? "Shared" : "Not shared"}
-                  >
-                    {shared && (
-                      <CheckCircleOutlineIcon sx={{ color: "#4CAF50" }} />
-                    )}
-                  </div>
-                );
-              },
-            },
-          ]),
-      {
-        header: "CMS ID",
-        accessorKey: "measureSet.cmsId",
-        cell: (info) => (
-          <TruncateText
-            text={formatCmsId(
-              info.row.original.actions?.measureSet?.cmsId,
-              info.row.original.actions?.model
-            )}
-            maxLength={60}
-            dataTestId={`measure-cmsId-${info.row.original.id}`}
-          />
-        ),
-      },
+        : []),
       {
         header: "Updated",
         accessorKey: "lastModifiedAt",

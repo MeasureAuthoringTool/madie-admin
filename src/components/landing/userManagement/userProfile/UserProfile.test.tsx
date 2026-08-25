@@ -650,6 +650,10 @@ describe("UserProfile", () => {
       expect(screen.getByTestId("measure-owner-m2")).toHaveTextContent(
         "Owner First Last"
       );
+      const headers = screen
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent?.trim());
+      expect(headers.indexOf("CMS ID")).toBeLessThan(headers.indexOf("Owner"));
       expect(screen.getByTestId("shared-measures-tab")).toHaveTextContent(
         "Shared Measures (2)"
       );
