@@ -550,7 +550,9 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    userEvent.click(await screen.findByRole("button", { name: /edit value set/i }));
+    userEvent.click(
+      await screen.findByRole("button", { name: /edit value set/i })
+    );
 
     fireEvent.change(screen.getByTestId("edit-value-set-url-input"), {
       target: { value: "http://example.com/vs-updated" },
@@ -604,11 +606,15 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    userEvent.click(await screen.findByRole("button", { name: /edit value set/i }));
+    userEvent.click(
+      await screen.findByRole("button", { name: /edit value set/i })
+    );
     userEvent.click(screen.getByTestId("edit-value-set-save-button"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("update-vses-error-message")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
     });
     expect(screen.getByText("Edit failed")).toBeInTheDocument();
   });
