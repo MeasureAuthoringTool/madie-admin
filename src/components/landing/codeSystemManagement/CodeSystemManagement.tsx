@@ -19,9 +19,10 @@ import CheckIcon from "@mui/icons-material/Check";
 import { IconButton, InputAdornment, MenuItem } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
-import CreateCodeSystemDialog, {
+import EditIcon from "@mui/icons-material/Edit";
+import CodeSystemDialog, {
   type NewCodeSystemFormData,
-} from "./CreateCodeSystemDialog";
+} from "./CodeSystemDialog";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
 
@@ -36,6 +37,11 @@ export default function CodeSystemManagement() {
   const [toastMessage, setToastMessage] = useState<string>("");
   const [isAddCodeSystemDialogOpen, setIsAddCodeSystemDialogOpen] =
     useState<boolean>(false);
+  const [isEditCodeSystemDialogOpen, setIsEditCodeSystemDialogOpen] =
+    useState<boolean>(false);
+  const [editingCodeSystemId, setEditingCodeSystemId] = useState<string | null>(
+    null
+  );
   const [newCodeSystemFormData, setNewCodeSystemFormData] =
     useState<NewCodeSystemFormData>({
       title: "",
@@ -128,6 +134,26 @@ export default function CodeSystemManagement() {
     resetNewCodeSystemFormData();
   };
 
+  const handleEditCodeSystem = (codeSystem: CodeSystem) => {
+    setEditingCodeSystemId(codeSystem.id);
+    setNewCodeSystemFormData({
+      title: codeSystem.title ?? "",
+      name: codeSystem.name,
+      fhirVersion: codeSystem.version?.fhirVersion ?? "",
+      vsacVersion: codeSystem.version?.vsacVersion ?? "",
+      fullUrl: codeSystem.fullUrl,
+      oid: codeSystem.oid,
+      isLatestVersion: codeSystem.isLatestVersion,
+    });
+    setIsEditCodeSystemDialogOpen(true);
+  };
+
+  const handleCloseEditCodeSystemDialog = () => {
+    setIsEditCodeSystemDialogOpen(false);
+    setEditingCodeSystemId(null);
+    resetNewCodeSystemFormData();
+  };
+
   const handleNewCodeSystemFieldChange = (
     field: keyof NewCodeSystemFormData,
     value: string | boolean
@@ -141,8 +167,9 @@ export default function CodeSystemManagement() {
   const handleSaveCodeSystem = async (
     formData: NewCodeSystemFormData
   ): Promise<void> => {
+    const isEditing = Boolean(editingCodeSystemId);
     try {
-      await terminologyServiceApi.createCodeSystem({
+      const payload = {
         title: formData.title.trim(),
         name: formData.name.trim(),
         fullUrl: formData.fullUrl.trim(),
@@ -152,18 +179,37 @@ export default function CodeSystemManagement() {
           fhirVersion: formData.fhirVersion.trim(),
           vsacVersion: formData.vsacVersion.trim(),
         },
-      });
+      };
+
+      if (isEditing) {
+        await terminologyServiceApi.updateCodeSystem(
+          editingCodeSystemId as string,
+          payload
+        );
+      } else {
+        await terminologyServiceApi.createCodeSystem(payload);
+      }
 
       await loadCodeSystems(); // Refresh table data
 
       setToastType("success");
-      setToastMessage("Code System created successfully");
+      setToastMessage(
+        isEditing
+          ? "Code System updated successfully"
+          : "Code System created successfully"
+      );
       setToastOpen(true);
-      handleCloseAddCodeSystemDialog();
+      if (isEditing) {
+        handleCloseEditCodeSystemDialog();
+      } else {
+        handleCloseAddCodeSystemDialog();
+      }
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ??
-        "An error occurred while creating the code system.";
+        `An error occurred while ${
+          isEditing ? "updating" : "creating"
+        } the code system.`;
       setToastType("danger");
       setToastMessage(errorMessage);
       setToastOpen(true);
@@ -249,6 +295,19 @@ export default function CodeSystemManagement() {
         header: "Latest Version?",
         accessorKey: "isLatestVersion",
         cell: (info) => (info.getValue() ? <CheckIcon /> : "-"),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: (info) => (
+          <IconButton
+            aria-label="Edit code system"
+            data-testid={`edit-code-system-${info.row.original.id}`}
+            onClick={() => handleEditCodeSystem(info.row.original)}
+          >
+            <EditIcon />
+          </IconButton>
+        ),
       },
     ],
     []
@@ -471,12 +530,21 @@ export default function CodeSystemManagement() {
         </div>
       </div>
 
-      <CreateCodeSystemDialog
+      <CodeSystemDialog
         open={isAddCodeSystemDialogOpen}
         formData={newCodeSystemFormData}
         onClose={handleCloseAddCodeSystemDialog}
         onSave={handleSaveCodeSystem}
         onFieldChange={handleNewCodeSystemFieldChange}
+      />
+
+      <CodeSystemDialog
+        open={isEditCodeSystemDialogOpen}
+        formData={newCodeSystemFormData}
+        onClose={handleCloseEditCodeSystemDialog}
+        onSave={handleSaveCodeSystem}
+        onFieldChange={handleNewCodeSystemFieldChange}
+        title="Edit Codesystem Data"
       />
     </div>
   );

@@ -204,6 +204,22 @@ export class TerminologyServiceApi {
     );
     return response.data;
   }
+
+  async updateCodeSystem(
+    id: string,
+    codeSystem: CreateCodeSystemRequest
+  ): Promise<CodeSystem> {
+    const response = await axios.put(
+      `${this.baseUrl}/terminology/admin/code-system/${id}`,
+      codeSystem,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getAccessToken()}`,
+        },
+      }
+    );
+    return response.data;
+  }
 }
 
 export default function useTerminologyServiceApi(): TerminologyServiceApi {

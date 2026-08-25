@@ -12,7 +12,7 @@ interface NewCodeSystemFormData {
   isLatestVersion: boolean;
 }
 
-interface CreateCodeSystemDialogProps {
+interface CodeSystemDialogProps {
   open: boolean;
   formData: NewCodeSystemFormData;
   onClose: () => void;
@@ -21,15 +21,19 @@ interface CreateCodeSystemDialogProps {
     field: keyof NewCodeSystemFormData,
     value: string | boolean
   ) => void;
+  title?: string;
+  saveButtonText?: string;
 }
 
-const CreateCodeSystemDialog = ({
+const CodeSystemDialog = ({
   open,
   formData,
   onClose,
   onSave,
   onFieldChange,
-}: CreateCodeSystemDialogProps) => {
+  title = "Add New Codesystem Data",
+  saveButtonText = "Save",
+}: CodeSystemDialogProps) => {
   const isSaveDisabled =
     !formData.name.trim() ||
     !formData.fhirVersion.trim() ||
@@ -43,7 +47,7 @@ const CreateCodeSystemDialog = ({
   return (
     <MadieDialog
       form
-      title="Add New Codesystem Data"
+      title={title}
       dialogProps={{
         id: "add-code-system-dialog",
         open,
@@ -61,7 +65,7 @@ const CreateCodeSystemDialog = ({
       continueButtonProps={{
         variant: "cyan",
         type: "submit",
-        continueText: "Save",
+        continueText: saveButtonText,
         "data-testid": "add-code-system-save-button",
         disabled: isSaveDisabled,
       }}
@@ -226,4 +230,4 @@ const CreateCodeSystemDialog = ({
 };
 
 export type { NewCodeSystemFormData };
-export default CreateCodeSystemDialog;
+export default CodeSystemDialog;
