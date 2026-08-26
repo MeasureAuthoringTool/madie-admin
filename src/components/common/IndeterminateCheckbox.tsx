@@ -1,9 +1,11 @@
 import React, { useEffect } from "react";
 
-type IndeterminateCheckboxProps =
-  React.InputHTMLAttributes<HTMLInputElement> & {
-    indeterminate?: boolean;
-  };
+type IndeterminateCheckboxProps = Omit<
+  React.ComponentPropsWithoutRef<"input">,
+  "type"
+> & {
+  indeterminate?: boolean;
+};
 
 const IndeterminateCheckbox = ({
   indeterminate = false,

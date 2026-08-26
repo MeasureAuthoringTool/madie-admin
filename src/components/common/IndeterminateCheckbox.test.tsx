@@ -7,7 +7,7 @@ describe("IndeterminateCheckbox", () => {
   it("sets the checkbox to indeterminate when indeterminate is true", () => {
     render(<IndeterminateCheckbox checked={false} indeterminate />);
 
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    const checkbox = screen.getByRole("checkbox");
 
     expect(checkbox.indeterminate).toBe(true);
   });
@@ -17,7 +17,7 @@ describe("IndeterminateCheckbox", () => {
       <IndeterminateCheckbox checked={false} indeterminate />
     );
 
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    const checkbox = screen.getByRole("checkbox");
 
     expect(checkbox.indeterminate).toBe(true);
 
