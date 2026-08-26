@@ -673,4 +673,106 @@ describe("UserManagement", () => {
     });
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
   });
+  // test some of the user management table stuff
+  it("selects an individual user row checkbox", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+
+    renderRouter();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+
+    fireEvent.click(checkboxes[1]);
+
+    expect(checkboxes[1]).toBeChecked();
+  });
+  it("selects all users when header checkbox is clicked", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+
+    renderRouter();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+
+    const headerCheckbox = checkboxes[0];
+
+    fireEvent.click(headerCheckbox);
+
+    checkboxes.slice(1).forEach((checkbox) => {
+      expect(checkbox).toBeChecked();
+    });
+  });
+  it("deselects all users when header checkbox is clicked twice", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+
+    renderRouter();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    const headerCheckbox = checkboxes[0];
+
+    fireEvent.click(headerCheckbox);
+
+    checkboxes.slice(1).forEach((checkbox) => {
+      expect(checkbox).toBeChecked();
+    });
+
+    fireEvent.click(headerCheckbox);
+
+    checkboxes.slice(1).forEach((checkbox) => {
+      expect(checkbox).not.toBeChecked();
+    });
+  });
+  it("sets header checkbox to indeterminate when some rows are selected", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+
+    renderRouter();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+
+    const headerCheckbox = checkboxes[0];
+    const firstRowCheckbox = checkboxes[1];
+
+    fireEvent.click(firstRowCheckbox);
+
+    await waitFor(() => {
+      expect(headerCheckbox).toBePartiallyChecked();
+    });
+  });
+  it("selects only visible filtered rows when using header checkbox", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+
+    renderRouter();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "Jane" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+
+    fireEvent.click(checkboxes[0]);
+
+    expect(checkboxes[1]).toBeChecked();
+  });
 });
