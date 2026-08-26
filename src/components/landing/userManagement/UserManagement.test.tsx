@@ -743,13 +743,13 @@ describe("UserManagement", () => {
 
     const checkboxes = screen.getAllByRole("checkbox");
 
-    const headerCheckbox = checkboxes[0] as HTMLInputElement;
+    const headerCheckbox = checkboxes[0];
     const firstRowCheckbox = checkboxes[1];
 
     fireEvent.click(firstRowCheckbox);
 
     await waitFor(() => {
-      expect(headerCheckbox.indeterminate).toBe(true);
+      expect(headerCheckbox).toBePartiallyChecked();
     });
   });
   it("selects only visible filtered rows when using header checkbox", async () => {

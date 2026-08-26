@@ -157,10 +157,12 @@ const UserManagement = () => {
           const someVisibleSelected = visibleRows.some((row) =>
             row.getIsSelected()
           );
-
           const toggleVisibleRows = () => {
             const shouldSelectAll = !allVisibleSelected;
-            visibleRows.forEach((row) => row.toggleSelected(shouldSelectAll));
+
+            for (const row of visibleRows) {
+              row.toggleSelected(shouldSelectAll);
+            }
           };
 
           return (

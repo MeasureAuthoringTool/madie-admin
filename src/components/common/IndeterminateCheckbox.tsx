@@ -1,6 +1,15 @@
 import React, { useEffect } from "react";
 
-const IndeterminateCheckbox = ({ indeterminate, checked, ...rest }: any) => {
+type IndeterminateCheckboxProps =
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    indeterminate?: boolean;
+  };
+
+const IndeterminateCheckbox = ({
+  indeterminate = false,
+  checked,
+  ...rest
+}: IndeterminateCheckboxProps) => {
   const ref = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
