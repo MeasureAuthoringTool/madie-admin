@@ -11,6 +11,18 @@ describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
   const mockGetCodeSystems = jest.fn();
   const mockCreateCodeSystem = jest.fn();
+  const mockUpdateCodeSystem = jest.fn();
+
+  const existingCodeSystem = {
+    id: "cs-1",
+    title: "Example Title",
+    name: "example",
+    version: { fhirVersion: "4.0.1", vsacVersion: "2024" },
+    fullUrl: "http://example.com",
+    oid: "1.2.3",
+    lastUpdated: "2025-01-01T00:00:00Z",
+    isLatestVersion: true,
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -24,11 +36,13 @@ describe("CodeSystemManagement", () => {
       numberOfElements: 0,
     });
     mockCreateCodeSystem.mockResolvedValue({});
+    mockUpdateCodeSystem.mockResolvedValue({});
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGetCodeSystems,
       createCodeSystem: mockCreateCodeSystem,
+      updateCodeSystem: mockUpdateCodeSystem,
     });
   });
 
@@ -696,6 +710,160 @@ describe("CodeSystemManagement", () => {
       expect(
         screen.queryByText("Add New Codesystem Data")
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("edit code system modal", () => {
+    const renderWithExistingCodeSystem = async () => {
+      mockGetCodeSystems.mockResolvedValue({
+        content: [existingCodeSystem],
+        totalElements: 1,
+        totalPages: 1,
+        number: 0,
+        size: 25,
+        numberOfElements: 1,
+      });
+
+      render(<CodeSystemManagement />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("code-system-table")).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByTestId("edit-code-system-cs-1"));
+
+      expect(screen.getByText("Edit Codesystem Data")).toBeInTheDocument();
+    };
+
+    it("opens the edit modal populated with the selected code system's data", async () => {
+      await renderWithExistingCodeSystem();
+
+      expect(screen.getByTestId("add-code-system-title-input")).toHaveValue(
+        "Example Title"
+      );
+      expect(screen.getByTestId("add-code-system-name-input")).toHaveValue(
+        "example"
+      );
+      expect(
+        screen.getByTestId("add-code-system-fhir-version-input")
+      ).toHaveValue("4.0.1");
+      expect(
+        screen.getByTestId("add-code-system-vsac-version-input")
+      ).toHaveValue("2024");
+      expect(screen.getByTestId("add-code-system-full-url-input")).toHaveValue(
+        "http://example.com"
+      );
+      expect(screen.getByTestId("add-code-system-oid-input")).toHaveValue(
+        "1.2.3"
+      );
+      expect(
+        screen.getByRole("checkbox", { name: "Add new Code System" })
+      ).toBeChecked();
+    });
+
+    it("keeps save enabled with existing valid data and disables it when a required field is cleared", async () => {
+      await renderWithExistingCodeSystem();
+
+      const saveButton = screen.getByTestId("add-code-system-save-button");
+      expect(saveButton).toBeEnabled();
+
+      await userEvent.clear(screen.getByTestId("add-code-system-oid-input"));
+
+      expect(saveButton).toBeDisabled();
+
+      await userEvent.type(
+        screen.getByTestId("add-code-system-oid-input"),
+        "1.2.3"
+      );
+
+      expect(saveButton).toBeEnabled();
+    });
+
+    it("resets edited fields and closes the modal on cancel without calling updateCodeSystem", async () => {
+      await renderWithExistingCodeSystem();
+
+      await userEvent.clear(screen.getByTestId("add-code-system-name-input"));
+      await userEvent.type(
+        screen.getByTestId("add-code-system-name-input"),
+        "changed-name"
+      );
+
+      await userEvent.click(
+        screen.getByTestId("add-code-system-cancel-button")
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Edit Codesystem Data")
+        ).not.toBeInTheDocument();
+      });
+
+      expect(mockUpdateCodeSystem).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("edit-code-system-cs-1"));
+
+      expect(screen.getByTestId("add-code-system-name-input")).toHaveValue(
+        "example"
+      );
+    });
+
+    it("calls updateCodeSystem with the edited data and shows success toast on save", async () => {
+      await renderWithExistingCodeSystem();
+
+      await userEvent.clear(screen.getByTestId("add-code-system-name-input"));
+      await userEvent.type(
+        screen.getByTestId("add-code-system-name-input"),
+        "updated-name"
+      );
+
+      await userEvent.click(screen.getByTestId("add-code-system-save-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateCodeSystem).toHaveBeenCalledWith("cs-1", {
+          title: "Example Title",
+          name: "updated-name",
+          fullUrl: "http://example.com",
+          oid: "1.2.3",
+          isLatestVersion: true,
+          version: {
+            fhirVersion: "4.0.1",
+            vsacVersion: "2024",
+          },
+        });
+      });
+
+      expect(mockCreateCodeSystem).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Code System updated successfully")
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Edit Codesystem Data")
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("shows error toast when updateCodeSystem fails", async () => {
+      mockUpdateCodeSystem.mockRejectedValueOnce({
+        response: {
+          data: {
+            message: "Unable to update code system",
+          },
+        },
+      });
+
+      await renderWithExistingCodeSystem();
+
+      await userEvent.click(screen.getByTestId("add-code-system-save-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateCodeSystem).toHaveBeenCalled();
+      });
+
+      expect(
+        screen.getByText("Unable to update code system")
+      ).toBeInTheDocument();
+      expect(screen.getByText("Edit Codesystem Data")).toBeInTheDocument();
     });
   });
 });
