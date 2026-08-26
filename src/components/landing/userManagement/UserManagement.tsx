@@ -25,6 +25,7 @@ import { type UserDetails, UserStatus } from "@madie/madie-models";
 // @ts-ignore
 import { useFeatureFlags, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
+import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
 
@@ -57,6 +58,8 @@ const UserManagement = () => {
   const userServiceApi = useRef(useUserServiceApi()).current;
   const featureFlags = useFeatureFlags();
   const navigate = useNavigate();
+
+  const [rowSelection, setRowSelection] = useState({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -143,6 +146,43 @@ const UserManagement = () => {
   const columns = useMemo<ColumnDef<UserDetails>[]>(
     () => [
       {
+        id: "select",
+        header: ({ table }) => {
+          const visibleRows = table.getRowModel().rows;
+
+          const allVisibleSelected =
+            visibleRows.length > 0 &&
+            visibleRows.every((row) => row.getIsSelected());
+
+          const someVisibleSelected = visibleRows.some((row) =>
+            row.getIsSelected()
+          );
+
+          const toggleVisibleRows = () => {
+            const shouldSelectAll = !allVisibleSelected;
+            visibleRows.forEach((row) => row.toggleSelected(shouldSelectAll));
+          };
+
+          return (
+            <IndeterminateCheckbox
+              checked={allVisibleSelected}
+              indeterminate={!allVisibleSelected && someVisibleSelected}
+              onChange={toggleVisibleRows}
+              aria-label="Select all users"
+            />
+          );
+        },
+        cell: ({ row }) => (
+          <IndeterminateCheckbox
+            checked={row.getIsSelected()}
+            indeterminate={row.getIsSomeSelected?.()}
+            onChange={row.getToggleSelectedHandler()}
+            aria-label={`Select user ${row.original.id}`}
+          />
+        ),
+        size: 5,
+      },
+      {
         header: "Name",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         id: "name",
@@ -206,7 +246,12 @@ const UserManagement = () => {
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
     enableSortingRemoval: false,
-    state: { sorting },
+    state: {
+      sorting,
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
   });
 
   return (
