@@ -15,6 +15,8 @@ import {
   useFeatureFlags,
   ExportDialog,
   LibraryShareDialog,
+  LibraryHistoryDialog,
+  LibraryCompareVersionsDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
@@ -386,6 +388,12 @@ const UserProfile = () => {
   const [viewHistoryDialogOpen, setViewHistoryDialogOpen] = useState(false);
   const [compareVersionsDialogOpen, setCompareVersionsDialogOpen] =
     useState(false);
+  const [libraryHistoryDialogOpen, setLibraryHistoryDialogOpen] =
+    useState(false);
+  const [
+    libraryCompareVersionsDialogOpen,
+    setLibraryCompareVersionsDialogOpen,
+  ] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareOption, setShareOption] = useState("");
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -1487,15 +1495,18 @@ const UserProfile = () => {
       .map((row) => row.actions);
     return [...topLevel, ...expanded];
   }, [selectedTopLevelRows, expandedRows, selectedExpandedRowIds]);
-  const selectedLibraries = [
-    ...libraryTable
-      .getSelectedRowModel()
-      .rows.map((row) => row.original.actions),
 
-    ...expandedLibraryRows
-      .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
-      .map((row) => row.actions),
-  ];
+  const selectedLibraryRows = libraryTable.getSelectedRowModel().rows;
+  const selectedLibraries = useMemo(
+    () => [
+      ...selectedLibraryRows.map((row) => row.original.actions),
+
+      ...expandedLibraryRows
+        .filter((row) => selectedExpandedLibraryRowIds.includes(row.id))
+        .map((row) => row.actions),
+    ],
+    [selectedLibraryRows, expandedLibraryRows, selectedExpandedLibraryRowIds]
+  );
   const handleConfirmDeleteLibrary = useCallback(async () => {
     if (!deleteTarget) return;
 
@@ -1588,6 +1599,14 @@ const UserProfile = () => {
 
   const handleCompareVersions = useCallback(() => {
     setCompareVersionsDialogOpen(true);
+  }, []);
+
+  const handleViewLibraryHistory = useCallback(() => {
+    setLibraryHistoryDialogOpen(true);
+  }, []);
+
+  const handleCompareLibraryVersions = useCallback(() => {
+    setLibraryCompareVersionsDialogOpen(true);
   }, []);
 
   const handleShare = useCallback(
@@ -1737,6 +1756,8 @@ const UserProfile = () => {
                 activeTab={activeTab - 2}
                 onDelete={openDeleteDialog}
                 onShare={handleLibraryShare}
+                onViewHistory={handleViewLibraryHistory}
+                onCompareVersions={handleCompareLibraryVersions}
                 disabledReason={deleteDisabledReason}
                 canDelete={canDelete}
                 userName={getUserName()}
@@ -1864,6 +1885,18 @@ const UserProfile = () => {
         open={libraryShareDialogOpen}
         option={libraryShareOption}
         onClose={handleLibraryShareDialogClose}
+      />
+
+      <LibraryHistoryDialog
+        libraries={selectedLibraries}
+        open={libraryHistoryDialogOpen}
+        onClose={() => setLibraryHistoryDialogOpen(false)}
+      />
+
+      <LibraryCompareVersionsDialog
+        libraries={selectedLibraries}
+        open={libraryCompareVersionsDialogOpen}
+        onClose={() => setLibraryCompareVersionsDialogOpen(false)}
       />
 
       <TransferDialog

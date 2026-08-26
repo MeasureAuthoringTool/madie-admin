@@ -262,4 +262,22 @@ declare module "@madie/madie-util" {
     option: string;
     onClose: () => void;
   }): JSX.Element | null;
+  export function LibraryHistoryAction(props: {
+    libraries: any[];
+    onClick: () => void;
+  }): JSX.Element | null;
+  export function LibraryCompareVersionsAction(props: {
+    libraries: any[];
+    onClick: () => void;
+  }): JSX.Element | null;
+  export function LibraryHistoryDialog(props: {
+    libraries: any[];
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
+  export function LibraryCompareVersionsDialog(props: {
+    libraries: any[];
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
 }
