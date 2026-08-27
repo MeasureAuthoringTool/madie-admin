@@ -34,6 +34,7 @@ jest.mock("@monaco-editor/react", () => {
 const mockUpdateValueSets = jest.fn();
 const mockGetValueSets = jest.fn();
 const mockAddValueSet = jest.fn();
+const mockUpdateValueSet = jest.fn();
 
 describe("ValueSetManagement", () => {
   beforeEach(() => {
@@ -52,6 +53,7 @@ describe("ValueSetManagement", () => {
       updateValueSets: mockUpdateValueSets,
       getValueSets: mockGetValueSets,
       addValueSet: mockAddValueSet,
+      updateValueSet: mockUpdateValueSet,
     });
   });
 
@@ -203,7 +205,7 @@ describe("ValueSetManagement", () => {
       expect(screen.getByText("http://example.com/vs")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("View Expansions")).toBeInTheDocument();
+    expect(screen.getByText("Edit Value Set")).toBeInTheDocument();
   });
 
   it("renders manually modified icon when value set is manually modified", async () => {
@@ -490,12 +492,13 @@ describe("ValueSetManagement", () => {
       );
     });
   });
-  it("opens the VSE dialog when View Expansions is clicked", async () => {
+  it("opens the VSE dialog when Edit Value Set is clicked", async () => {
     mockGetValueSets.mockResolvedValueOnce({
       content: [
         {
           id: "1",
           url: "http://example.com/vs",
+          version: "1.0",
           lastUpdated: "2025-01-01T00:00:00Z",
           manuallyModified: false,
           valueSet: '{"resourceType":"ValueSet"}',
@@ -511,18 +514,109 @@ describe("ValueSetManagement", () => {
     render(<ValueSetManagement />);
 
     const button = await screen.findByRole("button", {
-      name: /view expansions/i,
+      name: /edit value set/i,
     });
 
     userEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText("Details")).toBeInTheDocument();
+      expect(screen.getByText("Edit Valueset Data")).toBeInTheDocument();
     });
-    userEvent.click(screen.getByTestId("close-button"));
+    userEvent.click(screen.getByTestId("edit-value-set-discard-button"));
     await waitFor(() => {
-      expect(screen.queryByText("Details")).not.toBeInTheDocument();
+      expect(screen.queryByText("Edit Valueset Data")).not.toBeInTheDocument();
     });
+  });
+
+  it("submits an edited value set and shows success toast", async () => {
+    mockUpdateValueSet.mockResolvedValueOnce(undefined);
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+          valueSet: '{"resourceType":"ValueSet"}',
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(
+      await screen.findByRole("button", { name: /edit value set/i })
+    );
+
+    fireEvent.change(screen.getByTestId("edit-value-set-url-input"), {
+      target: { value: "http://example.com/vs-updated" },
+    });
+    fireEvent.change(screen.getByTestId("edit-value-set-version-input"), {
+      target: { value: "2.0" },
+    });
+    fireEvent.change(screen.getByTestId("mock-monaco-editor"), {
+      target: { value: '{"resourceType":"ValueSet","status":"active"}' },
+    });
+
+    userEvent.click(screen.getByTestId("edit-value-set-save-button"));
+
+    await waitFor(() => {
+      expect(mockUpdateValueSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "1",
+          url: "http://example.com/vs-updated",
+          version: "2.0",
+          valueSet: '{"resourceType":"ValueSet","status":"active"}',
+          manuallyModified: true,
+          lastUpdated: expect.any(String),
+        })
+      );
+    });
+
+    expect(
+      screen.getByText("Value set updated successfully.")
+    ).toBeInTheDocument();
+  });
+
+  it("shows an error toast when editing a value set fails", async () => {
+    mockUpdateValueSet.mockRejectedValueOnce(new Error("Edit failed"));
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+          valueSet: '{"resourceType":"ValueSet"}',
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(
+      await screen.findByRole("button", { name: /edit value set/i })
+    );
+    userEvent.click(screen.getByTestId("edit-value-set-save-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText("Edit failed")).toBeInTheDocument();
   });
 
   it("searches value sets when search icon is clicked", async () => {

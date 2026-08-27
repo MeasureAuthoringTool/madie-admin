@@ -175,6 +175,7 @@ export default function AddValueSetDialog({
             <MonacoEditor
               height="350px"
               defaultLanguage="json"
+              theme="vs-dark"
               value={formik.values.valueSet}
               onChange={(value) => {
                 formik.setFieldValue("valueSet", value ?? "");
