@@ -44,8 +44,9 @@ const renderActionCenter = (props: any = {}) =>
 describe("LibraryActionCenter", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("does not render the history or compare icons without their handlers", () => {
+  it("does not render the transfer, history or compare icons without their handlers", () => {
     renderActionCenter();
+    expect(screen.queryByTestId("transfer-action-btn")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("library-history-action-btn")
     ).not.toBeInTheDocument();
@@ -54,17 +55,35 @@ describe("LibraryActionCenter", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders the history and compare icons when handlers are supplied", () => {
+  it("renders the transfer, history and compare icons when handlers are supplied", () => {
     renderActionCenter({
+      onTransfer: jest.fn(),
       onViewHistory: jest.fn(),
       onCompareVersions: jest.fn(),
     });
+    expect(screen.getByTestId("transfer-action-btn")).toBeInTheDocument();
     expect(
       screen.getByTestId("library-history-action-btn")
     ).toBeInTheDocument();
     expect(
       screen.getByTestId("compare-versions-action-btn")
     ).toBeInTheDocument();
+  });
+
+  describe("Transfer", () => {
+    it("is enabled for one or more selected libraries and fires its handler", async () => {
+      const onTransfer = jest.fn();
+      renderActionCenter({
+        libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+        onTransfer,
+      });
+
+      const button = screen.getByTestId("transfer-action-btn");
+      expect(button).not.toBeDisabled();
+
+      await userEvent.click(button);
+      expect(onTransfer).toHaveBeenCalled();
+    });
   });
 
   describe("View History", () => {
