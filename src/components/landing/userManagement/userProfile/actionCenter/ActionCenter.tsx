@@ -9,6 +9,7 @@ import {
   TransferAction,
 } from "@madie/madie-util";
 import DeleteAction from "./deleteAction/DeleteAction";
+import PipeSeparator from "./PipeSeparator";
 
 interface PropTypes {
   measures: Measure[];
@@ -39,15 +40,6 @@ export default function ActionCenter({
   onTransfer,
   disabledReason,
 }: PropTypes) {
-  const PipeSeparator = () => (
-    <span
-      aria-hidden="true"
-      style={{ color: "#8C8C8C", display: "inline-flex", alignItems: "center" }}
-    >
-      |
-    </span>
-  );
-
   return (
     <div className="action-center" data-testid="action-center">
       <DeleteAction

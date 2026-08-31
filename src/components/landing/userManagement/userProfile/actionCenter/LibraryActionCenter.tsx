@@ -2,7 +2,12 @@ import React from "react";
 import type { CqlLibrary } from "@madie/madie-models";
 
 import DeleteAction from "./deleteAction/DeleteAction";
-import { LibraryShareAction } from "@madie/madie-util";
+import PipeSeparator from "./PipeSeparator";
+import {
+  LibraryShareAction,
+  LibraryHistoryAction,
+  LibraryCompareVersionsAction,
+} from "@madie/madie-util";
 
 interface PropTypes {
   libraries: CqlLibrary[];
@@ -10,6 +15,8 @@ interface PropTypes {
   activeTab: number;
   onDelete: () => void;
   onShare: (option: string) => void;
+  onViewHistory?: () => void;
+  onCompareVersions?: () => void;
   disabledReason?: string;
   target?: string;
   userName: string;
@@ -22,6 +29,8 @@ export default function LibraryActionCenter({
   activeTab,
   onDelete,
   onShare,
+  onViewHistory,
+  onCompareVersions,
   disabledReason,
   userName,
 }: PropTypes) {
@@ -43,6 +52,18 @@ export default function LibraryActionCenter({
         onClick={onDelete}
         disabledReason={disabledReason}
       />
+
+      {(onViewHistory ?? onCompareVersions) && <PipeSeparator />}
+
+      {onViewHistory && (
+        <LibraryHistoryAction libraries={libraries} onClick={onViewHistory} />
+      )}
+      {onCompareVersions && (
+        <LibraryCompareVersionsAction
+          libraries={libraries}
+          onClick={onCompareVersions}
+        />
+      )}
     </div>
   );
 }

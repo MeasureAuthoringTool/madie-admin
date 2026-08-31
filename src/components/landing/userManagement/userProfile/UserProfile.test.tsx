@@ -1,3 +1,4 @@
+import * as mockLibraryActionStubs from "../../../../__mocks__/libraryActionStubs";
 import * as mockCmsIdStubs from "../../../../__mocks__/cmsIdFormatterStubs";
 import * as React from "react";
 import * as mockMeasureActionStubs from "../../../../__mocks__/measureActionStubs";
@@ -33,6 +34,7 @@ const mockDeleteLibrary = jest.fn();
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
   ...mockMeasureActionStubs,
+  ...mockLibraryActionStubs,
   useUserServiceApi: jest.fn(() => ({
     getUser: (...args: unknown[]) => mockGetUser(...args),
     getBulkUserDetails: (...args: unknown[]) => mockGetBulkUserDetails(...args),
@@ -2727,6 +2729,132 @@ describe("UserProfile", () => {
 
       expect(
         screen.queryByTestId("library-share-dialog")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("library history and compare actions", () => {
+    const previousVersion = {
+      ...ownedLibrary,
+      id: "lib1-prev",
+      cqlLibraryName: "Owned Library A v0.9",
+      version: "0.9.000",
+      draft: false,
+      hasAssociatedLibraries: false,
+    };
+
+    const renderOwnedLibrariesTab = async (
+      libraries: any[] = [ownedLibrary]
+    ) => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(
+        pageWith(libraries, libraries.length)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+      await userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+    };
+
+    it("disables both actions when no library is selected", async () => {
+      await renderOwnedLibrariesTab();
+
+      expect(
+        await screen.findByTestId("library-history-action-btn")
+      ).toBeDisabled();
+      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+    });
+
+    it("disables both actions when more than one library is selected", async () => {
+      await renderOwnedLibrariesTab([ownedLibrary, sharedLibrary]);
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+      await userEvent.click(await screen.findByTestId("checkbox-lib2"));
+
+      expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
+      // two libraries, but different library sets
+      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+    });
+
+    it("opens the library history dialog for a single selected library", async () => {
+      await renderOwnedLibrariesTab();
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const historyBtn = await screen.findByTestId(
+        "library-history-action-btn"
+      );
+      await waitFor(() => expect(historyBtn).toBeEnabled());
+      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+
+      await userEvent.click(historyBtn);
+
+      expect(
+        await screen.findByTestId("library-history-dialog")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("library-history-dialog-library")
+      ).toHaveTextContent("Owned Library A");
+    });
+
+    it("opens the compare dialog for two instances in the same library set", async () => {
+      mockGetLibrariesByLibrarySetId.mockResolvedValue([previousVersion]);
+      await renderOwnedLibrariesTab();
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+      await userEvent.click(
+        await screen.findByTestId("expand-library-toggle-lib1")
+      );
+      await userEvent.click(
+        await screen.findByLabelText("Select library Owned Library A v0.9")
+      );
+
+      const compareBtn = screen.getByTestId("compare-versions-action-btn");
+      await waitFor(() => expect(compareBtn).toBeEnabled());
+      // history needs exactly one selection, so it is disabled here
+      expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
+
+      await userEvent.click(compareBtn);
+
+      expect(
+        await screen.findByTestId("compare-versions-dialog")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("compare-versions-dialog-count")
+      ).toHaveTextContent("2");
+    });
+
+    it("offers both actions on the Shared Libraries tab", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([sharedLibrary], 1));
+
+      renderAt("/admin/userProfile/test_user");
+      await userEvent.click(await screen.findByTestId("shared-libraries-tab"));
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib2"));
+
+      const historyBtn = await screen.findByTestId(
+        "library-history-action-btn"
+      );
+      await waitFor(() => expect(historyBtn).toBeEnabled());
+
+      await userEvent.click(historyBtn);
+
+      expect(
+        await screen.findByTestId("library-history-dialog")
+      ).toBeInTheDocument();
+    });
+
+    it("hides both actions when the AdminUserProfile flag is off", async () => {
+      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+      await renderOwnedLibrariesTab();
+
+      await waitFor(() => expect(mockFetchCqlLibraries).toHaveBeenCalled());
+
+      expect(
+        screen.queryByTestId("library-history-action-btn")
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("compare-versions-action-btn")
       ).not.toBeInTheDocument();
     });
   });
