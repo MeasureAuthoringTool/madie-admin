@@ -2859,6 +2859,98 @@ describe("UserProfile", () => {
     });
   });
 
+  describe("library transfer action", () => {
+    const renderLibrariesTab = async (
+      tab: "owned-libraries-tab" | "shared-libraries-tab",
+      libraries: any[]
+    ) => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(
+        pageWith(libraries, libraries.length)
+      );
+
+      renderAt("/admin/userProfile/test_user");
+      await userEvent.click(await screen.findByTestId(tab));
+    };
+
+    it("opens the transfer dialog for the selected libraries on the Owned tab", async () => {
+      await renderLibrariesTab("owned-libraries-tab", [ownedLibrary]);
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const transferBtn = await screen.findByTestId("transfer-action-btn");
+      await waitFor(() => expect(transferBtn).toBeEnabled());
+
+      await userEvent.click(transferBtn);
+
+      expect(await screen.findByTestId("transfer-dialog")).toBeInTheDocument();
+      expect(screen.getByTestId("transfer-dialog-count")).toHaveTextContent(
+        "1"
+      );
+    });
+
+    it("opens the transfer dialog on the Shared Libraries tab", async () => {
+      await renderLibrariesTab("shared-libraries-tab", [sharedLibrary]);
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib2"));
+
+      const transferBtn = await screen.findByTestId("transfer-action-btn");
+      await waitFor(() => expect(transferBtn).toBeEnabled());
+
+      await userEvent.click(transferBtn);
+
+      expect(await screen.findByTestId("transfer-dialog")).toBeInTheDocument();
+    });
+
+    it("refreshes the library list after a successful transfer", async () => {
+      await renderLibrariesTab("owned-libraries-tab", [ownedLibrary]);
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+      await userEvent.click(await screen.findByTestId("transfer-action-btn"));
+
+      const callsBefore = mockAdminSearchCqlLibraries.mock.calls.length;
+      await userEvent.click(
+        await screen.findByTestId("transfer-dialog-success")
+      );
+
+      await waitFor(() =>
+        expect(mockAdminSearchCqlLibraries.mock.calls.length).toBeGreaterThan(
+          callsBefore
+        )
+      );
+      expect(screen.queryByTestId("transfer-dialog")).not.toBeInTheDocument();
+      expect(
+        await screen.findByText("Library Successfully Transferred")
+      ).toBeInTheDocument();
+    });
+
+    it("closes the transfer dialog on cancel without refreshing the list", async () => {
+      await renderLibrariesTab("owned-libraries-tab", [ownedLibrary]);
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+      await userEvent.click(await screen.findByTestId("transfer-action-btn"));
+
+      const callsBefore = mockAdminSearchCqlLibraries.mock.calls.length;
+      await userEvent.click(await screen.findByTestId("transfer-dialog-close"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("transfer-dialog")).not.toBeInTheDocument()
+      );
+      expect(mockAdminSearchCqlLibraries.mock.calls.length).toBe(callsBefore);
+    });
+
+    it("hides the Transfer icon when the AdminUserProfile flag is off", async () => {
+      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
+      await renderLibrariesTab("owned-libraries-tab", [ownedLibrary]);
+
+      await waitFor(() => expect(mockFetchCqlLibraries).toHaveBeenCalled());
+
+      expect(
+        screen.queryByTestId("transfer-action-btn")
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("transfer action", () => {
     const ownedMeasureRow = {
       id: "m1",

@@ -17,6 +17,7 @@ import {
   LibraryShareDialog,
   LibraryHistoryDialog,
   LibraryCompareVersionsDialog,
+  LibraryTransferDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
@@ -394,6 +395,8 @@ const UserProfile = () => {
     libraryCompareVersionsDialogOpen,
     setLibraryCompareVersionsDialogOpen,
   ] = useState(false);
+  const [libraryTransferDialogOpen, setLibraryTransferDialogOpen] =
+    useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareOption, setShareOption] = useState("");
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -1612,6 +1615,10 @@ const UserProfile = () => {
     setLibraryCompareVersionsDialogOpen(true);
   }, []);
 
+  const handleLibraryTransfer = useCallback(() => {
+    setLibraryTransferDialogOpen(true);
+  }, []);
+
   const handleShare = useCallback(
     (option: string) => {
       const resolvedOption =
@@ -1690,6 +1697,21 @@ const UserProfile = () => {
     [libraryTable, clearLibraryExpansion]
   );
 
+  const handleLibraryTransferDialogClose = useCallback(
+    ({ toastType = "danger", toastMessage = "", toastOpen = false } = {}) => {
+      setLibraryTransferDialogOpen(false);
+      setToastType(toastType as "success" | "danger");
+      setToastMessage(toastMessage);
+      setToastOpen(toastOpen);
+      if (toastType === "success") {
+        libraryTable.toggleAllRowsSelected(false);
+        clearLibraryExpansion();
+        setRefreshToken((t) => t + 1);
+      }
+    },
+    [libraryTable, clearLibraryExpansion]
+  );
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1759,6 +1781,7 @@ const UserProfile = () => {
                 activeTab={activeTab - 2}
                 onDelete={openDeleteDialog}
                 onShare={handleLibraryShare}
+                onTransfer={handleLibraryTransfer}
                 onViewHistory={handleViewLibraryHistory}
                 onCompareVersions={handleCompareLibraryVersions}
                 disabledReason={deleteDisabledReason}
@@ -1900,6 +1923,13 @@ const UserProfile = () => {
         libraries={selectedLibraries}
         open={libraryCompareVersionsDialogOpen}
         onClose={() => setLibraryCompareVersionsDialogOpen(false)}
+      />
+
+      <LibraryTransferDialog
+        libraries={selectedLibraries}
+        open={libraryTransferDialogOpen}
+        onClose={handleLibraryTransferDialogClose}
+        setStatusHandler={() => {}}
       />
 
       <TransferDialog

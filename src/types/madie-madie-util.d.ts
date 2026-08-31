@@ -280,4 +280,15 @@ declare module "@madie/madie-util" {
     open: boolean;
     onClose: () => void;
   }): JSX.Element | null;
+  export function LibraryTransferAction(props: {
+    libraries: any[];
+    onClick: () => void;
+    activeTab: number;
+  }): JSX.Element | null;
+  export function LibraryTransferDialog(props: {
+    libraries: any[];
+    open: boolean;
+    onClose: (...args: any[]) => void;
+    setStatusHandler: (...args: any[]) => void;
+  }): JSX.Element | null;
 }
