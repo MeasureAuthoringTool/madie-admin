@@ -25,7 +25,6 @@ const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
 const mockAdminSearchCqlLibraries = jest.fn();
 const mockGetLibrariesByLibrarySetId = jest.fn();
-const mockUseFeatureFlags = jest.fn(() => ({ AdminUserProfile: true }));
 const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
 const mockGetBulkUserDetails = jest.fn();
 const mockDeleteDraftLibrary = jest.fn();
@@ -64,7 +63,6 @@ jest.mock("@madie/madie-util", () => ({
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
       mockGetLibrariesByLibrarySetId(...args),
   })),
-  useFeatureFlags: () => mockUseFeatureFlags(),
   checkUserCanEdit: (...args: unknown[]) => mockCheckUserCanEdit(...args),
   adminUserStore: {
     state: null,
@@ -293,8 +291,6 @@ describe("UserProfile", () => {
       (_harpId: string, ...args: unknown[]) => mockFetchCqlLibraries(...args)
     );
     mockGetLibrariesByLibrarySetId.mockReset();
-    mockUseFeatureFlags.mockReset();
-    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: true });
     mockCheckUserCanEdit.mockReset();
     mockCheckUserCanEdit.mockReturnValue(false);
     mockGetBulkUserDetails.mockReset();
@@ -1795,19 +1791,6 @@ describe("UserProfile", () => {
     expect(input).toHaveValue("");
   });
 
-  it("hides the search/filter bar when the AdminUserProfile flag is off", async () => {
-    mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-    mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
-
-    renderAt("/admin/userProfile/test_user");
-
-    await waitFor(() => {
-      expect(mockAdminSearchMeasures).toHaveBeenCalled();
-    });
-    expect(screen.queryByTestId("search-filter-bar")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("filter-by-select")).not.toBeInTheDocument();
-  });
-
   describe("status chips", () => {
     it("renders the 'In Composite' chip for a component measure", async () => {
       const componentMeasure = {
@@ -1838,16 +1821,6 @@ describe("UserProfile", () => {
   });
 
   describe("delete measure action", () => {
-    it("hides the action center when the AdminUserProfile flag is off", async () => {
-      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
-
-      renderAt("/admin/userProfile/test_user");
-
-      await waitFor(() => expect(mockAdminSearchMeasures).toHaveBeenCalled());
-      expect(screen.queryByTestId("action-center")).not.toBeInTheDocument();
-    });
-
     it("disables Delete with no selection and shows 'Select measure to delete'", async () => {
       mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
 
@@ -2562,18 +2535,10 @@ describe("UserProfile", () => {
     // Share behavior is unit-tested in @madie/madie-util; these cover only
     // the admin wiring (option per tab, save refresh).
 
-    it("shows the Share/Unshare icon on the Owned tab when the flag is on", async () => {
+    it("shows the Share/Unshare icon on the Owned tab", async () => {
       mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
       renderAt("/admin/userProfile/test_user");
       expect(await screen.findByTestId("share-action-btn")).toBeInTheDocument();
-    });
-
-    it("does not render the Share/Unshare icon when the flag is off", async () => {
-      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
-      renderAt("/admin/userProfile/test_user");
-      expect(await screen.findByTestId("user-profile")).toBeInTheDocument();
-      expect(screen.queryByTestId("share-action-btn")).not.toBeInTheDocument();
     });
 
     it("opens the share dialog with the 'Share With' option from the Owned tab", async () => {
@@ -2843,20 +2808,6 @@ describe("UserProfile", () => {
         await screen.findByTestId("library-history-dialog")
       ).toBeInTheDocument();
     });
-
-    it("hides both actions when the AdminUserProfile flag is off", async () => {
-      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-      await renderOwnedLibrariesTab();
-
-      await waitFor(() => expect(mockFetchCqlLibraries).toHaveBeenCalled());
-
-      expect(
-        screen.queryByTestId("library-history-action-btn")
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTestId("compare-versions-action-btn")
-      ).not.toBeInTheDocument();
-    });
   });
 
   describe("library transfer action", () => {
@@ -2938,17 +2889,6 @@ describe("UserProfile", () => {
       );
       expect(mockAdminSearchCqlLibraries.mock.calls.length).toBe(callsBefore);
     });
-
-    it("hides the Transfer icon when the AdminUserProfile flag is off", async () => {
-      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-      await renderLibrariesTab("owned-libraries-tab", [ownedLibrary]);
-
-      await waitFor(() => expect(mockFetchCqlLibraries).toHaveBeenCalled());
-
-      expect(
-        screen.queryByTestId("transfer-action-btn")
-      ).not.toBeInTheDocument();
-    });
   });
 
   describe("transfer action", () => {
@@ -2981,16 +2921,6 @@ describe("UserProfile", () => {
       expect(
         await screen.findByTestId("transfer-action-btn")
       ).toBeInTheDocument();
-    });
-
-    it("does not render the Transfer icon when the flag is off", async () => {
-      mockUseFeatureFlags.mockReturnValue({ AdminUserProfile: false });
-      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
-      renderAt("/admin/userProfile/test_user");
-      expect(await screen.findByTestId("user-profile")).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("transfer-action-btn")
-      ).not.toBeInTheDocument();
     });
 
     it("opens the transfer dialog from the Owned tab", async () => {

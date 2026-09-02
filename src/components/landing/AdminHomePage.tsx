@@ -1,18 +1,12 @@
 import React, { useState } from "react";
 import { Tabs, Tab } from "@madie/madie-design-system/dist/react";
-import { useFeatureFlags } from "@madie/madie-util";
 import "./AdminRoutes.scss";
 import UserManagement from "./userManagement/UserManagement";
 import CodeSystemManagement from "./codeSystemManagement/CodeSystemManagement";
 import ValueSetManagement from "./valueSetManagement/ValueSetManagement";
 
 export default function AdminHomePage() {
-  const featureFlags = useFeatureFlags();
   const [activeTab, setActiveTab] = useState("user-management");
-
-  if (!featureFlags?.AdminUserList) {
-    return null;
-  }
 
   return (
     <>

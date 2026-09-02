@@ -12,7 +12,6 @@ import {
   useMeasureServiceApi,
   useCqlLibraryServiceApi,
   adminUserStore,
-  useFeatureFlags,
   ExportDialog,
   LibraryShareDialog,
   LibraryHistoryDialog,
@@ -337,7 +336,6 @@ const UserProfile = () => {
   const userServiceApi = useRef(useUserServiceApi()).current;
   const measureServiceApi = useRef(useMeasureServiceApi()).current;
   const cqlLibraryServiceApi = useRef(useCqlLibraryServiceApi()).current;
-  const featureFlags = useFeatureFlags();
 
   const {
     filterBy,
@@ -1740,38 +1738,36 @@ const UserProfile = () => {
               />
             </Tabs>
           </section>
-          {featureFlags?.AdminUserProfile && (
-            <div className="search-filter-bar" data-testid="search-filter-bar">
-              <SearchAndFilter
-                filterBy={filterBy}
-                searchField={searchField}
-                onFilterChange={handleFilter}
-                onSearchChange={handleSearch}
-                onSearchTrigger={handleSearchTrigger}
-                onSearchClear={handleSearchClear}
-                filterByOpts={
-                  isLibraryTab ? LIBRARY_FILTER_OPTIONS : MEASURE_FILTER_OPTIONS
-                }
-                textFieldID="user-profile-measures"
+          <div className="search-filter-bar" data-testid="search-filter-bar">
+            <SearchAndFilter
+              filterBy={filterBy}
+              searchField={searchField}
+              onFilterChange={handleFilter}
+              onSearchChange={handleSearch}
+              onSearchTrigger={handleSearchTrigger}
+              onSearchClear={handleSearchClear}
+              filterByOpts={
+                isLibraryTab ? LIBRARY_FILTER_OPTIONS : MEASURE_FILTER_OPTIONS
+              }
+              textFieldID="user-profile-measures"
+            />
+            {!isLibraryTab && (
+              <ActionCenter
+                measures={selectedMeasures}
+                canDelete={canDelete}
+                activeTab={activeTab}
+                onDelete={openDeleteDialog}
+                onExport={handleExport}
+                onViewHumanReadable={handleViewHumanReadable}
+                onViewHistory={handleViewHistory}
+                onCompareVersions={handleCompareVersions}
+                onShare={handleShare}
+                onTransfer={handleTransfer}
+                disabledReason={deleteDisabledReason}
               />
-              {!isLibraryTab && (
-                <ActionCenter
-                  measures={selectedMeasures}
-                  canDelete={canDelete}
-                  activeTab={activeTab}
-                  onDelete={openDeleteDialog}
-                  onExport={handleExport}
-                  onViewHumanReadable={handleViewHumanReadable}
-                  onViewHistory={handleViewHistory}
-                  onCompareVersions={handleCompareVersions}
-                  onShare={handleShare}
-                  onTransfer={handleTransfer}
-                  disabledReason={deleteDisabledReason}
-                />
-              )}
-            </div>
-          )}
-          {featureFlags?.AdminUserProfile && isLibraryTab && (
+            )}
+          </div>
+          {isLibraryTab && (
             <div
               className="search-filter-bar flex-end"
               data-testid="search-filter-bar"
