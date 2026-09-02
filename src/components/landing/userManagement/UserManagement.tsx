@@ -23,7 +23,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { type UserDetails, UserStatus } from "@madie/madie-models";
 // @ts-ignore
-import { useFeatureFlags, useUserServiceApi } from "@madie/madie-util";
+import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
 
@@ -56,7 +56,6 @@ const UserManagement = () => {
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
   const userServiceApi = useRef(useUserServiceApi()).current;
-  const featureFlags = useFeatureFlags();
   const navigate = useNavigate();
 
   const [rowSelection, setRowSelection] = useState({});
@@ -192,9 +191,6 @@ const UserManagement = () => {
         cell: (info) => {
           const name = info.getValue() as string;
           const user = info.row.original;
-          if (!featureFlags?.AdminUserProfile) {
-            return <span data-testid={`user-name-${user.id}`}>{name}</span>;
-          }
           return (
             <button
               type="button"
@@ -237,7 +233,7 @@ const UserManagement = () => {
         },
       },
     ],
-    [openUserProfile, featureFlags?.AdminUserProfile]
+    [openUserProfile]
   );
 
   const table = useReactTable({

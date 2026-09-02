@@ -2,14 +2,13 @@ import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import AdminRoutes from "./AdminRoutes";
-import { useUserRoles, useFeatureFlags } from "@madie/madie-util";
+import { useUserRoles } from "@madie/madie-util";
 
 jest.mock("@madie/madie-util", () => ({
   useDocumentTitle: jest.fn(),
   useUserRoles: jest
     .fn()
     .mockReturnValue({ roles: ["MADiE-Admin"], isAdmin: true }),
-  useFeatureFlags: jest.fn().mockReturnValue({ AdminUserList: true }),
   useOktaTokens: jest.fn().mockReturnValue({
     getAccessToken: () => "test-token",
     getUserName: () => "testUser",
@@ -23,7 +22,7 @@ describe("AdminRoutes Component", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/admin");
   });
-  test("renders the User Management tab for admin users when flag is enabled", async () => {
+  test("renders the User Management tab for admin users", async () => {
     render(<AdminRoutes />);
 
     expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
@@ -50,18 +49,6 @@ describe("AdminRoutes Component", () => {
     render(<AdminRoutes />);
 
     expect(window.location.pathname).toBe("/404");
-    expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
-  });
-
-  test("does not render User Management when AdminUserList flag is disabled", async () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
-      AdminUserList: false,
-    });
-
-    render(<AdminRoutes />);
-
-    expect(screen.getByTestId("admin-routes")).toBeInTheDocument();
     expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
     expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
   });

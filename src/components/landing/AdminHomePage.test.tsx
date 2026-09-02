@@ -3,11 +3,6 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminHomePage from "./AdminHomePage";
-import { useFeatureFlags } from "@madie/madie-util";
-
-jest.mock("@madie/madie-util", () => ({
-  useFeatureFlags: jest.fn(),
-}));
 
 jest.mock("./userManagement/UserManagement", () => ({
   __esModule: true,
@@ -29,31 +24,7 @@ jest.mock("./valueSetManagement/ValueSetManagement", () => ({
 }));
 
 describe("AdminHomePage", () => {
-  test("renders nothing when AdminUserList flag is disabled", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
-      AdminUserList: false,
-    });
-
-    const { container } = render(<AdminHomePage />);
-
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("user-management-tab")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("user-management")).not.toBeInTheDocument();
-  });
-
-  test("renders nothing when featureFlags is undefined", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce(undefined);
-
-    const { container } = render(<AdminHomePage />);
-
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  test("renders the User Management tab and UserManagement when flag is enabled", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
-      AdminUserList: true,
-    });
-
+  test("renders the User Management tab and UserManagement", () => {
     render(<AdminHomePage />);
 
     expect(screen.getByTestId("user-management-tab")).toBeInTheDocument();
@@ -62,21 +33,13 @@ describe("AdminHomePage", () => {
   });
 
   test("User Management tab is selected by default", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
-      AdminUserList: true,
-    });
-
     render(<AdminHomePage />);
 
     const tab = screen.getByTestId("user-management-tab");
     expect(tab).toHaveAttribute("aria-selected", "true");
   });
 
-  test("renders Code System Management and Value Set Management tabs when flag is enabled", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValueOnce({
-      AdminUserList: true,
-    });
-
+  test("renders Code System Management and Value Set Management tabs", () => {
     render(<AdminHomePage />);
 
     expect(
@@ -88,10 +51,6 @@ describe("AdminHomePage", () => {
   });
 
   test("renders CodeSystemManagement component when Code System Management tab is clicked", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValue({
-      AdminUserList: true,
-    });
-
     render(<AdminHomePage />);
 
     expect(screen.getByTestId("user-management")).toBeInTheDocument();
@@ -113,10 +72,6 @@ describe("AdminHomePage", () => {
   });
 
   test("renders ValueSetManagement component when Value Set Management tab is clicked", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValue({
-      AdminUserList: true,
-    });
-
     render(<AdminHomePage />);
 
     expect(screen.getByTestId("user-management")).toBeInTheDocument();
@@ -138,10 +93,6 @@ describe("AdminHomePage", () => {
   });
 
   test("switches back to User Management when its tab is clicked", () => {
-    (useFeatureFlags as jest.Mock).mockReturnValue({
-      AdminUserList: true,
-    });
-
     render(<AdminHomePage />);
 
     userEvent.click(screen.getByTestId("code-system-management-tab"));
