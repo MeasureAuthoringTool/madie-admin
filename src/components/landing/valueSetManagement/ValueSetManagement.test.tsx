@@ -3,9 +3,13 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ValueSetManagement from "./ValueSetManagement";
-import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import { useTerminologyServiceApi } from "@madie/madie-util";
 
-jest.mock("../../../api/useTerminologyServiceApi");
+const mockDeleteValueSet = jest.fn();
+
+jest.mock("@madie/madie-util", () => ({
+  useTerminologyServiceApi: jest.fn(),
+}));
 
 jest.mock("monaco-editor", () => ({}), { virtual: true });
 
@@ -54,6 +58,7 @@ describe("ValueSetManagement", () => {
       getValueSets: mockGetValueSets,
       addValueSet: mockAddValueSet,
       updateValueSet: mockUpdateValueSet,
+      deleteValueSet: mockDeleteValueSet,
     });
   });
 
@@ -814,6 +819,112 @@ describe("ValueSetManagement", () => {
     await waitFor(() => {
       expect(
         screen.getByText("An error occurred while adding the value set.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("deletes a value set and shows success toast", async () => {
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      numberOfElements: 1,
+    });
+
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(await screen.findByTestId("delete-component-1"));
+
+    userEvent.click(screen.getByText("Yes, Delete"));
+
+    await waitFor(() => {
+      expect(mockDeleteValueSet).toHaveBeenCalledWith("1");
+    });
+
+    expect(
+      screen.getByText("Value set deleted successfully.")
+    ).toBeInTheDocument();
+  });
+  it("reloads value sets after successful delete", async () => {
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      numberOfElements: 1,
+    });
+
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledTimes(1);
+    });
+
+    userEvent.click(await screen.findByTestId("delete-component-1"));
+
+    userEvent.click(screen.getByText("Yes, Delete"));
+
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenCalledTimes(2);
+    });
+  });
+  it("shows error toast when delete fails", async () => {
+    mockDeleteValueSet.mockRejectedValue(new Error("Delete failed"));
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      numberOfElements: 1,
+    });
+
+    mockDeleteValueSet.mockRejectedValueOnce(new Error("Delete failed"));
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(await screen.findByTestId("delete-component-1"));
+
+    userEvent.click(screen.getByText("Yes, Delete"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("An error occurred while deleting the value set.")
       ).toBeInTheDocument();
     });
   });
