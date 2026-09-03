@@ -257,6 +257,14 @@ export class TerminologyServiceApi {
     );
     return response.data;
   }
+
+  async deleteCodeSystem(id: string): Promise<void> {
+    await axios.delete(`${this.baseUrl}/terminology/admin/code-system/${id}`, {
+      headers: {
+        Authorization: `Bearer ${this.getAccessToken()}`,
+      },
+    });
+  }
 }
 
 export default function useTerminologyServiceApi(): TerminologyServiceApi {

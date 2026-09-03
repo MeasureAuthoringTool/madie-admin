@@ -499,6 +499,49 @@ describe("TerminologyServiceApi", () => {
     });
   });
 
+  describe("deleteCodeSystem", () => {
+    it("calls the delete endpoint with correct headers", async () => {
+      (axios.delete as jest.Mock).mockResolvedValueOnce({ status: 204 });
+
+      await terminologyService.deleteCodeSystem("cs-1");
+
+      expect(axios.delete).toHaveBeenCalledTimes(1);
+      expect(axios.delete).toHaveBeenCalledWith(
+        "http://test.url/terminology/admin/code-system/cs-1",
+        {
+          headers: { Authorization: "Bearer test-token" },
+        }
+      );
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+      (axios.delete as jest.Mock).mockResolvedValue({ status: 204 });
+
+      await service.deleteCodeSystem("cs-1");
+      await service.deleteCodeSystem("cs-2");
+
+      expect(axios.delete).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-1" },
+        })
+      );
+      expect(axios.delete).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-2" },
+        })
+      );
+    });
+  });
+
   describe("addValueSet", () => {
     const validValueSet = {
       url: "http://example.org/fhir/ValueSet/test",
