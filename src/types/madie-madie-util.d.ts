@@ -1,5 +1,124 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
+  export interface ValueSet {
+    resourceType: string;
+    id: string;
+    url: string;
+    status: string;
+    errorMsg: string;
+  }
+
+  export interface ValueSetDisplayForAdmin {
+    id: string;
+    url: string;
+    version?: string;
+    lastUpdated: string;
+    manuallyModified: boolean;
+    valueSet: string;
+  }
+
+  export interface ValueSetSearchResult {
+    resultBundle: string;
+    valueSets: ValueSetForSearch[];
+  }
+
+  export interface ValueSetForSearch {
+    codeSystem?: string;
+    name?: string;
+    author?: string;
+    composedOf?: string;
+    effectiveDate?: string;
+    lastReviewDate?: string;
+    lastUpdated?: string;
+    publisher?: string;
+    purpose?: string;
+    oid?: string;
+    status?: string;
+    steward?: string;
+    title?: string;
+    url?: string;
+    version?: string;
+  }
+
+  export interface CustomCqlCodeSystem {
+    name?: string;
+    id?: string;
+    version?: string;
+    valid?: boolean;
+    errorMessage?: string;
+  }
+
+  export interface CustomCqlCode {
+    code?: string;
+    display?: string;
+    codeSystem: CustomCqlCodeSystem;
+    valid?: boolean;
+    errorMessage?: string;
+  }
+
+  export interface AddValueSetForAdmin {
+    url: string;
+    version: string;
+    valueSet: string;
+    manuallyModified?: boolean;
+    lastUpdated?: string;
+  }
+
+  export interface UpdateValueSetForAdmin {
+    id: string;
+    url: string;
+    version: string;
+    valueSet: string;
+    lastUpdated?: string;
+    manuallyModified?: boolean;
+  }
+
+  export interface Page<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+    numberOfElements: number;
+  }
+  export interface CodeSystem {
+    id: string;
+    fullUrl: string;
+    title?: string;
+    name: string;
+    version: Version;
+    versionId?: string;
+    oid: string;
+    lastUpdated?: string;
+    lastUpdatedUpstream?: string;
+    isLatestVersion: boolean;
+  }
+
+  export interface CreateCodeSystemRequest {
+    title?: string;
+    name: string;
+    fullUrl: string;
+    oid?: string;
+    isLatestVersion: boolean;
+    version: {
+      fhirVersion: string;
+      vsacVersion?: string;
+    };
+  }
+
+  export interface Version {
+    fhirVersion: string;
+    vsacVersion?: string;
+  }
+
+  export interface ValueSetDisplayForAdmin {
+    id: string;
+    url: string;
+    version?: string;
+    lastUpdated: string;
+    manuallyModified: boolean;
+    valueSet: string;
+  }
   export function padCmsId(cmsId: number | string | null | undefined): string;
   export function formatCmsId(
     cmsId: number | string | null | undefined,
@@ -39,6 +158,67 @@ declare module "@madie/madie-util" {
     getUserName: () => string;
   };
   export function wafIntercept(error: AxiosError): Promise<never>;
+
+  export class TerminologyServiceApi {
+    constructor(baseUrl: string, getAccessToken: () => string);
+
+    checkLogin(): Promise<Boolean>;
+    loginUMLS(apiKey: string): Promise<string>;
+    logoutUMLS(): Promise<Boolean>;
+
+    getValueSet(
+      oid: string,
+      locator: string,
+      loggedInUMLS: boolean
+    ): Promise<ValueSet>;
+
+    getValueSets(
+      page?: number,
+      limit?: number,
+      sortInfo?: string,
+      searchTerm?: string
+    ): Promise<Page<ValueSetDisplayForAdmin>>;
+
+    searchValueSets(values: Record<string, any>): Promise<ValueSetSearchResult>;
+
+    validateCodes(
+      customCqlCodes: CustomCqlCode[],
+      loggedInUMLS: boolean,
+      model: string
+    ): Promise<CustomCqlCode[]>;
+
+    adminDeleteValueSet(id: string): Promise<Response>;
+
+    addValueSet(
+      valueSet: AddValueSetForAdmin
+    ): Promise<ValueSetDisplayForAdmin>;
+
+    updateValueSet(
+      valueSet: UpdateValueSetForAdmin
+    ): Promise<ValueSetDisplayForAdmin>;
+
+    createCodeSystem(codeSystem: CreateCodeSystemRequest): Promise<CodeSystem>;
+
+    updateCodeSystem(
+      id: string,
+      codeSystem: CreateCodeSystemRequest
+    ): Promise<CodeSystem>;
+
+    updateValueSets(ig?: string, version?: string): Promise<void>;
+
+    getCodeSystems(
+      page: number,
+      limit: number,
+      sortInfo?: string,
+      filterField?: string,
+      searchText?: string
+    ): Promise<Page<CodeSystem>>;
+
+    triggerUpdateCodeSystems(): Promise<void>;
+    deleteValueSet(id: string): Promise<Response>;
+  }
+  export function useTerminologyServiceApi(): TerminologyServiceApi;
+
   export function checkUserCanEdit(
     createdBy: string,
     acls: any[],

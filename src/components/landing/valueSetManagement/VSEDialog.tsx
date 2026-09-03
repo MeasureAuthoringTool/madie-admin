@@ -5,7 +5,7 @@ import { Box } from "@mui/system";
 import { useFormik } from "formik";
 import MonacoEditor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import type { ValueSetDisplayForAdmin } from "../../../api/useTerminologyServiceApi";
+import type { ValueSetDisplayForAdmin } from "@madie/madie-util";
 
 const REQUIRED_ASTERISK_COLOR = "rgb(174, 28, 28)";
 
