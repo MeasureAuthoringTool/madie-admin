@@ -486,7 +486,7 @@ export default function ValueSetManagement() {
         open={!!valueSetToDelete}
         onClose={() => setValueSetToDelete(null)}
         onContinue={() => {
-          void handleDeleteValueSet(valueSetToDelete.id);
+          handleDeleteValueSet(valueSetToDelete.id);
           setValueSetToDelete(null);
         }}
         dialogTitle="Delete Component Measure"
