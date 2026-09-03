@@ -484,7 +484,7 @@ export default function ValueSetManagement() {
         open={!!valueSetToDelete}
         onClose={() => setValueSetToDelete(null)}
         onContinue={() => {
-          handleDeleteValueSet(valueSetToDelete.id);
+          void handleDeleteValueSet(valueSetToDelete.id);
           setValueSetToDelete(null);
         }}
         dialogTitle="Delete Component Measure"
@@ -493,7 +493,7 @@ export default function ValueSetManagement() {
           <>
             Are you sure you want to delete URL: {valueSetToDelete?.url}{" "}
             Version:{" "}
-            {valueSetToDelete?.version ? valueSetToDelete?.version : "N/A"}
+            {valueSetToDelete?.version ? valueSetToDelete.version : "N/A"}
           </>
         }
       />
