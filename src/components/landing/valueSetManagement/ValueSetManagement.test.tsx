@@ -241,7 +241,7 @@ describe("ValueSetManagement", () => {
     mockUpdateValueSets.mockResolvedValueOnce(undefined);
 
     render(<ValueSetManagement />);
-    userEvent.click(screen.getByTestId("update-vses-data-button"));
+    void userEvent.click(screen.getByTestId("update-vses-data-button"));
 
     await waitFor(() => {
       expect(
@@ -256,7 +256,7 @@ describe("ValueSetManagement", () => {
     mockUpdateValueSets.mockRejectedValueOnce(new Error("Service is down"));
 
     render(<ValueSetManagement />);
-    userEvent.click(screen.getByTestId("update-vses-data-button"));
+    void userEvent.click(screen.getByTestId("update-vses-data-button"));
 
     await waitFor(() => {
       expect(
@@ -270,7 +270,7 @@ describe("ValueSetManagement", () => {
     mockUpdateValueSets.mockRejectedValueOnce("unexpected string failure");
 
     render(<ValueSetManagement />);
-    userEvent.click(screen.getByTestId("update-vses-data-button"));
+    void userEvent.click(screen.getByTestId("update-vses-data-button"));
 
     await waitFor(() => {
       expect(
@@ -286,7 +286,7 @@ describe("ValueSetManagement", () => {
     mockUpdateValueSets.mockResolvedValueOnce(undefined);
 
     render(<ValueSetManagement />);
-    userEvent.click(screen.getByTestId("update-vses-data-button"));
+    void userEvent.click(screen.getByTestId("update-vses-data-button"));
 
     await waitFor(() => {
       expect(
@@ -294,7 +294,7 @@ describe("ValueSetManagement", () => {
       ).toBeInTheDocument();
     });
 
-    userEvent.click(screen.getByTestId("close-toast-button"));
+    void userEvent.click(screen.getByTestId("close-toast-button"));
 
     await waitFor(() => {
       expect(
@@ -308,7 +308,7 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
     const button = screen.getByTestId("update-vses-data-button");
-    userEvent.click(button);
+    void userEvent.click(button);
 
     await waitFor(() => {
       expect(
@@ -362,7 +362,7 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
     });
 
-    userEvent.click(screen.getByTestId("header-lastUpdated"));
+    void userEvent.click(screen.getByTestId("header-lastUpdated"));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenCalledWith(0, 25, "url,false", "");
@@ -394,7 +394,7 @@ describe("ValueSetManagement", () => {
       ).toBeInTheDocument();
     });
 
-    userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+    void userEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenLastCalledWith(1, 25, "url,false", "");
@@ -922,9 +922,9 @@ describe("ValueSetManagement", () => {
       expect(mockGetValueSets).toHaveBeenCalledTimes(1);
     });
 
-    userEvent.click(await screen.findByTestId("delete-component-1"));
+    void userEvent.click(await screen.findByTestId("delete-component-1"));
 
-    userEvent.click(screen.getByText("Yes, Delete"));
+    void userEvent.click(screen.getByText("Yes, Delete"));
 
     await waitFor(() => {
       expect(mockGetValueSets).toHaveBeenCalledTimes(2);
@@ -951,9 +951,9 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    userEvent.click(await screen.findByTestId("delete-component-1"));
+    void userEvent.click(await screen.findByTestId("delete-component-1"));
 
-    userEvent.click(screen.getByText("Yes, Delete"));
+    void userEvent.click(screen.getByText("Yes, Delete"));
 
     await waitFor(() => {
       expect(

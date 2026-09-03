@@ -199,7 +199,9 @@ export default function ValueSetManagement() {
         cell: ({ row }) => (
           <IconButton
             size="small"
-            onClick={() => setValueSetToDelete(row.original)}
+            onClick={() => {
+              setValueSetToDelete(row.original);
+            }}
             data-testid={`delete-component-${row.original.id}`}
           >
             <Trash2 size={20} color="#D92F2F" />
