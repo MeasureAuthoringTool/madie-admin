@@ -3,12 +3,14 @@ import {
   Button,
   Toast,
   Pagination,
+  MadieDeleteDialog,
   MadieTable,
   TextField,
 } from "@madie/madie-design-system/dist/react";
-import useTerminologyServiceApi, {
+import {
   type ValueSetDisplayForAdmin,
-} from "../../../api/useTerminologyServiceApi";
+  useTerminologyServiceApi,
+} from "@madie/madie-util";
 import {
   getCoreRowModel,
   useReactTable,
@@ -23,6 +25,7 @@ import AddValueSetDialog, {
   type AddValueSetFormValues,
 } from "./AddValueSetDialog";
 import { InputAdornment, IconButton } from "@mui/material";
+import { Trash2 } from "lucide-react";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -60,6 +63,29 @@ export default function ValueSetManagement() {
     useState<ValueSetDisplayForAdmin | null>(null);
   const [isAddValueSetDialogOpen, setIsAddValueSetDialogOpen] =
     useState<boolean>(false);
+
+  const [valueSetToDelete, setValueSetToDelete] =
+    useState<ValueSetDisplayForAdmin | null>();
+
+  const handleDeleteValueSet = async (valueSetId: string) => {
+    try {
+      const { status } = await terminologyServiceApi.deleteValueSet(valueSetId);
+
+      if (status === 204) {
+        setToastType("success");
+        setToastMessage("Value set deleted successfully.");
+        setToastOpen(true);
+
+        setReloadCounter((current) => current + 1);
+      }
+    } catch (err) {
+      console.error("Error deleting value set:", err);
+
+      setToastType("danger");
+      setToastMessage("An error occurred while deleting the value set.");
+      setToastOpen(true);
+    }
+  };
 
   useEffect(() => {
     const loadValueSets = async () => {
@@ -164,6 +190,20 @@ export default function ValueSetManagement() {
           >
             Edit Value Set
           </Button>
+        ),
+      },
+      {
+        header: "Delete",
+        accessorKey: "delete",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <IconButton
+            size="small"
+            onClick={() => setValueSetToDelete(row.original)}
+            data-testid={`delete-component-${row.original.id}`}
+          >
+            <Trash2 size={20} color="#D92F2F" />
+          </IconButton>
         ),
       },
     ],
@@ -440,6 +480,23 @@ export default function ValueSetManagement() {
           autoHideDuration={toastType === "danger" ? null : 6000}
         />
       </div>
+      <MadieDeleteDialog
+        open={!!valueSetToDelete}
+        onClose={() => setValueSetToDelete(null)}
+        onContinue={() => {
+          handleDeleteValueSet(valueSetToDelete.id);
+          setValueSetToDelete(null);
+        }}
+        dialogTitle="Delete Component Measure"
+        hideWarning
+        customDialogBody={
+          <>
+            Are you sure you want to delete URL: {valueSetToDelete?.url}{" "}
+            Version:{" "}
+            {valueSetToDelete?.version ? valueSetToDelete?.version : "N/A"}
+          </>
+        }
+      />
     </div>
   );
 }
