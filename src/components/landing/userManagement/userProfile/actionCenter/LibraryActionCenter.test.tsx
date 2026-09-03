@@ -44,7 +44,7 @@ const renderActionCenter = (props: any = {}) =>
 describe("LibraryActionCenter", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("does not render the transfer, history or compare icons without their handlers", () => {
+  it("does not render the transfer, history, compare or change version icons without their handlers", () => {
     renderActionCenter();
     expect(screen.queryByTestId("transfer-action-btn")).not.toBeInTheDocument();
     expect(
@@ -53,13 +53,17 @@ describe("LibraryActionCenter", () => {
     expect(
       screen.queryByTestId("compare-versions-action-btn")
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("change-version-action-btn")
+    ).not.toBeInTheDocument();
   });
 
-  it("renders the transfer, history and compare icons when handlers are supplied", () => {
+  it("renders the transfer, history, compare and change version icons when handlers are supplied", () => {
     renderActionCenter({
       onTransfer: jest.fn(),
       onViewHistory: jest.fn(),
       onCompareVersions: jest.fn(),
+      onChangeVersion: jest.fn(),
     });
     expect(screen.getByTestId("transfer-action-btn")).toBeInTheDocument();
     expect(
@@ -68,6 +72,7 @@ describe("LibraryActionCenter", () => {
     expect(
       screen.getByTestId("compare-versions-action-btn")
     ).toBeInTheDocument();
+    expect(screen.getByTestId("change-version-action-btn")).toBeInTheDocument();
   });
 
   describe("Transfer", () => {
@@ -161,6 +166,35 @@ describe("LibraryActionCenter", () => {
 
       await userEvent.click(button);
       expect(onCompareVersions).toHaveBeenCalled();
+    });
+  });
+
+  describe("Change Version #", () => {
+    it("is disabled when no library is selected", () => {
+      renderActionCenter({ onChangeVersion: jest.fn() });
+      expect(screen.getByTestId("change-version-action-btn")).toBeDisabled();
+    });
+
+    it("is disabled when more than one library is selected", () => {
+      renderActionCenter({
+        libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+        onChangeVersion: jest.fn(),
+      });
+      expect(screen.getByTestId("change-version-action-btn")).toBeDisabled();
+    });
+
+    it("is enabled for a single eligible library and fires its handler", async () => {
+      const onChangeVersion = jest.fn();
+      renderActionCenter({
+        libraries: [makeLibrary()],
+        onChangeVersion,
+      });
+
+      const button = screen.getByTestId("change-version-action-btn");
+      expect(button).not.toBeDisabled();
+
+      await userEvent.click(button);
+      expect(onChangeVersion).toHaveBeenCalled();
     });
   });
 });

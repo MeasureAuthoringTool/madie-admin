@@ -27,6 +27,14 @@ jest.mock("@madie/madie-util", () => ({
       Compare
     </button>
   ),
+  ChangeVersionAction: (props: any) => (
+    <button
+      data-testid="change-version-action"
+      onClick={() => props.onClick?.()}
+    >
+      Change Version #
+    </button>
+  ),
   ShareAction: (props: any) => (
     <button
       data-testid="share-action"
@@ -62,6 +70,7 @@ const baseProps = {
   onViewHumanReadable: jest.fn(),
   onViewHistory: jest.fn(),
   onCompareVersions: jest.fn(),
+  onChangeVersion: jest.fn(),
   onShare: jest.fn(),
   disabledReason: undefined,
 };
@@ -84,6 +93,7 @@ describe("ActionCenter", () => {
     expect(screen.getByTestId("view-hr-action")).toBeInTheDocument();
     expect(screen.getByTestId("history-action")).toBeInTheDocument();
     expect(screen.getByTestId("compare-action")).toBeInTheDocument();
+    expect(screen.getByTestId("change-version-action")).toBeInTheDocument();
     expect(screen.getByText("|")).toBeInTheDocument();
   });
 
@@ -97,6 +107,7 @@ describe("ActionCenter", () => {
         onViewHumanReadable={undefined as any}
         onViewHistory={undefined as any}
         onCompareVersions={undefined as any}
+        onChangeVersion={undefined as any}
       />
     );
 
@@ -110,6 +121,9 @@ describe("ActionCenter", () => {
     expect(screen.queryByTestId("view-hr-action")).not.toBeInTheDocument();
     expect(screen.queryByTestId("history-action")).not.toBeInTheDocument();
     expect(screen.queryByTestId("compare-action")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("change-version-action")
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("|")).not.toBeInTheDocument();
   });
 });

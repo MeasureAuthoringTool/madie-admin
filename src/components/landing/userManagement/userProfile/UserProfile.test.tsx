@@ -112,6 +112,18 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
+  ChangeVersionDialog: ({ open, onClose, measures }: any) =>
+    open ? (
+      <div
+        data-testid="change-version-dialog"
+        data-measure-id={measures?.[0]?.id}
+      >
+        Change Version #
+        <button data-testid="change-version-close-btn" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    ) : null,
   ShareDialog: ({ open, option, onSave, onClose, unshareFromUser }: any) =>
     open ? (
       <div
@@ -2416,6 +2428,28 @@ describe("UserProfile", () => {
       ).toBeInTheDocument();
     });
 
+    it("opens the Change Version # dialog for the selected measure", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("change-version-action-btn"));
+      const dialog = await screen.findByTestId("change-version-dialog");
+      expect(dialog).toHaveAttribute("data-measure-id", "m1");
+    });
+
+    it("closes the Change Version # dialog", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("change-version-action-btn"));
+      userEvent.click(await screen.findByTestId("change-version-close-btn"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("change-version-dialog")
+        ).not.toBeInTheDocument()
+      );
+    });
+
     it("opens the Compare dialog for two selected instances", async () => {
       mockAdminSearchMeasures.mockResolvedValue(
         pageWith([draftMeasure, sameSetSibling], 2)
@@ -2786,6 +2820,29 @@ describe("UserProfile", () => {
       expect(
         screen.getByTestId("compare-versions-dialog-count")
       ).toHaveTextContent("2");
+    });
+
+    it("opens and closes the Change Version # dialog for a single selected library", async () => {
+      await renderOwnedLibrariesTab();
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const changeVersionBtn = await screen.findByTestId(
+        "change-version-action-btn"
+      );
+      await waitFor(() => expect(changeVersionBtn).toBeEnabled());
+
+      await userEvent.click(changeVersionBtn);
+
+      const dialog = await screen.findByTestId("change-version-dialog");
+      expect(dialog).toHaveAttribute("data-library-id", "lib1");
+
+      await userEvent.click(screen.getByTestId("change-version-dialog-close"));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("change-version-dialog")
+        ).not.toBeInTheDocument()
+      );
     });
 
     it("offers both actions on the Shared Libraries tab", async () => {
