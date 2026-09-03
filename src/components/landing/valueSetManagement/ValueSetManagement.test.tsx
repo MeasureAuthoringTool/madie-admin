@@ -860,6 +860,39 @@ describe("ValueSetManagement", () => {
       screen.getByText("Value set deleted successfully.")
     ).toBeInTheDocument();
   });
+  it("closes delete", async () => {
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      numberOfElements: 1,
+    });
+
+    mockDeleteValueSet.mockResolvedValue({
+      status: 204,
+    });
+
+    render(<ValueSetManagement />);
+
+    userEvent.click(await screen.findByTestId("delete-component-1"));
+
+    userEvent.click(screen.getByText("Cancel"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Yes, Delete")).not.toBeInTheDocument();
+    });
+  });
   it("reloads value sets after successful delete", async () => {
     mockDeleteValueSet.mockResolvedValue({
       status: 204,
