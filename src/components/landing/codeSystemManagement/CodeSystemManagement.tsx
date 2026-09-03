@@ -615,7 +615,7 @@ export default function CodeSystemManagement() {
             <br />
             FHIR Version:{" "}
             <span className="strong">
-              {deletingCodeSystem?.version?.fhirVersion || "-"}
+              {deletingCodeSystem?.version.fhirVersion || "-"}
             </span>
             <br />
             Full URL:{" "}
