@@ -848,9 +848,9 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    userEvent.click(await screen.findByTestId("delete-component-1"));
+    void userEvent.click(await screen.findByTestId("delete-component-1"));
 
-    userEvent.click(screen.getByText("Yes, Delete"));
+    void userEvent.click(screen.getByText("Yes, Delete"));
 
     await waitFor(() => {
       expect(mockDeleteValueSet).toHaveBeenCalledWith("1");
@@ -885,9 +885,9 @@ describe("ValueSetManagement", () => {
 
     render(<ValueSetManagement />);
 
-    userEvent.click(await screen.findByTestId("delete-component-1"));
+    void userEvent.click(await screen.findByTestId("delete-component-1"));
 
-    userEvent.click(screen.getByText("Cancel"));
+    void userEvent.click(screen.getByText("Cancel"));
 
     await waitFor(() => {
       expect(screen.queryByText("Yes, Delete")).not.toBeInTheDocument();
