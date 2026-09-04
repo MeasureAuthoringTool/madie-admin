@@ -12,6 +12,7 @@ describe("CodeSystemManagement", () => {
   const mockGetCodeSystems = jest.fn();
   const mockCreateCodeSystem = jest.fn();
   const mockUpdateCodeSystem = jest.fn();
+  const mockDeleteCodeSystem = jest.fn();
 
   const existingCodeSystem = {
     id: "cs-1",
@@ -37,12 +38,14 @@ describe("CodeSystemManagement", () => {
     });
     mockCreateCodeSystem.mockResolvedValue({});
     mockUpdateCodeSystem.mockResolvedValue({});
+    mockDeleteCodeSystem.mockResolvedValue({});
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGetCodeSystems,
       createCodeSystem: mockCreateCodeSystem,
       updateCodeSystem: mockUpdateCodeSystem,
+      deleteCodeSystem: mockDeleteCodeSystem,
     });
   });
 
@@ -710,6 +713,91 @@ describe("CodeSystemManagement", () => {
       expect(
         screen.queryByText("Add New Codesystem Data")
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("delete code system", () => {
+    const renderWithExistingCodeSystem = async () => {
+      mockGetCodeSystems.mockResolvedValue({
+        content: [existingCodeSystem],
+        totalElements: 1,
+        totalPages: 1,
+        number: 0,
+        size: 25,
+        numberOfElements: 1,
+      });
+
+      render(<CodeSystemManagement />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("code-system-table")).toBeInTheDocument();
+      });
+    };
+
+    it("opens delete confirmation dialog when delete icon is clicked", async () => {
+      await renderWithExistingCodeSystem();
+
+      await userEvent.click(screen.getByTestId("delete-code-system-cs-1"));
+
+      expect(screen.getByTestId("delete-dialog")).toBeInTheDocument();
+      expect(screen.getByText("Delete Code system")).toBeInTheDocument();
+    });
+
+    it("closes dialog and does not delete when cancel is clicked", async () => {
+      await renderWithExistingCodeSystem();
+
+      await userEvent.click(screen.getByTestId("delete-code-system-cs-1"));
+      await userEvent.click(screen.getByTestId("delete-dialog-cancel-button"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument();
+      });
+      expect(mockDeleteCodeSystem).not.toHaveBeenCalled();
+    });
+
+    it("deletes the code system, reloads table, and shows success toast", async () => {
+      mockGetCodeSystems
+        .mockResolvedValueOnce({
+          content: [existingCodeSystem],
+          totalElements: 1,
+          totalPages: 1,
+          number: 0,
+          size: 25,
+          numberOfElements: 1,
+        })
+        .mockResolvedValueOnce({
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 25,
+          numberOfElements: 0,
+        });
+
+      render(<CodeSystemManagement />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("delete-code-system-cs-1")
+        ).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByTestId("delete-code-system-cs-1"));
+      await userEvent.click(
+        screen.getByTestId("delete-dialog-continue-button")
+      );
+
+      await waitFor(() => {
+        expect(mockDeleteCodeSystem).toHaveBeenCalledWith("cs-1");
+      });
+
+      await waitFor(() => {
+        expect(mockGetCodeSystems).toHaveBeenCalledTimes(2);
+      });
+
+      expect(
+        screen.getByText("Code system successfully deleted")
+      ).toBeInTheDocument();
     });
   });
 

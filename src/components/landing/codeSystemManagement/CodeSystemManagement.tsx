@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
+  MadieDeleteDialog,
   Toast,
   Pagination,
   MadieTable,
@@ -20,6 +21,7 @@ import { IconButton, InputAdornment, MenuItem } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import CodeSystemDialog, {
   type NewCodeSystemFormData,
 } from "./CodeSystemDialog";
@@ -42,6 +44,9 @@ export default function CodeSystemManagement() {
   const [editingCodeSystemId, setEditingCodeSystemId] = useState<string | null>(
     null
   );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [deletingCodeSystem, setDeletingCodeSystem] =
+    useState<CodeSystem | null>(null);
   const [newCodeSystemFormData, setNewCodeSystemFormData] =
     useState<NewCodeSystemFormData>({
       title: "",
@@ -152,6 +157,40 @@ export default function CodeSystemManagement() {
     setIsEditCodeSystemDialogOpen(false);
     setEditingCodeSystemId(null);
     resetNewCodeSystemFormData();
+  };
+
+  const handleOpenDeleteCodeSystemDialog = (codeSystem: CodeSystem) => {
+    setDeletingCodeSystem(codeSystem);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteCodeSystemDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setDeletingCodeSystem(null);
+  };
+
+  const handleDeleteCodeSystem = async (): Promise<void> => {
+    if (!deletingCodeSystem) {
+      return;
+    }
+
+    try {
+      await terminologyServiceApi.deleteCodeSystem(deletingCodeSystem.id);
+      await loadCodeSystems();
+      setToastType("success");
+      setToastMessage("Code system successfully deleted");
+      setToastOpen(true);
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ??
+        err.message ??
+        "An error occurred while deleting the code system.";
+      setToastType("danger");
+      setToastMessage(errorMessage);
+      setToastOpen(true);
+    } finally {
+      handleCloseDeleteCodeSystemDialog();
+    }
   };
 
   const handleNewCodeSystemFieldChange = (
@@ -300,13 +339,24 @@ export default function CodeSystemManagement() {
         id: "actions",
         header: "Actions",
         cell: (info) => (
-          <IconButton
-            aria-label="Edit code system"
-            data-testid={`edit-code-system-${info.row.original.id}`}
-            onClick={() => handleEditCodeSystem(info.row.original)}
-          >
-            <EditIcon />
-          </IconButton>
+          <div style={{ display: "flex" }}>
+            <IconButton
+              aria-label="Edit code system"
+              data-testid={`edit-code-system-${info.row.original.id}`}
+              onClick={() => handleEditCodeSystem(info.row.original)}
+            >
+              <EditIcon />
+            </IconButton>
+            <IconButton
+              aria-label="Delete code system"
+              data-testid={`delete-code-system-${info.row.original.id}`}
+              onClick={() =>
+                handleOpenDeleteCodeSystemDialog(info.row.original)
+              }
+            >
+              <DeleteIcon />
+            </IconButton>
+          </div>
         ),
       },
     ],
@@ -545,6 +595,38 @@ export default function CodeSystemManagement() {
         onSave={handleSaveCodeSystem}
         onFieldChange={handleNewCodeSystemFieldChange}
         title="Edit Codesystem Data"
+      />
+
+      <MadieDeleteDialog
+        open={isDeleteDialogOpen}
+        onClose={handleCloseDeleteCodeSystemDialog}
+        onContinue={handleDeleteCodeSystem}
+        dialogTitle="Delete Code system"
+        statement
+        customDialogBody={
+          <>
+            Are you sure you want to delete
+            <br />
+            Title:{" "}
+            <span className="strong">{deletingCodeSystem?.title || "-"}</span>
+            <br />
+            Name:{" "}
+            <span className="strong">{deletingCodeSystem?.name || "-"}</span>
+            <br />
+            FHIR Version:{" "}
+            <span className="strong">
+              {deletingCodeSystem?.version.fhirVersion || "-"}
+            </span>
+            <br />
+            Full URL:{" "}
+            <span className="strong">{deletingCodeSystem?.fullUrl || "-"}</span>
+            <br />
+            Latest Version:{" "}
+            <span className="strong">
+              {deletingCodeSystem?.isLatestVersion ? "Yes" : "No"}
+            </span>
+          </>
+        }
       />
     </div>
   );

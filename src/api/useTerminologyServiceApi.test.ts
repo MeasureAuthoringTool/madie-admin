@@ -499,6 +499,50 @@ describe("TerminologyServiceApi", () => {
     });
   });
 
+  describe("deleteCodeSystem", () => {
+    it("calls the delete endpoint with correct headers", async () => {
+      const deleteMock = axios.delete as jest.Mock;
+      deleteMock.mockResolvedValueOnce({ status: 204 });
+
+      await terminologyService.deleteCodeSystem("cs-1");
+
+      expect(deleteMock.mock.calls).toHaveLength(1);
+      expect(deleteMock.mock.calls[0]).toEqual([
+        "http://test.url/terminology/admin/code-system/cs-1",
+        {
+          headers: { Authorization: "Bearer test-token" },
+        },
+      ]);
+    });
+
+    it("uses the latest access token on each call", async () => {
+      const tokenFn = jest
+        .fn()
+        .mockReturnValueOnce("token-1")
+        .mockReturnValueOnce("token-2");
+      const service = new TerminologyServiceApi("http://test.url", tokenFn);
+      const deleteMock = axios.delete as jest.Mock;
+      deleteMock.mockResolvedValue({ status: 204 });
+
+      await service.deleteCodeSystem("cs-1");
+      await service.deleteCodeSystem("cs-2");
+
+      expect(deleteMock.mock.calls).toHaveLength(2);
+      expect(deleteMock.mock.calls[0]).toEqual([
+        "http://test.url/terminology/admin/code-system/cs-1",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-1" },
+        }),
+      ]);
+      expect(deleteMock.mock.calls[1]).toEqual([
+        "http://test.url/terminology/admin/code-system/cs-2",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer token-2" },
+        }),
+      ]);
+    });
+  });
+
   describe("addValueSet", () => {
     const validValueSet = {
       url: "http://example.org/fhir/ValueSet/test",
