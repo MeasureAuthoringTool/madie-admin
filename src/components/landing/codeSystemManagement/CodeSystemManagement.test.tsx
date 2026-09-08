@@ -2,10 +2,12 @@ import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
-import useTerminologyServiceApi from "../../../api/useTerminologyServiceApi";
+import { useTerminologyServiceApi } from "@madie/madie-util";
 import userEvent from "@testing-library/user-event";
 
-jest.mock("../../../api/useTerminologyServiceApi");
+jest.mock("@madie/madie-util", () => ({
+  useTerminologyServiceApi: jest.fn(),
+}));
 
 describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
