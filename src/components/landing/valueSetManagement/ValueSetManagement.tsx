@@ -162,7 +162,7 @@ export default function ValueSetManagement() {
               setTargetValueSet(row.original);
             }}
           >
-            Edit Value Set
+            View/Edit Value Set
           </Button>
         ),
       },

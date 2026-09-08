@@ -205,7 +205,7 @@ describe("ValueSetManagement", () => {
       expect(screen.getByText("http://example.com/vs")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Edit Value Set")).toBeInTheDocument();
+    expect(screen.getByText("View/Edit Value Set")).toBeInTheDocument();
   });
 
   it("renders manually modified icon when value set is manually modified", async () => {
@@ -609,6 +609,11 @@ describe("ValueSetManagement", () => {
     userEvent.click(
       await screen.findByRole("button", { name: /edit value set/i })
     );
+
+    fireEvent.change(screen.getByTestId("edit-value-set-version-input"), {
+      target: { value: "1.1" },
+    });
+
     userEvent.click(screen.getByTestId("edit-value-set-save-button"));
 
     await waitFor(() => {
