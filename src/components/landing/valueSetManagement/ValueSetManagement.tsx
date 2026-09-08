@@ -157,6 +157,18 @@ export default function ValueSetManagement() {
       {
         header: "URL",
         accessorKey: "url",
+        cell: (info) => (
+          <div
+            style={{
+              width: "250px",
+              whiteSpace: "normal",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+            }}
+          >
+            {info.getValue() as string}
+          </div>
+        ),
       },
       {
         header: "Last Updated",
