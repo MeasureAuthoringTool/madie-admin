@@ -180,7 +180,12 @@ declare module "@madie/madie-util" {
     ): Promise<Page<ValueSetDisplayForAdmin>>;
 
     searchValueSets(values: Record<string, any>): Promise<ValueSetSearchResult>;
-
+    createCodeSystem(codeSystem: CreateCodeSystemRequest): Promise<CodeSystem>;
+    updateCodeSystem(
+      id: string,
+      codeSystem: CreateCodeSystemRequest
+    ): Promise<CodeSystem>;
+    deleteCodeSystem(id: string): Promise<void>;
     validateCodes(
       customCqlCodes: CustomCqlCode[],
       loggedInUMLS: boolean,
