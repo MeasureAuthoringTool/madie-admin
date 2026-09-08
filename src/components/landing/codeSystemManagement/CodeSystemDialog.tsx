@@ -1,6 +1,7 @@
 import React from "react";
 import { MadieDialog, TextField } from "@madie/madie-design-system/dist/react";
 import { Box, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { useFormik } from "formik";
 
 interface NewCodeSystemFormData {
   title: string;
@@ -14,31 +15,51 @@ interface NewCodeSystemFormData {
 
 interface CodeSystemDialogProps {
   open: boolean;
-  formData: NewCodeSystemFormData;
+  initialCodeSystemData: NewCodeSystemFormData;
   onClose: () => void;
   onSave: (formData: NewCodeSystemFormData) => Promise<void>;
-  onFieldChange: (
-    field: keyof NewCodeSystemFormData,
-    value: string | boolean
-  ) => void;
   title?: string;
   saveButtonText?: string;
 }
 
 const CodeSystemDialog = ({
   open,
-  formData,
+  initialCodeSystemData: initialFormData,
   onClose,
   onSave,
-  onFieldChange,
   title = "Add New Codesystem Data",
   saveButtonText = "Save",
 }: CodeSystemDialogProps) => {
-  const isSaveDisabled =
-    !formData.name.trim() ||
-    !formData.fhirVersion.trim() ||
-    !formData.fullUrl.trim() ||
-    !formData.oid.trim();
+  const formik = useFormik<NewCodeSystemFormData>({
+    initialValues: initialFormData,
+    enableReinitialize: true,
+    validateOnMount: true,
+    validate: (values) => {
+      const errors: Partial<Record<keyof NewCodeSystemFormData, string>> = {};
+
+      if (!values.name.trim()) {
+        errors.name = "Name is required.";
+      }
+      if (!values.fhirVersion.trim()) {
+        errors.fhirVersion = "FHIR Version is required.";
+      }
+      if (!values.fullUrl.trim()) {
+        errors.fullUrl = "Full URL is required.";
+      }
+      if (!values.oid.trim()) {
+        errors.oid = "OID is required.";
+      }
+
+      return errors;
+    },
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        await onSave(values);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const formRowSx = {
     marginTop: "16px",
@@ -52,10 +73,7 @@ const CodeSystemDialog = ({
         id: "add-code-system-dialog",
         open,
         onClose,
-        onSubmit: (event) => {
-          event.preventDefault();
-          onSave(formData);
-        },
+        onSubmit: formik.handleSubmit,
       }}
       cancelButtonProps={{
         variant: "secondary",
@@ -67,7 +85,13 @@ const CodeSystemDialog = ({
         type: "submit",
         continueText: saveButtonText,
         "data-testid": "add-code-system-save-button",
-        disabled: isSaveDisabled,
+        disabled:
+          formik.isSubmitting ||
+          !formik.dirty ||
+          !formik.values.name.trim() ||
+          !formik.values.fhirVersion.trim() ||
+          !formik.values.fullUrl.trim() ||
+          !formik.values.oid.trim(),
       }}
     >
       <div
@@ -96,6 +120,7 @@ const CodeSystemDialog = ({
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("name")}
           required
           label="Name (Machine Readable)"
           id="add-code-system-name"
@@ -106,15 +131,14 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter Name"
           size="small"
-          value={formData.name}
-          onChange={(e) => {
-            onFieldChange("name", e.target.value);
-          }}
+          error={formik.touched.name && Boolean(formik.errors.name)}
+          helperText={formik.touched.name && formik.errors.name}
         />
       </Box>
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("title")}
           label="Title (Human Readable)"
           id="add-code-system-title"
           data-testid="add-code-system-title"
@@ -123,15 +147,12 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter Title"
           size="small"
-          value={formData.title}
-          onChange={(e) => {
-            onFieldChange("title", e.target.value);
-          }}
         />
       </Box>
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("fhirVersion")}
           required
           label="FHIR Version"
           id="add-code-system-fhir-version"
@@ -142,15 +163,16 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter FHIR Version"
           size="small"
-          value={formData.fhirVersion}
-          onChange={(e) => {
-            onFieldChange("fhirVersion", e.target.value);
-          }}
+          error={
+            formik.touched.fhirVersion && Boolean(formik.errors.fhirVersion)
+          }
+          helperText={formik.touched.fhirVersion && formik.errors.fhirVersion}
         />
       </Box>
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("vsacVersion")}
           label="VSAC Version"
           id="add-code-system-vsac-version"
           data-testid="add-code-system-vsac-version"
@@ -159,15 +181,12 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter VSAC Version"
           size="small"
-          value={formData.vsacVersion}
-          onChange={(e) => {
-            onFieldChange("vsacVersion", e.target.value);
-          }}
         />
       </Box>
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("fullUrl")}
           required
           label="Full URL"
           id="add-code-system-full-url"
@@ -178,15 +197,14 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter Full URL"
           size="small"
-          value={formData.fullUrl}
-          onChange={(e) => {
-            onFieldChange("fullUrl", e.target.value);
-          }}
+          error={formik.touched.fullUrl && Boolean(formik.errors.fullUrl)}
+          helperText={formik.touched.fullUrl && formik.errors.fullUrl}
         />
       </Box>
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("oid")}
           required
           label="OID"
           id="add-code-system-oid"
@@ -197,10 +215,8 @@ const CodeSystemDialog = ({
           }}
           placeholder="Enter OID"
           size="small"
-          value={formData.oid}
-          onChange={(e) => {
-            onFieldChange("oid", e.target.value);
-          }}
+          error={formik.touched.oid && Boolean(formik.errors.oid)}
+          helperText={formik.touched.oid && formik.errors.oid}
         />
       </Box>
 
@@ -211,9 +227,9 @@ const CodeSystemDialog = ({
               data-testid="add-code-system-latest-checkbox"
               id="add-code-system-latest-checkbox"
               name="isLatestVersion"
-              checked={formData.isLatestVersion}
+              checked={formik.values.isLatestVersion}
               onChange={(e) => {
-                onFieldChange("isLatestVersion", e.target.checked);
+                formik.setFieldValue("isLatestVersion", e.target.checked);
               }}
               slotProps={{
                 input: {

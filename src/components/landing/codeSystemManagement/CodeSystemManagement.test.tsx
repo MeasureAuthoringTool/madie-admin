@@ -849,10 +849,17 @@ describe("CodeSystemManagement", () => {
       ).toBeChecked();
     });
 
-    it("keeps save enabled with existing valid data and disables it when a required field is cleared", async () => {
+    it("keeps save disabled until existing data is changed, and disables it again when a required field is cleared", async () => {
       await renderWithExistingCodeSystem();
 
       const saveButton = screen.getByTestId("add-code-system-save-button");
+      expect(saveButton).toBeDisabled();
+
+      await userEvent.type(
+        screen.getByTestId("add-code-system-oid-input"),
+        "4"
+      );
+
       expect(saveButton).toBeEnabled();
 
       await userEvent.clear(screen.getByTestId("add-code-system-oid-input"));
@@ -864,7 +871,7 @@ describe("CodeSystemManagement", () => {
         "1.2.3"
       );
 
-      expect(saveButton).toBeEnabled();
+      expect(saveButton).toBeDisabled();
     });
 
     it("resets edited fields and closes the modal on cancel without calling updateCodeSystem", async () => {
@@ -941,6 +948,12 @@ describe("CodeSystemManagement", () => {
       });
 
       await renderWithExistingCodeSystem();
+
+      await userEvent.clear(screen.getByTestId("add-code-system-name-input"));
+      await userEvent.type(
+        screen.getByTestId("add-code-system-name-input"),
+        "updated-name"
+      );
 
       await userEvent.click(screen.getByTestId("add-code-system-save-button"));
 
