@@ -119,7 +119,7 @@ export default function VSEDialog(props: ModalProps) {
         variant: "cyan",
         type: "submit",
         continueText: "Save",
-        disabled: formik.isSubmitting || !formik.isValid,
+        disabled: formik.isSubmitting || !formik.isValid || !formik.dirty,
         "data-testid": "edit-value-set-save-button",
       }}
     >
