@@ -47,7 +47,8 @@ const CodeSystemDialog = ({
         errors.fullUrl = "Full URL is required.";
       }
       if (!values.oid.trim()) {
-        errors.oid = "OID is required.";
+        errors.oid =
+          "OID is required. Enter NOT.IN.VSAC if the Code System is not in VSAC.";
       }
 
       return errors;
@@ -206,7 +207,7 @@ const CodeSystemDialog = ({
         <TextField
           {...formik.getFieldProps("oid")}
           required
-          label="OID"
+          label="OID (If not in VSAC, enter NOT.IN.VSAC)"
           id="add-code-system-oid"
           data-testid="add-code-system-oid"
           inputProps={{
