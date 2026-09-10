@@ -9,8 +9,7 @@ import {
   TextField,
 } from "@madie/madie-design-system/dist/react";
 import "./CodeSystemManagement.scss";
-import { useTerminologyServiceApi } from "@madie/madie-util";
-import { CodeSystem } from "./CodeSystem";
+import { useTerminologyServiceApi, type CodeSystem } from "@madie/madie-util";
 import {
   ColumnDef,
   getCoreRowModel,
