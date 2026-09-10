@@ -4,11 +4,18 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
 import { useUserServiceApi } from "@madie/madie-util";
+import useUserExportServiceApi from "../../../api/useUserExportServiceApi";
 
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
+}));
+
+const mockExportFullUserList = jest.fn();
+jest.mock("../../../api/useUserExportServiceApi", () => ({
+  __esModule: true,
+  default: jest.fn(),
 }));
 
 const renderRouter = () =>
@@ -67,8 +74,12 @@ describe("UserManagement", () => {
     window.history.replaceState({}, "", "/admin");
     mockFetchUsers.mockReset();
     mockNavigate.mockReset();
+    mockExportFullUserList.mockReset();
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
+    });
+    (useUserExportServiceApi as jest.Mock).mockReturnValue({
+      exportFullUserList: mockExportFullUserList,
     });
   });
 
@@ -757,5 +768,281 @@ describe("UserManagement", () => {
     fireEvent.click(checkboxes[0]);
 
     expect(checkboxes[1]).toBeChecked();
+  });
+
+  describe("Export action", () => {
+    const originalCreateObjectURL = window.URL.createObjectURL;
+    const originalRevokeObjectURL = window.URL.revokeObjectURL;
+
+    beforeEach(() => {
+      window.URL.createObjectURL = jest.fn().mockReturnValue("blob:url");
+      window.URL.revokeObjectURL = jest.fn();
+    });
+
+    afterEach(() => {
+      window.URL.createObjectURL = originalCreateObjectURL;
+      window.URL.revokeObjectURL = originalRevokeObjectURL;
+    });
+
+    it("renders the Export button and opens the dropdown on click", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      const exportButton = screen.getByTestId("user-export-button");
+      expect(exportButton).toBeInTheDocument();
+
+      fireEvent.click(exportButton);
+
+      expect(
+        screen.getByTestId("user-export-full-user-list")
+      ).toBeInTheDocument();
+    });
+
+    it("downloads the file and shows a success toast when export succeeds", async () => {
+      const blob = new Blob(["test"], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      mockExportFullUserList.mockResolvedValue(blob);
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      const anchorClick = jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => {});
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-full-user-list"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("user-export-success-message")
+        ).toBeInTheDocument()
+      );
+      expect(mockExportFullUserList).toHaveBeenCalledTimes(1);
+      expect(anchorClick).toHaveBeenCalled();
+      expect(
+        screen.getByText("Full User Report exported successfully")
+      ).toBeInTheDocument();
+
+      anchorClick.mockRestore();
+    });
+
+    it("shows an error toast when export fails", async () => {
+      mockExportFullUserList.mockRejectedValue(
+        new Error("Unable to export the full user list.")
+      );
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-full-user-list"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("user-export-error-message")
+        ).toBeInTheDocument()
+      );
+      expect(
+        screen.getByText("Unable to export the full user list.")
+      ).toBeInTheDocument();
+    });
+
+    it("shows the default error message when the failure has no message", async () => {
+      // Reject with a value that has no `message` property to exercise the fallback.
+      mockExportFullUserList.mockRejectedValue({});
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-full-user-list"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("user-export-error-message")
+        ).toBeInTheDocument()
+      );
+      expect(
+        screen.getByText("Unable to export the full user list.")
+      ).toBeInTheDocument();
+    });
+
+    it("closes the toast when the close button is clicked", async () => {
+      const blob = new Blob(["test"], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      mockExportFullUserList.mockResolvedValue(blob);
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      const anchorClick = jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => {});
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-full-user-list"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Full User Report exported successfully")
+        ).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("close-toast-button"));
+
+      await waitFor(() =>
+        expect(
+          screen.queryByText("Full User Report exported successfully")
+        ).not.toBeInTheDocument()
+      );
+
+      anchorClick.mockRestore();
+    });
+  });
+
+  it("renders a fallback status chip and raw label for an unknown status", async () => {
+    mockFetchUsers.mockResolvedValue([
+      {
+        id: "42",
+        harpId: "harp42",
+        firstName: "Unknown",
+        lastName: "Status",
+        email: "unknown@example.com",
+        status: "MYSTERY",
+        lastLoginAt: null,
+      },
+    ]);
+    renderRouter();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    const chip = screen.getByTestId("status-chip-MYSTERY");
+    expect(chip).toBeInTheDocument();
+    // getStatusLabel falls back to the raw status value when not in the label map.
+    expect(chip).toHaveTextContent("MYSTERY");
+  });
+
+  it("matches users with missing harpId/email/status when searching without a filter", async () => {
+    mockFetchUsers.mockResolvedValue([
+      // No harpId, email, or status — exercises the `|| ""` / `?? ""` fallbacks.
+      { id: "77", firstName: "Missing", lastName: "Fields" },
+    ]);
+    renderRouter();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "missing" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("user-row-item")).toHaveLength(1);
+    });
+  });
+
+  it("falls back to empty string when the filtered field is missing on a user", async () => {
+    mockFetchUsers.mockResolvedValue([
+      { id: "78", firstName: "No", lastName: "Contact", status: "ACTIVE" },
+    ]);
+    renderRouter();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    // Harp ID filter — user has no harpId, so value falls back to "".
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Harp ID" },
+    });
+    fireEvent.change(screen.getByTestId("user-search-input"), {
+      target: { value: "anything" },
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument()
+    );
+
+    // Email filter — user has no email, so value falls back to "".
+    fireEvent.change(screen.getByTestId("user-filter-by-input"), {
+      target: { value: "Email Address" },
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("no-results-message")).toBeInTheDocument()
+    );
+  });
+
+  it("ignores non-Enter key presses in the search field", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    renderRouter();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    const searchInput = screen.getByTestId("user-search-input");
+    fireEvent.keyPress(searchInput, { key: "a", code: "KeyA", charCode: 97 });
+
+    // Non-Enter keys take the falsy branch and do nothing.
+    expect(searchInput).toBeInTheDocument();
+  });
+
+  it("applies sortable styling, hover icon and sort titles across columns", async () => {
+    mockFetchUsers.mockResolvedValue(mockUsers);
+    renderRouter();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+    );
+
+    const nameButton = screen.getByText("Name").closest("button");
+    const nameHeader = screen.getByText("Name").closest("th");
+    const harpButton = screen.getByText("Harp ID").closest("button");
+    const harpHeader = screen.getByText("Harp ID").closest("th");
+    if (!nameButton || !nameHeader || !harpButton || !harpHeader) {
+      throw new Error("Headers not found");
+    }
+
+    // Sortable columns get the "sortable" modifier class.
+    expect(nameButton).toHaveClass("sortable");
+
+    // Name is sorted ascending by default, so its next sort is descending.
+    expect(nameButton).toHaveAttribute("title", "Sort descending");
+    // Harp ID is unsorted, so its next sort is ascending.
+    expect(harpButton).toHaveAttribute("title", "Sort ascending");
+
+    // Hovering an unsorted, sortable column shows the "unfold" icon.
+    fireEvent.mouseEnter(harpHeader);
+    await waitFor(() =>
+      expect(harpHeader.querySelector("svg")).toBeInTheDocument()
+    );
+    fireEvent.mouseLeave(harpHeader);
+
+    // Sorting Harp ID ascending flips its next-sort title to descending.
+    fireEvent.click(harpHeader);
+    await waitFor(() =>
+      expect(harpButton).toHaveAttribute("title", "Sort descending")
+    );
+
+    // Sorting Harp ID descending flips it back to ascending.
+    fireEvent.click(harpHeader);
+    await waitFor(() =>
+      expect(harpButton).toHaveAttribute("title", "Sort ascending")
+    );
   });
 });

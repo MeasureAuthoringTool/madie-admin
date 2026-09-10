@@ -20,6 +20,10 @@
 
   .user-search-row {
     padding: 16px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
 
     .user-search-inner {
       display: flex;
@@ -32,6 +36,32 @@
 
       .search-wrapper {
         flex: 0 0 50%;
+      }
+    }
+
+    .user-export {
+      display: flex;
+      align-items: center;
+
+      .user-export-link {
+        display: inline-flex;
+        align-items: center;
+        background: none;
+        border: none;
+        padding: 8px 2px;
+        font: inherit;
+        color: #0073c8;
+        cursor: pointer;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+          text-decoration: underline;
+        }
+
+        &:disabled {
+          color: #717171;
+          cursor: not-allowed;
+        }
       }
     }
   }
