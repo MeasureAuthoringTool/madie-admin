@@ -193,16 +193,6 @@ export default function CodeSystemManagement() {
     }
   };
 
-  const handleNewCodeSystemFieldChange = (
-    field: keyof NewCodeSystemFormData,
-    value: string | boolean
-  ) => {
-    setNewCodeSystemFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const handleSaveCodeSystem = async (
     formData: NewCodeSystemFormData
   ): Promise<void> => {
@@ -582,18 +572,16 @@ export default function CodeSystemManagement() {
 
       <CodeSystemDialog
         open={isAddCodeSystemDialogOpen}
-        formData={newCodeSystemFormData}
+        initialCodeSystemData={newCodeSystemFormData}
         onClose={handleCloseAddCodeSystemDialog}
         onSave={handleSaveCodeSystem}
-        onFieldChange={handleNewCodeSystemFieldChange}
       />
 
       <CodeSystemDialog
         open={isEditCodeSystemDialogOpen}
-        formData={newCodeSystemFormData}
+        initialCodeSystemData={newCodeSystemFormData}
         onClose={handleCloseEditCodeSystemDialog}
         onSave={handleSaveCodeSystem}
-        onFieldChange={handleNewCodeSystemFieldChange}
         title="Edit Codesystem Data"
       />
 
