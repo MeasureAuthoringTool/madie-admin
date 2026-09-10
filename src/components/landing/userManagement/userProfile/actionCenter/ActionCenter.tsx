@@ -70,10 +70,16 @@ export default function ActionCenter({
         />
       )}
 
-      {(onViewHumanReadable ??
-        onViewHistory ??
-        onCompareVersions ??
-        onChangeVersion) && <PipeSeparator />}
+      {onChangeVersion && (
+        <>
+          <PipeSeparator />
+          <ChangeVersionAction measures={measures} onClick={onChangeVersion} />
+        </>
+      )}
+
+      {(onViewHumanReadable ?? onViewHistory ?? onCompareVersions) && (
+        <PipeSeparator />
+      )}
 
       {onViewHumanReadable && (
         <ViewHRAction measures={measures} onClick={onViewHumanReadable} />
@@ -86,9 +92,6 @@ export default function ActionCenter({
           measures={measures}
           onClick={onCompareVersions}
         />
-      )}
-      {onChangeVersion && (
-        <ChangeVersionAction measures={measures} onClick={onChangeVersion} />
       )}
     </div>
   );

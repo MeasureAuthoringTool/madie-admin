@@ -94,36 +94,34 @@ describe("ActionCenter", () => {
     expect(screen.getByTestId("history-action")).toBeInTheDocument();
     expect(screen.getByTestId("compare-action")).toBeInTheDocument();
     expect(screen.getByTestId("change-version-action")).toBeInTheDocument();
-    expect(screen.getByText("|")).toBeInTheDocument();
+    expect(screen.getAllByText("|")).toHaveLength(2);
   });
+});
 
-  it("omits optional actions and separator when handlers are missing", () => {
-    render(
-      <ActionCenter
-        {...baseProps}
-        canDelete={false}
-        onShare={undefined as any}
-        onTransfer={undefined as any}
-        onViewHumanReadable={undefined as any}
-        onViewHistory={undefined as any}
-        onCompareVersions={undefined as any}
-        onChangeVersion={undefined as any}
-      />
-    );
+it("omits optional actions and separator when handlers are missing", () => {
+  render(
+    <ActionCenter
+      {...baseProps}
+      canDelete={false}
+      onShare={undefined as any}
+      onTransfer={undefined as any}
+      onViewHumanReadable={undefined as any}
+      onViewHistory={undefined as any}
+      onCompareVersions={undefined as any}
+      onChangeVersion={undefined as any}
+    />
+  );
 
-    expect(screen.getByTestId("delete-action")).toHaveAttribute(
-      "data-disabled",
-      "true"
-    );
-    expect(screen.getByTestId("export-action")).toBeInTheDocument();
-    expect(screen.queryByTestId("share-action")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("transfer-action")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("view-hr-action")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("history-action")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("compare-action")).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId("change-version-action")
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("|")).not.toBeInTheDocument();
-  });
+  expect(screen.getByTestId("delete-action")).toHaveAttribute(
+    "data-disabled",
+    "true"
+  );
+  expect(screen.getByTestId("export-action")).toBeInTheDocument();
+  expect(screen.queryByTestId("share-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("transfer-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("view-hr-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("history-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("compare-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("change-version-action")).not.toBeInTheDocument();
+  expect(screen.queryByText("|")).not.toBeInTheDocument();
 });

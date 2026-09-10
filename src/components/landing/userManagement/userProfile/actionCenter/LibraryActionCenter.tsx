@@ -66,9 +66,17 @@ export default function LibraryActionCenter({
         />
       )}
 
-      {(onViewHistory ?? onCompareVersions ?? onChangeVersion) && (
-        <PipeSeparator />
+      {onChangeVersion && (
+        <>
+          <PipeSeparator />
+          <LibraryChangeVersionAction
+            libraries={libraries}
+            onClick={onChangeVersion}
+          />
+        </>
       )}
+
+      {(onViewHistory ?? onCompareVersions) && <PipeSeparator />}
 
       {onViewHistory && (
         <LibraryHistoryAction libraries={libraries} onClick={onViewHistory} />
@@ -77,12 +85,6 @@ export default function LibraryActionCenter({
         <LibraryCompareVersionsAction
           libraries={libraries}
           onClick={onCompareVersions}
-        />
-      )}
-      {onChangeVersion && (
-        <LibraryChangeVersionAction
-          libraries={libraries}
-          onClick={onChangeVersion}
         />
       )}
     </div>
