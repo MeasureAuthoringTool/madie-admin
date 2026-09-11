@@ -5,6 +5,7 @@ import {
   ViewHRAction,
   HistoryAction,
   CompareVersionsAction,
+  ChangeVersionAction,
   ShareAction,
   TransferAction,
 } from "@madie/madie-util";
@@ -21,6 +22,7 @@ interface PropTypes {
   onViewHumanReadable: () => void;
   onViewHistory: () => void;
   onCompareVersions: () => void;
+  onChangeVersion?: () => void;
   onShare: (option: string) => void;
   disabledReason?: string;
   target?: string;
@@ -36,6 +38,7 @@ export default function ActionCenter({
   onViewHumanReadable,
   onViewHistory,
   onCompareVersions,
+  onChangeVersion,
   onShare,
   onTransfer,
   disabledReason,
@@ -65,6 +68,13 @@ export default function ActionCenter({
           onClick={onTransfer}
           activeTab={activeTab}
         />
+      )}
+
+      {onChangeVersion && (
+        <>
+          <PipeSeparator />
+          <ChangeVersionAction measures={measures} onClick={onChangeVersion} />
+        </>
       )}
 
       {(onViewHumanReadable ?? onViewHistory ?? onCompareVersions) && (

@@ -35,6 +35,15 @@ export const CompareVersionsAction = ({ onClick }: any) => (
     Compare Versions Action
   </button>
 );
+export const ChangeVersionAction = ({ measures, onClick }: any) => (
+  <button
+    data-testid="change-version-action-btn"
+    disabled={measures?.length !== 1}
+    onClick={() => onClick && onClick()}
+  >
+    Change Version #
+  </button>
+);
 export const ShareAction = ({ measures, activeTab, onClick }: any) => {
   const options = activeTab === 1 ? ["Unshare"] : ["Share With", "Unshare"];
   return (

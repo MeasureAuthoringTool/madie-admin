@@ -44,7 +44,7 @@ const renderActionCenter = (props: any = {}) =>
 describe("LibraryActionCenter", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("does not render the transfer, history or compare icons without their handlers", () => {
+  it("does not render the transfer, history, compare or change version icons without their handlers", () => {
     renderActionCenter();
     expect(screen.queryByTestId("transfer-action-btn")).not.toBeInTheDocument();
     expect(
@@ -53,13 +53,17 @@ describe("LibraryActionCenter", () => {
     expect(
       screen.queryByTestId("compare-versions-action-btn")
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("change-version-action-btn")
+    ).not.toBeInTheDocument();
   });
 
-  it("renders the transfer, history and compare icons when handlers are supplied", () => {
+  it("renders the transfer, history, compare and change version icons when handlers are supplied", () => {
     renderActionCenter({
       onTransfer: jest.fn(),
       onViewHistory: jest.fn(),
       onCompareVersions: jest.fn(),
+      onChangeVersion: jest.fn(),
     });
     expect(screen.getByTestId("transfer-action-btn")).toBeInTheDocument();
     expect(
@@ -68,99 +72,129 @@ describe("LibraryActionCenter", () => {
     expect(
       screen.getByTestId("compare-versions-action-btn")
     ).toBeInTheDocument();
+    expect(screen.getByTestId("change-version-action-btn")).toBeInTheDocument();
+  });
+});
+
+describe("Transfer", () => {
+  it("is enabled for one or more selected libraries and fires its handler", async () => {
+    const onTransfer = jest.fn();
+    renderActionCenter({
+      libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+      onTransfer,
+    });
+
+    const button = screen.getByTestId("transfer-action-btn");
+    expect(button).not.toBeDisabled();
+
+    await userEvent.click(button);
+    expect(onTransfer).toHaveBeenCalled();
+  });
+});
+
+describe("View History", () => {
+  it("is disabled when no library is selected", () => {
+    renderActionCenter({ onViewHistory: jest.fn() });
+    expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
   });
 
-  describe("Transfer", () => {
-    it("is enabled for one or more selected libraries and fires its handler", async () => {
-      const onTransfer = jest.fn();
-      renderActionCenter({
-        libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
-        onTransfer,
-      });
-
-      const button = screen.getByTestId("transfer-action-btn");
-      expect(button).not.toBeDisabled();
-
-      await userEvent.click(button);
-      expect(onTransfer).toHaveBeenCalled();
+  it("is disabled when more than one library is selected", () => {
+    renderActionCenter({
+      libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+      onViewHistory: jest.fn(),
     });
+    expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
   });
 
-  describe("View History", () => {
-    it("is disabled when no library is selected", () => {
-      renderActionCenter({ onViewHistory: jest.fn() });
-      expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
-    });
+  it("is enabled for exactly one library and fires its handler", async () => {
+    const onViewHistory = jest.fn();
+    renderActionCenter({ libraries: [makeLibrary()], onViewHistory });
 
-    it("is disabled when more than one library is selected", () => {
-      renderActionCenter({
-        libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
-        onViewHistory: jest.fn(),
-      });
-      expect(screen.getByTestId("library-history-action-btn")).toBeDisabled();
-    });
+    const button = screen.getByTestId("library-history-action-btn");
+    expect(button).not.toBeDisabled();
 
-    it("is enabled for exactly one library and fires its handler", async () => {
-      const onViewHistory = jest.fn();
-      renderActionCenter({ libraries: [makeLibrary()], onViewHistory });
+    await userEvent.click(button);
+    expect(onViewHistory).toHaveBeenCalled();
+  });
+});
 
-      const button = screen.getByTestId("library-history-action-btn");
-      expect(button).not.toBeDisabled();
-
-      await userEvent.click(button);
-      expect(onViewHistory).toHaveBeenCalled();
-    });
+describe("Compare Library Versions", () => {
+  it("is disabled when no library is selected", () => {
+    renderActionCenter({ onCompareVersions: jest.fn() });
+    expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
   });
 
-  describe("Compare Library Versions", () => {
-    it("is disabled when no library is selected", () => {
-      renderActionCenter({ onCompareVersions: jest.fn() });
-      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+  it("is disabled for a single library", () => {
+    renderActionCenter({
+      libraries: [makeLibrary()],
+      onCompareVersions: jest.fn(),
+    });
+    expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+  });
+
+  it("is disabled for two libraries in different library sets", () => {
+    renderActionCenter({
+      libraries: [
+        makeLibrary(),
+        makeLibrary({ id: "lib-2", librarySetId: "set-2" }),
+      ],
+      onCompareVersions: jest.fn(),
+    });
+    expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+  });
+
+  it("is disabled for three instances in the same library set", () => {
+    renderActionCenter({
+      libraries: [
+        makeLibrary(),
+        makeLibrary({ id: "lib-2" }),
+        makeLibrary({ id: "lib-3" }),
+      ],
+      onCompareVersions: jest.fn(),
+    });
+    expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+  });
+
+  it("is enabled for two instances in the same library set and fires its handler", async () => {
+    const onCompareVersions = jest.fn();
+    renderActionCenter({
+      libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+      onCompareVersions,
     });
 
-    it("is disabled for a single library", () => {
-      renderActionCenter({
-        libraries: [makeLibrary()],
-        onCompareVersions: jest.fn(),
-      });
-      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
+    const button = screen.getByTestId("compare-versions-action-btn");
+    expect(button).not.toBeDisabled();
+
+    await userEvent.click(button);
+    expect(onCompareVersions).toHaveBeenCalled();
+  });
+});
+
+describe("Change Version #", () => {
+  it("is disabled when no library is selected", () => {
+    renderActionCenter({ onChangeVersion: jest.fn() });
+    expect(screen.getByTestId("change-version-action-btn")).toBeDisabled();
+  });
+
+  it("is disabled when more than one library is selected", () => {
+    renderActionCenter({
+      libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
+      onChangeVersion: jest.fn(),
+    });
+    expect(screen.getByTestId("change-version-action-btn")).toBeDisabled();
+  });
+
+  it("is enabled for a single eligible library and fires its handler", async () => {
+    const onChangeVersion = jest.fn();
+    renderActionCenter({
+      libraries: [makeLibrary()],
+      onChangeVersion,
     });
 
-    it("is disabled for two libraries in different library sets", () => {
-      renderActionCenter({
-        libraries: [
-          makeLibrary(),
-          makeLibrary({ id: "lib-2", librarySetId: "set-2" }),
-        ],
-        onCompareVersions: jest.fn(),
-      });
-      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
-    });
+    const button = screen.getByTestId("change-version-action-btn");
+    expect(button).not.toBeDisabled();
 
-    it("is disabled for three instances in the same library set", () => {
-      renderActionCenter({
-        libraries: [
-          makeLibrary(),
-          makeLibrary({ id: "lib-2" }),
-          makeLibrary({ id: "lib-3" }),
-        ],
-        onCompareVersions: jest.fn(),
-      });
-      expect(screen.getByTestId("compare-versions-action-btn")).toBeDisabled();
-    });
-
-    it("is enabled for two instances in the same library set and fires its handler", async () => {
-      const onCompareVersions = jest.fn();
-      renderActionCenter({
-        libraries: [makeLibrary(), makeLibrary({ id: "lib-2" })],
-        onCompareVersions,
-      });
-
-      const button = screen.getByTestId("compare-versions-action-btn");
-      expect(button).not.toBeDisabled();
-
-      await userEvent.click(button);
-      expect(onCompareVersions).toHaveBeenCalled();
-    });
+    await userEvent.click(button);
+    expect(onChangeVersion).toHaveBeenCalled();
   });
 });

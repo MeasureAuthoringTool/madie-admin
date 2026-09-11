@@ -32,6 +32,34 @@ export const LibraryCompareVersionsAction = ({ libraries, onClick }: any) => (
   </button>
 );
 
+export const LibraryChangeVersionAction = ({ libraries, onClick }: any) => (
+  <button
+    type="button"
+    data-testid="change-version-action-btn"
+    disabled={libraries?.length !== 1}
+    onClick={() => onClick && onClick()}
+  >
+    Change Version #
+  </button>
+);
+
+export const LibraryChangeVersionDialog = ({ libraries, open, onClose }: any) =>
+  open ? (
+    <div
+      data-testid="change-version-dialog"
+      data-library-id={libraries?.[0]?.id}
+    >
+      <span>Change Version #</span>
+      <button
+        type="button"
+        data-testid="change-version-dialog-close"
+        onClick={() => onClose && onClose()}
+      >
+        Cancel
+      </button>
+    </div>
+  ) : null;
+
 export const LibraryHistoryDialog = ({ libraries, open, onClose }: any) =>
   open ? (
     <div data-testid="library-history-dialog">

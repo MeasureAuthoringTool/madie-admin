@@ -382,6 +382,10 @@ declare module "@madie/madie-util" {
     measures: any[];
     onClick: () => void;
   }): JSX.Element;
+  export function ChangeVersionAction(props: {
+    measures: any[];
+    onClick: () => void;
+  }): JSX.Element;
   export function ShareAction(props: {
     measures: any[];
     onClick: (option: string) => void;
@@ -416,6 +420,11 @@ declare module "@madie/madie-util" {
   }): JSX.Element | null;
   export function CompareVersionsDialog(props: {
     measures: any[] | null | undefined;
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
+  export function ChangeVersionDialog(props: {
+    measures: any[];
     open: boolean;
     onClose: () => void;
   }): JSX.Element | null;
@@ -477,6 +486,15 @@ declare module "@madie/madie-util" {
     onClose: () => void;
   }): JSX.Element | null;
   export function LibraryCompareVersionsDialog(props: {
+    libraries: any[];
+    open: boolean;
+    onClose: () => void;
+  }): JSX.Element | null;
+  export function LibraryChangeVersionAction(props: {
+    libraries: any[];
+    onClick: () => void;
+  }): JSX.Element | null;
+  export function LibraryChangeVersionDialog(props: {
     libraries: any[];
     open: boolean;
     onClose: () => void;

@@ -7,6 +7,7 @@ import {
   LibraryShareAction,
   LibraryHistoryAction,
   LibraryCompareVersionsAction,
+  LibraryChangeVersionAction,
   LibraryTransferAction,
 } from "@madie/madie-util";
 
@@ -19,6 +20,7 @@ interface PropTypes {
   onTransfer?: () => void;
   onViewHistory?: () => void;
   onCompareVersions?: () => void;
+  onChangeVersion?: () => void;
   disabledReason?: string;
   target?: string;
   userName: string;
@@ -34,6 +36,7 @@ export default function LibraryActionCenter({
   onTransfer,
   onViewHistory,
   onCompareVersions,
+  onChangeVersion,
   disabledReason,
   userName,
 }: PropTypes) {
@@ -61,6 +64,16 @@ export default function LibraryActionCenter({
           onClick={onTransfer}
           activeTab={activeTab}
         />
+      )}
+
+      {onChangeVersion && (
+        <>
+          <PipeSeparator />
+          <LibraryChangeVersionAction
+            libraries={libraries}
+            onClick={onChangeVersion}
+          />
+        </>
       )}
 
       {(onViewHistory ?? onCompareVersions) && <PipeSeparator />}

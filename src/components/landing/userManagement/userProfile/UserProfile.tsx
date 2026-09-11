@@ -16,10 +16,12 @@ import {
   LibraryShareDialog,
   LibraryHistoryDialog,
   LibraryCompareVersionsDialog,
+  LibraryChangeVersionDialog,
   LibraryTransferDialog,
   ViewHRModal,
   ViewMeasureHistoryDialog,
   CompareVersionsDialog,
+  ChangeVersionDialog,
   ShareDialog,
   TransferDialog,
   exportMeasure as downloadMeasureExport,
@@ -386,6 +388,9 @@ const UserProfile = () => {
   const [viewHRModalOpen, setViewHRModalOpen] = useState(false);
   const [viewHistoryDialogOpen, setViewHistoryDialogOpen] = useState(false);
   const [compareVersionsDialogOpen, setCompareVersionsDialogOpen] =
+    useState(false);
+  const [changeVersionDialogOpen, setChangeVersionDialogOpen] = useState(false);
+  const [libraryChangeVersionDialogOpen, setLibraryChangeVersionDialogOpen] =
     useState(false);
   const [libraryHistoryDialogOpen, setLibraryHistoryDialogOpen] =
     useState(false);
@@ -1605,12 +1610,20 @@ const UserProfile = () => {
     setCompareVersionsDialogOpen(true);
   }, []);
 
+  const handleChangeVersion = useCallback(() => {
+    setChangeVersionDialogOpen(true);
+  }, []);
+
   const handleViewLibraryHistory = useCallback(() => {
     setLibraryHistoryDialogOpen(true);
   }, []);
 
   const handleCompareLibraryVersions = useCallback(() => {
     setLibraryCompareVersionsDialogOpen(true);
+  }, []);
+
+  const handleLibraryChangeVersion = useCallback(() => {
+    setLibraryChangeVersionDialogOpen(true);
   }, []);
 
   const handleLibraryTransfer = useCallback(() => {
@@ -1761,6 +1774,7 @@ const UserProfile = () => {
                 onViewHumanReadable={handleViewHumanReadable}
                 onViewHistory={handleViewHistory}
                 onCompareVersions={handleCompareVersions}
+                onChangeVersion={handleChangeVersion}
                 onShare={handleShare}
                 onTransfer={handleTransfer}
                 disabledReason={deleteDisabledReason}
@@ -1780,6 +1794,7 @@ const UserProfile = () => {
                 onTransfer={handleLibraryTransfer}
                 onViewHistory={handleViewLibraryHistory}
                 onCompareVersions={handleCompareLibraryVersions}
+                onChangeVersion={handleLibraryChangeVersion}
                 disabledReason={deleteDisabledReason}
                 canDelete={canDelete}
                 userName={getUserName()}
@@ -1893,6 +1908,12 @@ const UserProfile = () => {
         onClose={() => setCompareVersionsDialogOpen(false)}
       />
 
+      <ChangeVersionDialog
+        measures={selectedMeasures}
+        open={changeVersionDialogOpen}
+        onClose={() => setChangeVersionDialogOpen(false)}
+      />
+
       <ShareDialog
         measures={selectedMeasures}
         open={shareDialogOpen}
@@ -1919,6 +1940,12 @@ const UserProfile = () => {
         libraries={selectedLibraries}
         open={libraryCompareVersionsDialogOpen}
         onClose={() => setLibraryCompareVersionsDialogOpen(false)}
+      />
+
+      <LibraryChangeVersionDialog
+        libraries={selectedLibraries}
+        open={libraryChangeVersionDialogOpen}
+        onClose={() => setLibraryChangeVersionDialogOpen(false)}
       />
 
       <LibraryTransferDialog
