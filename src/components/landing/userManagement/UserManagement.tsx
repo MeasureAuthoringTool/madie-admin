@@ -14,8 +14,18 @@ import {
   getSortedRowModel,
 } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
-import { Select, TextField } from "@madie/madie-design-system/dist/react";
-import { InputAdornment, IconButton, MenuItem, Chip } from "@mui/material";
+import {
+  Select,
+  TextField,
+  Toast,
+} from "@madie/madie-design-system/dist/react";
+import {
+  InputAdornment,
+  IconButton,
+  MenuItem,
+  Menu,
+  Chip,
+} from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
@@ -26,6 +36,7 @@ import { type UserDetails, UserStatus } from "@madie/madie-models";
 import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
+import useUserExportServiceApi from "../../../api/useUserExportServiceApi";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
 
@@ -44,6 +55,17 @@ const STATUS_LABEL: Record<string, string> = {
 const getStatusLabel = (status: UserStatus): string =>
   STATUS_LABEL[status] ?? status ?? "";
 
+// Builds a filename in the format "UserExport_yyyyMMdd_HHmmss.xlsx".
+const buildExportFileName = (date: Date = new Date()): string => {
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  const stamp =
+    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
+      date.getSeconds()
+    )}`;
+  return `UserExport_${stamp}.xlsx`;
+};
+
 const UserManagement = () => {
   const [users, setUsers] = useState<UserDetails[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -56,9 +78,63 @@ const UserManagement = () => {
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
   const userServiceApi = useRef(useUserServiceApi()).current;
+  const userExportServiceApi = useRef(useUserExportServiceApi()).current;
   const navigate = useNavigate();
 
   const [rowSelection, setRowSelection] = useState({});
+
+  // Export action state
+  const [exportAnchorEl, setExportAnchorEl] = useState<HTMLElement | null>(
+    null
+  );
+  const exportMenuOpen = Boolean(exportAnchorEl);
+  const [exporting, setExporting] = useState<boolean>(false);
+
+  // Toast state
+  const [toastOpen, setToastOpen] = useState<boolean>(false);
+  const [toastType, setToastType] = useState<string>("success");
+  const [toastMessage, setToastMessage] = useState<string>("");
+
+  const onToastClose = () => {
+    setToastOpen(false);
+    setToastMessage("");
+  };
+
+  const handleExportMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setExportAnchorEl(event.currentTarget);
+  };
+
+  const handleExportMenuClose = () => {
+    setExportAnchorEl(null);
+  };
+
+  const handleExportFullUserList = async () => {
+    handleExportMenuClose();
+    setExporting(true);
+    try {
+      const excelBlob = await userExportServiceApi.exportFullUserList();
+      const url = window.URL.createObjectURL(excelBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", buildExportFileName());
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setToastType("success");
+      setToastMessage("Full User Report exported successfully");
+      setToastOpen(true);
+    } catch (err) {
+      setToastType("danger");
+      setToastMessage(
+        (err as Error)?.message ?? "Unable to export the full user list."
+      );
+      setToastOpen(true);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -341,6 +417,38 @@ const UserManagement = () => {
             />
           </div>
         </div>
+
+        <div className="user-export">
+          <button
+            type="button"
+            className="user-export-link"
+            data-testid="user-export-button"
+            aria-haspopup="menu"
+            aria-expanded={exportMenuOpen}
+            aria-controls={exportMenuOpen ? "user-export-menu" : undefined}
+            disabled={exporting}
+            onClick={handleExportMenuOpen}
+          >
+            <span>Export</span>
+            <KeyboardArrowDownIcon fontSize="small" />
+          </button>
+          <Menu
+            id="user-export-menu"
+            anchorEl={exportAnchorEl}
+            open={exportMenuOpen}
+            onClose={handleExportMenuClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{ list: { "aria-labelledby": "user-export-button" } }}
+          >
+            <MenuItem
+              data-testid="user-export-full-user-list"
+              onClick={handleExportFullUserList}
+            >
+              Export full user list
+            </MenuItem>
+          </Menu>
+        </div>
       </div>
 
       {/* Table */}
@@ -442,6 +550,24 @@ const UserManagement = () => {
           No users found.
         </p>
       )}
+
+      <Toast
+        toastKey="user-management-toast"
+        aria-live="polite"
+        toastType={toastType}
+        testId={
+          toastType === "danger"
+            ? "user-export-error-message"
+            : "user-export-success-message"
+        }
+        closeButtonProps={{
+          "data-testid": "close-toast-button",
+        }}
+        open={toastOpen}
+        message={toastMessage}
+        onClose={onToastClose}
+        autoHideDuration={6000}
+      />
     </div>
   );
 };
