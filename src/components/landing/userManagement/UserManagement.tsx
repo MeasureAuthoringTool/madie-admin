@@ -444,7 +444,7 @@ const UserManagement = () => {
             <MenuItem
               data-testid="user-export-full-user-list"
               onClick={() => {
-                void handleExportFullUserList();
+                handleExportFullUserList();
               }}
             >
               Export full user list
