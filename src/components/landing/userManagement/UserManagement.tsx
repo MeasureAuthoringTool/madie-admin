@@ -126,7 +126,9 @@ const UserManagement = () => {
     } catch (err) {
       setToastType("danger");
       setToastMessage(
-        (err as Error)?.message ?? "Unable to export the full user list."
+        err instanceof Error
+          ? err.message
+          : "Unable to export the full user list."
       );
       setToastOpen(true);
     } finally {
@@ -441,7 +443,9 @@ const UserManagement = () => {
           >
             <MenuItem
               data-testid="user-export-full-user-list"
-              onClick={handleExportFullUserList}
+              onClick={() => {
+                void handleExportFullUserList();
+              }}
             >
               Export full user list
             </MenuItem>

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
+// @ts-ignore
 import { useUserServiceApi } from "@madie/madie-util";
 
 const mockNavigate = jest.fn();
@@ -764,17 +765,31 @@ describe("UserManagement", () => {
   });
 
   describe("Export action", () => {
-    const originalCreateObjectURL = window.URL.createObjectURL;
-    const originalRevokeObjectURL = window.URL.revokeObjectURL;
+    let anchorClick: jest.Mock;
 
     beforeEach(() => {
+      anchorClick = jest.fn();
+      // jsdom doesn't implement these, so assign fresh mocks (cleaned up below).
       window.URL.createObjectURL = jest.fn().mockReturnValue("blob:url");
       window.URL.revokeObjectURL = jest.fn();
+
+      const nativeCreateElement = document.createElement.bind(document);
+      jest
+        .spyOn(document, "createElement")
+        .mockImplementation((tagName: string) => {
+          const element = nativeCreateElement(tagName);
+          if (tagName === "a") {
+            element.click = anchorClick;
+          }
+          return element;
+        });
     });
 
     afterEach(() => {
-      window.URL.createObjectURL = originalCreateObjectURL;
-      window.URL.revokeObjectURL = originalRevokeObjectURL;
+      jest.restoreAllMocks();
+      const urlMethods = window.URL as unknown as Record<string, unknown>;
+      urlMethods.createObjectURL = undefined;
+      urlMethods.revokeObjectURL = undefined;
     });
 
     it("renders the Export button and opens the dropdown on click", async () => {
@@ -801,10 +816,6 @@ describe("UserManagement", () => {
       mockExportFullUserList.mockResolvedValue(blob);
       mockFetchUsers.mockResolvedValue(mockUsers);
 
-      const anchorClick = jest
-        .spyOn(HTMLAnchorElement.prototype, "click")
-        .mockImplementation(() => {});
-
       renderRouter();
       await waitFor(() =>
         expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
@@ -823,8 +834,6 @@ describe("UserManagement", () => {
       expect(
         screen.getByText("Full User Report exported successfully")
       ).toBeInTheDocument();
-
-      anchorClick.mockRestore();
     });
 
     it("shows an error toast when export fails", async () => {
@@ -881,10 +890,6 @@ describe("UserManagement", () => {
       mockExportFullUserList.mockResolvedValue(blob);
       mockFetchUsers.mockResolvedValue(mockUsers);
 
-      const anchorClick = jest
-        .spyOn(HTMLAnchorElement.prototype, "click")
-        .mockImplementation(() => {});
-
       renderRouter();
       await waitFor(() =>
         expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
@@ -906,8 +911,6 @@ describe("UserManagement", () => {
           screen.queryByText("Full User Report exported successfully")
         ).not.toBeInTheDocument()
       );
-
-      anchorClick.mockRestore();
     });
   });
 
