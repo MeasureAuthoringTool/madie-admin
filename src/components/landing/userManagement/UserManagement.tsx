@@ -36,7 +36,6 @@ import { type UserDetails, UserStatus } from "@madie/madie-models";
 import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
-import useUserExportServiceApi from "../../../api/useUserExportServiceApi";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
 
@@ -78,7 +77,6 @@ const UserManagement = () => {
   const [hoveredHeader, setHoveredHeader] = useState<string>("");
 
   const userServiceApi = useRef(useUserServiceApi()).current;
-  const userExportServiceApi = useRef(useUserExportServiceApi()).current;
   const navigate = useNavigate();
 
   const [rowSelection, setRowSelection] = useState({});
@@ -112,7 +110,7 @@ const UserManagement = () => {
     handleExportMenuClose();
     setExporting(true);
     try {
-      const excelBlob = await userExportServiceApi.exportFullUserList();
+      const excelBlob = await userServiceApi.exportFullUserList();
       const url = window.URL.createObjectURL(excelBlob);
       const link = document.createElement("a");
       link.href = url;

@@ -4,7 +4,6 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
 import { useUserServiceApi } from "@madie/madie-util";
-import useUserExportServiceApi from "../../../api/useUserExportServiceApi";
 
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({
@@ -13,10 +12,6 @@ jest.mock("react-router-dom", () => ({
 }));
 
 const mockExportFullUserList = jest.fn();
-jest.mock("../../../api/useUserExportServiceApi", () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
 
 const renderRouter = () =>
   render(
@@ -77,8 +72,6 @@ describe("UserManagement", () => {
     mockExportFullUserList.mockReset();
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
-    });
-    (useUserExportServiceApi as jest.Mock).mockReturnValue({
       exportFullUserList: mockExportFullUserList,
     });
   });

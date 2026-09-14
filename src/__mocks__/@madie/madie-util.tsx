@@ -18,6 +18,7 @@ const wafIntercept = jest.fn((error) => {
 });
 const useUserServiceApi = jest.fn().mockReturnValue({
   fetchUsers: jest.fn().mockResolvedValue([]),
+  exportFullUserList: jest.fn().mockResolvedValue(new Blob()),
 });
 const useMeasureServiceApi = jest.fn().mockReturnValue({
   adminSearchMeasuresForUser: jest.fn().mockResolvedValue({
