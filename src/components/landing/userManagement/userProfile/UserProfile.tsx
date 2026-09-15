@@ -1520,12 +1520,13 @@ const UserProfile = () => {
     if (!deleteTarget) return;
 
     const { id, draft } = deleteTarget;
+    const owner = deleteTarget?.librarySet?.owner;
 
     try {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        await cqlLibraryServiceApi.deleteLibrary(id, userName);
+        await cqlLibraryServiceApi.deleteLibrary(id, owner);
       }
 
       setToastType("success");
