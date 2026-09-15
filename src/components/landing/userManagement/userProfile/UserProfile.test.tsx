@@ -3045,13 +3045,14 @@ describe("UserProfile", () => {
         await screen.findByText("Library successfully deleted")
       ).toBeInTheDocument();
     });
-    it("deletes a versioned library and shows success toast", async () => {
+    it("deletes a versioned library with the library set owner and shows success toast", async () => {
       const versionedLibrary = {
         ...ownedLibrary,
         id: "lib2",
         cqlLibraryName: "Versioned Library",
         draft: false,
         version: "2.0.000",
+        librarySet: { ...ownedLibrary.librarySet, owner: "library_owner" },
       };
 
       mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
@@ -3079,13 +3080,54 @@ describe("UserProfile", () => {
       userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
 
       await waitFor(() =>
-        expect(mockDeleteLibrary).toHaveBeenCalledWith("lib2", "test_user")
+        expect(mockDeleteLibrary).toHaveBeenCalledWith("lib2", "library_owner")
       );
 
+      expect(mockDeleteLibrary).not.toHaveBeenCalledWith("lib2", "test_user");
       expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
 
       expect(
         await screen.findByText("Library successfully deleted")
+      ).toBeInTheDocument();
+    });
+
+    it("shows an error toast when deleting a versioned library fails", async () => {
+      const versionedLibrary = {
+        ...ownedLibrary,
+        id: "lib3",
+        cqlLibraryName: "Versioned Library",
+        draft: false,
+        version: "3.0.000",
+        librarySet: { ...ownedLibrary.librarySet, owner: "library_owner" },
+      };
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([versionedLibrary], 1));
+      mockDeleteLibrary.mockRejectedValueOnce(
+        new Error("Versioned library delete failed")
+      );
+
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("owned-libraries-tab"));
+
+      userEvent.click(await screen.findByTestId("checkbox-lib3"));
+
+      const deleteBtn = await screen.findByTestId("delete-action-btn");
+      await waitFor(() => expect(deleteBtn).toBeEnabled());
+
+      userEvent.click(deleteBtn);
+
+      await screen.findByTestId("delete-dialog");
+
+      userEvent.click(screen.getByTestId("delete-dialog-continue-button"));
+
+      await waitFor(() =>
+        expect(mockDeleteLibrary).toHaveBeenCalledWith("lib3", "library_owner")
+      );
+      expect(mockDeleteDraftLibrary).not.toHaveBeenCalled();
+      expect(
+        await screen.findByText("Versioned library delete failed")
       ).toBeInTheDocument();
     });
 
