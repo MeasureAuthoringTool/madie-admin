@@ -1631,15 +1631,10 @@ const UserProfile = () => {
     setLibraryTransferDialogOpen(true);
   }, []);
 
-  const handleShare = useCallback(
-    (option: string) => {
-      const resolvedOption =
-        option === "Unshare" && activeTab === 1 ? "UnshareFromMe" : option;
-      setShareOption(resolvedOption);
-      setShareDialogOpen(true);
-    },
-    [activeTab]
-  );
+  const handleShare = useCallback((option: string) => {
+    setShareOption(option);
+    setShareDialogOpen(true);
+  }, []);
 
   const handleShareDialogClose = useCallback(() => {
     setShareDialogOpen(false);

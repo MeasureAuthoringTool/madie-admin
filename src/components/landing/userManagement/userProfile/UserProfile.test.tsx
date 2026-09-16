@@ -2599,7 +2599,7 @@ describe("UserProfile", () => {
       );
     });
 
-    it("opens the 'UnshareFromMe' confirmation from the Shared tab", async () => {
+    it("opens the Unshare checkbox dialog from the Shared tab", async () => {
       mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasureRow], 1));
       renderAt("/admin/userProfile/test_user");
       userEvent.click(await screen.findByTestId("shared-measures-tab"));
@@ -2607,7 +2607,7 @@ describe("UserProfile", () => {
       userEvent.click(await screen.findByTestId("share-action-btn"));
       userEvent.click(await screen.findByTestId("share-option-unshare"));
       const shareDialog = await screen.findByTestId("share-dialog");
-      expect(shareDialog).toHaveAttribute("data-option", "UnshareFromMe");
+      expect(shareDialog).toHaveAttribute("data-option", "Unshare");
       expect(shareDialog).toHaveAttribute(
         "data-unshare-from-user",
         "test_user"
