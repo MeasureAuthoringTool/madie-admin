@@ -106,11 +106,11 @@ const UserManagement = () => {
     setExportAnchorEl(null);
   };
 
-  const handleExportFullUserList = async () => {
+  const handleExportUserList = async () => {
     handleExportMenuClose();
     setExporting(true);
     try {
-      const excelBlob = await userServiceApi.exportFullUserList();
+      const excelBlob = await userServiceApi.exportUserList();
       const url = window.URL.createObjectURL(excelBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -444,7 +444,7 @@ const UserManagement = () => {
             <MenuItem
               data-testid="user-export-full-user-list"
               onClick={() => {
-                handleExportFullUserList();
+                handleExportUserList();
               }}
             >
               Export full user list

@@ -12,7 +12,7 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-const mockExportFullUserList = jest.fn();
+const mockExportUserList = jest.fn();
 
 const renderRouter = () =>
   render(
@@ -70,10 +70,10 @@ describe("UserManagement", () => {
     window.history.replaceState({}, "", "/admin");
     mockFetchUsers.mockReset();
     mockNavigate.mockReset();
-    mockExportFullUserList.mockReset();
+    mockExportUserList.mockReset();
     (useUserServiceApi as jest.Mock).mockReturnValue({
       fetchUsers: mockFetchUsers,
-      exportFullUserList: mockExportFullUserList,
+      exportUserList: mockExportUserList,
     });
   });
 
@@ -813,7 +813,7 @@ describe("UserManagement", () => {
       const blob = new Blob(["test"], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      mockExportFullUserList.mockResolvedValue(blob);
+      mockExportUserList.mockResolvedValue(blob);
       mockFetchUsers.mockResolvedValue(mockUsers);
 
       renderRouter();
@@ -829,7 +829,7 @@ describe("UserManagement", () => {
           screen.getByTestId("user-export-success-message")
         ).toBeInTheDocument()
       );
-      expect(mockExportFullUserList).toHaveBeenCalledTimes(1);
+      expect(mockExportUserList).toHaveBeenCalledTimes(1);
       expect(anchorClick).toHaveBeenCalled();
       expect(
         screen.getByText("Full User Report exported successfully")
@@ -837,7 +837,7 @@ describe("UserManagement", () => {
     });
 
     it("shows an error toast when export fails", async () => {
-      mockExportFullUserList.mockRejectedValue(
+      mockExportUserList.mockRejectedValue(
         new Error("Unable to export the full user list.")
       );
       mockFetchUsers.mockResolvedValue(mockUsers);
@@ -862,7 +862,7 @@ describe("UserManagement", () => {
 
     it("shows the default error message when the failure has no message", async () => {
       // Reject with a value that has no `message` property to exercise the fallback.
-      mockExportFullUserList.mockRejectedValue({});
+      mockExportUserList.mockRejectedValue({});
       mockFetchUsers.mockResolvedValue(mockUsers);
 
       renderRouter();
@@ -887,7 +887,7 @@ describe("UserManagement", () => {
       const blob = new Blob(["test"], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      mockExportFullUserList.mockResolvedValue(blob);
+      mockExportUserList.mockResolvedValue(blob);
       mockFetchUsers.mockResolvedValue(mockUsers);
 
       renderRouter();
