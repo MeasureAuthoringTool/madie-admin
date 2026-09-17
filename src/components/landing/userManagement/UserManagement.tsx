@@ -18,6 +18,7 @@ import {
   Select,
   TextField,
   Toast,
+  MadieSpinner,
 } from "@madie/madie-design-system/dist/react";
 import {
   InputAdornment,
@@ -25,6 +26,7 @@ import {
   MenuItem,
   Menu,
   Chip,
+  Box,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -87,6 +89,7 @@ const UserManagement = () => {
   );
   const exportMenuOpen = Boolean(exportAnchorEl);
   const [exporting, setExporting] = useState<boolean>(false);
+  const exportAbortControllerRef = useRef<AbortController | null>(null);
 
   // Toast state
   const [toastOpen, setToastOpen] = useState<boolean>(false);
@@ -109,8 +112,12 @@ const UserManagement = () => {
   const handleExportUserList = async () => {
     handleExportMenuClose();
     setExporting(true);
+    exportAbortControllerRef.current = new AbortController();
     try {
-      const excelBlob = await userServiceApi.exportUserList();
+      const excelBlob = await userServiceApi.exportUserList(
+        {},
+        exportAbortControllerRef.current.signal
+      );
       const url = window.URL.createObjectURL(excelBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -124,15 +131,19 @@ const UserManagement = () => {
       setToastMessage("Full User Report exported successfully");
       setToastOpen(true);
     } catch (err) {
-      setToastType("danger");
-      setToastMessage(
-        err instanceof Error
-          ? err.message
-          : "Unable to export the full user list."
-      );
-      setToastOpen(true);
+      // Don't show error toast if the request was aborted
+      if (!(err instanceof Error && err.name === "AbortError")) {
+        setToastType("danger");
+        setToastMessage(
+          err instanceof Error
+            ? err.message
+            : "Unable to export the full user list."
+        );
+        setToastOpen(true);
+      }
     } finally {
       setExporting(false);
+      exportAbortControllerRef.current = null;
     }
   };
 
@@ -154,6 +165,15 @@ const UserManagement = () => {
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, [userServiceApi]);
+
+  // Cleanup: cancel export if component unmounts during export
+  useEffect(() => {
+    return () => {
+      if (exportAbortControllerRef.current) {
+        exportAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const openUserProfile = useCallback(
     (user: UserDetails) => {
@@ -453,105 +473,136 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <p data-testid="loading-message" className="loading-message">
-          Loading users...
-        </p>
-      ) : error ? (
-        <p data-testid="error-message" className="error-message">
-          {error}
-        </p>
-      ) : table.getRowModel().rows.length > 0 ? (
-        <div className="user-table-container">
-          <table
-            data-testid="user-management-table"
-            className="user-management-table"
+      {/* Table with spinner overlay */}
+      <Box position="relative">
+        {exporting && (
+          <Box
+            className="export-spinner-overlay"
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex={10}
+            data-testid="export-spinner-overlay"
           >
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isHovered = hoveredHeader === header.id;
-                    return (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        onClick={header.column.getToggleSortingHandler()}
-                        onMouseEnter={() => setHoveredHeader(header.id)}
-                        onMouseLeave={() => setHoveredHeader("")}
-                        style={{ width: `${header.column.getSize()}%` }}
-                        className="header-cell"
-                      >
-                        {header.isPlaceholder ? null : (
-                          <button
-                            type="button"
-                            className={
-                              header.column.getCanSort()
-                                ? "header-button sortable"
-                                : "header-button"
-                            }
-                            title={
-                              header.column.getCanSort()
-                                ? header.column.getNextSortingOrder() === "asc"
-                                  ? "Sort ascending"
-                                  : header.column.getNextSortingOrder() ===
-                                    "desc"
-                                  ? "Sort descending"
-                                  : "Clear sort"
-                                : undefined
-                            }
-                          >
-                            <span className="sort-icon">
-                              {header.column.getCanSort() &&
-                                isHovered &&
-                                !header.column.getIsSorted() && (
-                                  <UnfoldMoreIcon fontSize="small" />
-                                )}
-                              {{
-                                asc: <KeyboardArrowUpIcon fontSize="small" />,
-                                desc: (
-                                  <KeyboardArrowDownIcon fontSize="small" />
-                                ),
-                              }[header.column.getIsSorted() as string] ?? null}
-                            </span>
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                          </button>
+            <div
+              data-testid="loading"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <MadieSpinner style={{ height: 50, width: 50 }} />
+            </div>
+          </Box>
+        )}
+        {loading ? (
+          <p data-testid="loading-message" className="loading-message">
+            Loading users...
+          </p>
+        ) : error ? (
+          <p data-testid="error-message" className="error-message">
+            {error}
+          </p>
+        ) : table.getRowModel().rows.length > 0 ? (
+          <div className="user-table-container">
+            <table
+              data-testid="user-management-table"
+              className="user-management-table"
+            >
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const isHovered = hoveredHeader === header.id;
+                      return (
+                        <th
+                          key={header.id}
+                          scope="col"
+                          onClick={header.column.getToggleSortingHandler()}
+                          onMouseEnter={() => setHoveredHeader(header.id)}
+                          onMouseLeave={() => setHoveredHeader("")}
+                          style={{ width: `${header.column.getSize()}%` }}
+                          className="header-cell"
+                        >
+                          {header.isPlaceholder ? null : (
+                            <button
+                              type="button"
+                              className={
+                                header.column.getCanSort()
+                                  ? "header-button sortable"
+                                  : "header-button"
+                              }
+                              title={
+                                header.column.getCanSort()
+                                  ? header.column.getNextSortingOrder() ===
+                                    "asc"
+                                    ? "Sort ascending"
+                                    : header.column.getNextSortingOrder() ===
+                                      "desc"
+                                    ? "Sort descending"
+                                    : "Clear sort"
+                                  : undefined
+                              }
+                            >
+                              <span className="sort-icon">
+                                {header.column.getCanSort() &&
+                                  isHovered &&
+                                  !header.column.getIsSorted() && (
+                                    <UnfoldMoreIcon fontSize="small" />
+                                  )}
+                                {{
+                                  asc: <KeyboardArrowUpIcon fontSize="small" />,
+                                  desc: (
+                                    <KeyboardArrowDownIcon fontSize="small" />
+                                  ),
+                                }[header.column.getIsSorted() as string] ??
+                                  null}
+                              </span>
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </button>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id} data-testid="user-row-item">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} data-testid={`user-cell-${cell.id}`}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
                         )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} data-testid="user-row-item">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} data-testid={`user-cell-${cell.id}`}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : searchText.trim() ? (
-        <p data-testid="no-results-message" className="no-users-message">
-          No results were found.
-        </p>
-      ) : (
-        <p data-testid="no-users-message" className="no-users-message">
-          No users found.
-        </p>
-      )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : searchText.trim() ? (
+          <p data-testid="no-results-message" className="no-users-message">
+            No results were found.
+          </p>
+        ) : (
+          <p data-testid="no-users-message" className="no-users-message">
+            No users found.
+          </p>
+        )}
+      </Box>
 
       <Toast
         toastKey="user-management-toast"
