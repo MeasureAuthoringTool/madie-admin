@@ -253,7 +253,10 @@ declare module "@madie/madie-util" {
     fetchUsers(signal?: AbortSignal): Promise<UserDetails[]>;
     getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
     getBulkUserDetails(harpIds: string[]): Promise<Record<string, UserDetails>>;
-    exportFullUserList(signal?: AbortSignal): Promise<Blob>;
+    exportUserList(
+      exportRequest?: Record<string, unknown>,
+      signal?: AbortSignal
+    ): Promise<Blob>;
   }
 
   export function useUserServiceApi(): UserServiceApi;
