@@ -308,8 +308,50 @@ export default function CodeSystemManagement() {
         accessorFn: (row) => row.version.fhirVersion,
       },
       {
+        id: "vsacVersion",
+        header: "VSAC Version",
+        accessorFn: (row) => row.version?.vsacVersion,
+        cell: (info) => (
+          <div data-testid="code-system-vsac-version">
+            {(info.getValue() as string) || "-"}
+          </div>
+        ),
+      },
+      {
         header: "Full URL",
         accessorKey: "fullUrl",
+        cell: (info) => (
+          <div
+            style={{
+              minWidth: "150px",
+              maxWidth: "18vw",
+              paddingRight: "60px",
+              whiteSpace: "normal",
+              overflowWrap: "anywhere",
+              wordBreak: "break-all",
+            }}
+          >
+            {info.getValue() as string}
+          </div>
+        ),
+      },
+      {
+        header: "OID",
+        accessorKey: "oid",
+        cell: (info) => (
+          <div
+            data-testid="code-system-oid"
+            style={{
+              minWidth: "120px",
+              maxWidth: "12vw",
+              whiteSpace: "normal",
+              overflowWrap: "anywhere",
+              wordBreak: "break-all",
+            }}
+          >
+            {(info.getValue() as string) || "-"}
+          </div>
+        ),
       },
       {
         header: "Last Updated",

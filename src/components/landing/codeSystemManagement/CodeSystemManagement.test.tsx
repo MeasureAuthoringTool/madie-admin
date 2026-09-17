@@ -506,6 +506,111 @@ describe("CodeSystemManagement", () => {
     });
   });
 
+  it("renders VSAC Version between FHIR Version and Full URL, and OID between Full URL and Last Updated", async () => {
+    mockGetCodeSystems.mockResolvedValue({
+      content: [
+        existingCodeSystem,
+        {
+          id: "cs-2",
+          title: "No VSAC",
+          name: "novsac",
+          version: { fhirVersion: "1.0" },
+          fullUrl: "http://example.com/2",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          isLatestVersion: false,
+        },
+      ],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 25,
+      numberOfElements: 2,
+    });
+
+    render(<CodeSystemManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-vsacVersion")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("header-oid")).toBeInTheDocument();
+
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    const fhirIndex = headers.findIndex((h) => h.includes("FHIR Version"));
+    expect(headers[fhirIndex + 1]).toContain("VSAC Version");
+    expect(headers[fhirIndex + 2]).toContain("Full URL");
+    expect(headers[fhirIndex + 3]).toContain("OID");
+    expect(headers[fhirIndex + 4]).toContain("Last Updated");
+
+    const vsacVersions = screen.getAllByTestId("code-system-vsac-version");
+    expect(vsacVersions[0]).toHaveTextContent("2024");
+    expect(vsacVersions[1]).toHaveTextContent("-");
+
+    const oids = screen.getAllByTestId("code-system-oid");
+    expect(oids[0]).toHaveTextContent("1.2.3");
+    expect(oids[1]).toHaveTextContent("-");
+  });
+
+  it.each([["vsacVersion"], ["oid"]])(
+    "cycles %s sort through ASC, DESC, and default",
+    async (sortKey) => {
+      mockGetCodeSystems.mockResolvedValue({
+        content: [existingCodeSystem],
+        totalElements: 1,
+        totalPages: 1,
+        number: 0,
+        size: 25,
+        numberOfElements: 1,
+      });
+
+      render(<CodeSystemManagement />);
+      const header = `header-${sortKey}`;
+
+      await waitFor(() => {
+        expect(screen.getByTestId(header)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId(header));
+      await waitFor(() => {
+        expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
+          0,
+          25,
+          `${sortKey},false`,
+          "",
+          ""
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId(header)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId(header));
+      await waitFor(() => {
+        expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
+          0,
+          25,
+          `${sortKey},true`,
+          "",
+          ""
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId(header)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId(header));
+      await waitFor(() => {
+        expect(mockGetCodeSystems).toHaveBeenLastCalledWith(
+          0,
+          25,
+          undefined,
+          "",
+          ""
+        );
+      });
+    }
+  );
+
   it("opens add code system modal when add button is clicked", async () => {
     render(<CodeSystemManagement />);
 
