@@ -1520,12 +1520,13 @@ const UserProfile = () => {
     if (!deleteTarget) return;
 
     const { id, draft } = deleteTarget;
+    const owner = deleteTarget?.librarySet?.owner;
 
     try {
       if (draft) {
         await cqlLibraryServiceApi.deleteDraft(id);
       } else {
-        await cqlLibraryServiceApi.deleteLibrary(id, userName);
+        await cqlLibraryServiceApi.deleteLibrary(id, owner);
       }
 
       setToastType("success");
@@ -1630,15 +1631,10 @@ const UserProfile = () => {
     setLibraryTransferDialogOpen(true);
   }, []);
 
-  const handleShare = useCallback(
-    (option: string) => {
-      const resolvedOption =
-        option === "Unshare" && activeTab === 1 ? "UnshareFromMe" : option;
-      setShareOption(resolvedOption);
-      setShareDialogOpen(true);
-    },
-    [activeTab]
-  );
+  const handleShare = useCallback((option: string) => {
+    setShareOption(option);
+    setShareDialogOpen(true);
+  }, []);
 
   const handleShareDialogClose = useCallback(() => {
     setShareDialogOpen(false);
