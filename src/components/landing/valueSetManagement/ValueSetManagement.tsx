@@ -160,8 +160,7 @@ export default function ValueSetManagement() {
         cell: (info) => (
           <div
             style={{
-              maxWidth: "20vw",
-              minWidth: "150px",
+              minWidth: "200px",
               whiteSpace: "normal",
               overflowWrap: "break-word",
               wordBreak: "break-word",
