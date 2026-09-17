@@ -497,6 +497,104 @@ describe("ValueSetManagement", () => {
       );
     });
   });
+  it("renders the Version column between URL and Last Updated", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          version: "20240101",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+        {
+          id: "2",
+          url: "http://example.com",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 2,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-version")).toBeInTheDocument();
+    });
+
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    const urlIndex = headers.findIndex((h) => h.includes("URL"));
+    expect(headers[urlIndex + 1]).toContain("Version");
+    expect(headers[urlIndex + 2]).toContain("Last Updated");
+
+    const versions = screen.getAllByTestId("value-set-version");
+    expect(versions[0]).toHaveTextContent("20240101");
+    expect(versions[1]).toHaveTextContent("-");
+  });
+
+  it("cycles version sort through ASC, DESC, and default", async () => {
+    mockGetValueSets.mockResolvedValue({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com",
+          version: "1.0",
+          lastUpdated: "2025-01-01T00:00:00Z",
+          manuallyModified: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-version")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("header-version"));
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(
+        0,
+        25,
+        "version,false",
+        ""
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-version")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("header-version"));
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(
+        0,
+        25,
+        "version,true",
+        ""
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-version")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("header-version"));
+    await waitFor(() => {
+      expect(mockGetValueSets).toHaveBeenLastCalledWith(0, 25, undefined, "");
+    });
+  });
+
   it("opens the VSE dialog when Edit Value Set is clicked", async () => {
     mockGetValueSets.mockResolvedValueOnce({
       content: [
