@@ -160,13 +160,22 @@ export default function ValueSetManagement() {
         cell: (info) => (
           <div
             style={{
-              width: "250px",
+              minWidth: "200px",
               whiteSpace: "normal",
               overflowWrap: "break-word",
               wordBreak: "break-word",
             }}
           >
             {info.getValue() as string}
+          </div>
+        ),
+      },
+      {
+        header: "Version",
+        accessorKey: "version",
+        cell: (info) => (
+          <div data-testid="value-set-version">
+            {(info.getValue() as string) || "-"}
           </div>
         ),
       },
