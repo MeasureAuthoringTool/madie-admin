@@ -536,7 +536,7 @@ export default function CodeSystemManagement() {
             <MenuItem
               data-testid="code-system-report-all-code-systems"
               onClick={() => {
-                handleExportAllCodeSystems();
+                handleExportAllCodeSystems().then(() => undefined);
               }}
             >
               All Code Systems
