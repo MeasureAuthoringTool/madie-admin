@@ -510,7 +510,7 @@ export default function ValueSetManagement() {
           handleDeleteValueSet(valueSetToDelete.id);
           setValueSetToDelete(null);
         }}
-        dialogTitle="Delete Component Measure"
+        dialogTitle="Delete Value Set"
         hideWarning
         customDialogBody={
           <>
