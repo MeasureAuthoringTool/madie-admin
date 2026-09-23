@@ -111,40 +111,42 @@ export default function CodeSystemManagement() {
     setReportsAnchorEl(null);
   };
 
-  const handleExportAllCodeSystems = async (): Promise<void> => {
+  const handleExportAllCodeSystems = (): void => {
     handleReportsMenuClose();
     setExporting(true);
     exportAbortControllerRef.current = new AbortController();
 
-    try {
-      const excelBlob = await terminologyServiceApi.exportCodeSystems(
-        {},
-        exportAbortControllerRef.current.signal
-      );
-      const url = window.URL.createObjectURL(excelBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", buildExportFileName());
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+    terminologyServiceApi
+      .exportCodeSystems({}, exportAbortControllerRef.current.signal)
+      .then((excelBlob) => {
+        const url = window.URL.createObjectURL(excelBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", buildExportFileName());
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
 
-      setToastType("success");
-      setToastMessage("All Code Systems report exported successfully");
-      setToastOpen(true);
-    } catch (err) {
-      if (!(err instanceof Error && err.name === "AbortError")) {
-        setToastType("danger");
-        setToastMessage(
-          err instanceof Error ? err.message : "Unable to export code systems."
-        );
+        setToastType("success");
+        setToastMessage("All Code Systems report exported successfully");
         setToastOpen(true);
-      }
-    } finally {
-      setExporting(false);
-      exportAbortControllerRef.current = null;
-    }
+      })
+      .catch((err) => {
+        if (!(err instanceof Error && err.name === "AbortError")) {
+          setToastType("danger");
+          setToastMessage(
+            err instanceof Error
+              ? err.message
+              : "Unable to export code systems."
+          );
+          setToastOpen(true);
+        }
+      })
+      .finally(() => {
+        setExporting(false);
+        exportAbortControllerRef.current = null;
+      });
   };
 
   const loadCodeSystems = async () => {
@@ -536,7 +538,7 @@ export default function CodeSystemManagement() {
             <MenuItem
               data-testid="code-system-report-all-code-systems"
               onClick={() => {
-                handleExportAllCodeSystems().then(() => undefined);
+                handleExportAllCodeSystems();
               }}
             >
               All Code Systems
