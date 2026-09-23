@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   MadieDeleteDialog,
+  MadieSpinner,
   Toast,
   Pagination,
   MadieTable,
@@ -16,16 +17,27 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import CheckIcon from "@mui/icons-material/Check";
-import { IconButton, InputAdornment, MenuItem } from "@mui/material";
+import { Box, IconButton, InputAdornment, Menu, MenuItem } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import CodeSystemDialog, {
   type NewCodeSystemFormData,
 } from "./CodeSystemDialog";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
+
+const buildExportFileName = (date: Date = new Date()): string => {
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  const stamp =
+    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
+      date.getSeconds()
+    )}`;
+  return `CodeSystemsExport_${stamp}.xlsx`;
+};
 
 export default function CodeSystemManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
@@ -46,6 +58,12 @@ export default function CodeSystemManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [deletingCodeSystem, setDeletingCodeSystem] =
     useState<CodeSystem | null>(null);
+  const [reportsAnchorEl, setReportsAnchorEl] = useState<HTMLElement | null>(
+    null
+  );
+  const reportsMenuOpen = Boolean(reportsAnchorEl);
+  const [exporting, setExporting] = useState<boolean>(false);
+  const exportAbortControllerRef = useRef<AbortController | null>(null);
   const [newCodeSystemFormData, setNewCodeSystemFormData] =
     useState<NewCodeSystemFormData>({
       title: "",
@@ -80,6 +98,52 @@ export default function CodeSystemManagement() {
       setToastType("danger");
       setToastMessage(err.message);
       setToastOpen(true);
+    }
+  };
+
+  const handleReportsMenuOpen = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    setReportsAnchorEl(event.currentTarget);
+  };
+
+  const handleReportsMenuClose = () => {
+    setReportsAnchorEl(null);
+  };
+
+  const handleExportAllCodeSystems = async (): Promise<void> => {
+    handleReportsMenuClose();
+    setExporting(true);
+    exportAbortControllerRef.current = new AbortController();
+
+    try {
+      const excelBlob = await terminologyServiceApi.exportCodeSystems(
+        {},
+        exportAbortControllerRef.current.signal
+      );
+      const url = window.URL.createObjectURL(excelBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", buildExportFileName());
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setToastType("success");
+      setToastMessage("All Code Systems report exported successfully");
+      setToastOpen(true);
+    } catch (err) {
+      if (!(err instanceof Error && err.name === "AbortError")) {
+        setToastType("danger");
+        setToastMessage(
+          err instanceof Error ? err.message : "Unable to export code systems."
+        );
+        setToastOpen(true);
+      }
+    } finally {
+      setExporting(false);
+      exportAbortControllerRef.current = null;
     }
   };
 
@@ -262,6 +326,14 @@ export default function CodeSystemManagement() {
     filterBy,
   ]);
 
+  useEffect(() => {
+    return () => {
+      if (exportAbortControllerRef.current) {
+        exportAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const onSearchTrigger = () => {
     setAppliedSearchText(searchText.trim());
     setPage(1);
@@ -427,6 +499,51 @@ export default function CodeSystemManagement() {
           }}
         ></div>
 
+        <div
+          className="code-system-reports"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            paddingBottom: 16,
+          }}
+        >
+          <button
+            type="button"
+            className="code-system-reports-link"
+            data-testid="code-system-reports-button"
+            aria-haspopup="menu"
+            aria-expanded={reportsMenuOpen}
+            aria-controls={
+              reportsMenuOpen ? "code-system-reports-menu" : undefined
+            }
+            disabled={exporting}
+            onClick={handleReportsMenuOpen}
+          >
+            <span>Reports</span>
+            <KeyboardArrowDownIcon fontSize="small" />
+          </button>
+          <Menu
+            id="code-system-reports-menu"
+            anchorEl={reportsAnchorEl}
+            open={reportsMenuOpen}
+            onClose={handleReportsMenuClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{
+              list: { "aria-labelledby": "code-system-reports-button" },
+            }}
+          >
+            <MenuItem
+              data-testid="code-system-report-all-code-systems"
+              onClick={() => {
+                handleExportAllCodeSystems();
+              }}
+            >
+              All Code Systems
+            </MenuItem>
+          </Menu>
+        </div>
+
         {/* Search / Filter row */}
         <div
           className="code-system-search-row"
@@ -529,7 +646,34 @@ export default function CodeSystemManagement() {
             Loading code systems...
           </p>
         ) : (
-          <>
+          <Box position="relative">
+            {exporting && (
+              <Box
+                className="export-spinner-overlay"
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                zIndex={10}
+                data-testid="code-system-export-spinner-overlay"
+              >
+                <div
+                  data-testid="code-system-export-loading"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <MadieSpinner style={{ height: 50, width: 50 }} />
+                </div>
+              </Box>
+            )}
             <div
               style={{
                 overflow: "auto",
@@ -564,7 +708,7 @@ export default function CodeSystemManagement() {
                 setPage(1);
               }}
             />
-          </>
+          </Box>
         )}
 
         <Toast
