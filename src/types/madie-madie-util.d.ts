@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
+  import {Measure} from "@madie/madie-models";
+
   export interface CodeSystem {
     id: string;
     fullUrl: string;
@@ -302,6 +304,13 @@ declare module "@madie/madie-util" {
       harpId: string,
       retainShareAccess: boolean
     ): Promise<any>;
+    correctMeasureVersion(
+      id: string,
+      inCorrectVersion: string,
+      correctVersion: string,
+      draftVersion: string,
+      ownerHarpId: string
+    ): Promise<Measure>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;
@@ -428,10 +437,17 @@ declare module "@madie/madie-util" {
     onClose: () => void;
   }): JSX.Element | null;
   export function ChangeVersionDialog(props: {
-    measures: any[];
+    measures: Measure[];
     open: boolean;
-    onClose: () => void;
-  }): JSX.Element | null;
+    onClose: Function;
+    onSubmit?: (payload: {
+      measure: Measure;
+      inCorrectVersion: string;
+      correctVersion: string;
+      draftVersion: string;
+    }) => Promise<void>;
+    isSubmitting?: boolean;
+  }): React.ReactElement | null;
   export function ShareDialog(props: {
     measures: any[];
     open: boolean;

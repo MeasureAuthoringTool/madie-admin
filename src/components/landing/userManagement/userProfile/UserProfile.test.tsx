@@ -20,6 +20,7 @@ const mockAdminSearchMeasures = jest.fn();
 const mockGetMeasuresByMeasureSetId = jest.fn();
 const mockAdminDeleteMeasure = jest.fn();
 const mockDeleteMeasure = jest.fn();
+const mockCorrectMeasureVersion = jest.fn();
 const mockFetchMeasure = jest.fn();
 const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
@@ -52,6 +53,8 @@ jest.mock("@madie/madie-util", () => ({
       mockGetMeasuresByMeasureSetId(...args),
     adminDeleteMeasure: (...args: unknown[]) => mockAdminDeleteMeasure(...args),
     deleteMeasure: (...args: unknown[]) => mockDeleteMeasure(...args),
+    correctMeasureVersion: (...args: unknown[]) =>
+      mockCorrectMeasureVersion(...args),
     fetchMeasure: (...args: unknown[]) => mockFetchMeasure(...args),
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
@@ -112,13 +115,33 @@ jest.mock("@madie/madie-util", () => ({
         </button>
       </div>
     ) : null,
-  ChangeVersionDialog: ({ open, onClose, measures }: any) =>
+  ChangeVersionDialog: ({
+    open,
+    onClose,
+    onSubmit,
+    measures,
+    isSubmitting,
+  }: any) =>
     open ? (
       <div
         data-testid="change-version-dialog"
         data-measure-id={measures?.[0]?.id}
       >
         Change Version #
+        <button
+          data-testid="change-version-save-btn"
+          disabled={isSubmitting}
+          onClick={() =>
+            onSubmit?.({
+              measure: measures?.[0],
+              inCorrectVersion: measures?.[0]?.version,
+              correctVersion: "1.0.001",
+              draftVersion: "1.0.000",
+            })
+          }
+        >
+          Save
+        </button>
         <button data-testid="change-version-close-btn" onClick={onClose}>
           Cancel
         </button>
@@ -295,6 +318,7 @@ describe("UserProfile", () => {
     mockGetMeasuresByMeasureSetId.mockReset();
     mockAdminDeleteMeasure.mockReset();
     mockDeleteMeasure.mockReset();
+    mockCorrectMeasureVersion.mockReset();
     mockFetchMeasure.mockReset();
     mockExportMeasure.mockReset();
     mockFetchCqlLibraries.mockReset();
@@ -314,6 +338,7 @@ describe("UserProfile", () => {
     mockGetLibrariesByLibrarySetId.mockResolvedValue([]);
     mockAdminDeleteMeasure.mockResolvedValue({ status: 200 });
     mockDeleteMeasure.mockResolvedValue({ status: 200 });
+    mockCorrectMeasureVersion.mockResolvedValue({ status: 200 });
     mockFetchMeasure.mockImplementation((id: string) =>
       Promise.resolve({ id, measureName: "Owned Measure A" })
     );
@@ -2448,6 +2473,58 @@ describe("UserProfile", () => {
           screen.queryByTestId("change-version-dialog")
         ).not.toBeInTheDocument()
       );
+    });
+
+    it("saves change version, refreshes the list, and shows success toast", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("change-version-action-btn"));
+
+      const callsBeforeSave = mockAdminSearchMeasures.mock.calls.length;
+      userEvent.click(await screen.findByTestId("change-version-save-btn"));
+
+      await waitFor(() => {
+        expect(mockCorrectMeasureVersion).toHaveBeenCalledWith(
+          "m1",
+          "1.0.000",
+          "1.0.001",
+          "1.0.000",
+          "test_user"
+        );
+      });
+
+      expect(
+        await screen.findByText("Version # changed successfully")
+      ).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(mockAdminSearchMeasures.mock.calls.length).toBeGreaterThan(
+          callsBeforeSave
+        );
+      });
+      expect(screen.queryByTestId("change-version-dialog")).not.toBeInTheDocument();
+    });
+
+    it("shows danger toast and keeps dialog open when change version save fails", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockCorrectMeasureVersion.mockRejectedValueOnce({
+        response: { data: { message: "Unable to revert version" } },
+      });
+      renderAt("/admin/userProfile/test_user");
+
+      userEvent.click(await screen.findByTestId("checkbox-m1"));
+      userEvent.click(await screen.findByTestId("change-version-action-btn"));
+
+      const callsBeforeSave = mockAdminSearchMeasures.mock.calls.length;
+      userEvent.click(await screen.findByTestId("change-version-save-btn"));
+
+      expect(
+        await screen.findByTestId("delete-measure-error-message")
+      ).toHaveTextContent("Unable to revert version");
+      expect(screen.getByTestId("change-version-dialog")).toBeInTheDocument();
+      expect(mockAdminSearchMeasures.mock.calls.length).toBe(callsBeforeSave);
     });
 
     it("opens the Compare dialog for two selected instances", async () => {

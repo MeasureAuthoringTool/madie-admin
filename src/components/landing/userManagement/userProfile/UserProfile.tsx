@@ -60,6 +60,7 @@ import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
 import _ from "lodash";
+import {Measure} from "@madie/madie-models";
 
 type Ownership =
   | "OWNED_MEASURE"
@@ -422,6 +423,8 @@ const UserProfile = () => {
   const [expandedLibraryRows, setExpandedLibraryRows] = useState<LibraryRow[]>(
     []
   );
+  const [changeVersionSubmitting, setChangeVersionSubmitting] =
+    useState<boolean>(false);
   const expandedLibrarySetIdRef = useRef<string | null>(null);
   useEffect(() => {
     expandedLibrarySetIdRef.current = expandedLibrarySetId;
@@ -1719,6 +1722,48 @@ const UserProfile = () => {
     [libraryTable, clearLibraryExpansion]
   );
 
+  const submitChangeVersion = async ({
+    measure,
+    inCorrectVersion,
+    correctVersion,
+    draftVersion,
+  }: {
+    measure: Measure;
+    inCorrectVersion: string;
+    correctVersion: string;
+    draftVersion: string;
+  }) => {
+    if (changeVersionSubmitting) return;
+
+    setChangeVersionSubmitting(true);
+    try {
+      await measureServiceApi.correctMeasureVersion(
+        measure.id,
+        inCorrectVersion,
+        correctVersion,
+        draftVersion,
+        measure?.measureSet?.owner
+      );
+
+      setChangeVersionDialogOpen(false);
+      setToastOpen(true);
+      setToastType("success");
+      setToastMessage("Version # changed successfully");
+      table.toggleAllRowsSelected(false);
+      clearExpansion();
+      setRefreshToken((t) => t + 1);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        "An error occurred, please try again. If the error persists, please contact the help desk.";
+      setToastOpen(true);
+      setToastType("danger");
+      setToastMessage(message);
+    } finally {
+      setChangeVersionSubmitting(false);
+    }
+  };
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1908,6 +1953,8 @@ const UserProfile = () => {
         measures={selectedMeasures}
         open={changeVersionDialogOpen}
         onClose={() => setChangeVersionDialogOpen(false)}
+        onSubmit={submitChangeVersion}
+        isSubmitting={changeVersionSubmitting}
       />
 
       <ShareDialog
