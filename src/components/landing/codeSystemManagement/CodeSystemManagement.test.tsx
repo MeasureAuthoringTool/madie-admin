@@ -2,6 +2,7 @@ import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
+// @ts-ignore
 import { useTerminologyServiceApi } from "@madie/madie-util";
 import userEvent from "@testing-library/user-event";
 
@@ -12,6 +13,7 @@ jest.mock("@madie/madie-util", () => ({
 describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
   const mockGetCodeSystems = jest.fn();
+  const mockExportCodeSystems = jest.fn();
   const mockCreateCodeSystem = jest.fn();
   const mockUpdateCodeSystem = jest.fn();
   const mockDeleteCodeSystem = jest.fn();
@@ -30,6 +32,15 @@ describe("CodeSystemManagement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    Object.defineProperty(window.URL, "createObjectURL", {
+      writable: true,
+      value: jest.fn(() => "blob:code-system-export"),
+    });
+    Object.defineProperty(window.URL, "revokeObjectURL", {
+      writable: true,
+      value: jest.fn(),
+    });
+
     mockGetCodeSystems.mockResolvedValue({
       content: [],
       totalElements: 0,
@@ -41,10 +52,12 @@ describe("CodeSystemManagement", () => {
     mockCreateCodeSystem.mockResolvedValue({});
     mockUpdateCodeSystem.mockResolvedValue({});
     mockDeleteCodeSystem.mockResolvedValue({});
+    mockExportCodeSystems.mockResolvedValue(new Blob(["code systems"]));
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGetCodeSystems,
+      exportCodeSystems: mockExportCodeSystems,
       createCodeSystem: mockCreateCodeSystem,
       updateCodeSystem: mockUpdateCodeSystem,
       deleteCodeSystem: mockDeleteCodeSystem,
@@ -73,6 +86,15 @@ describe("CodeSystemManagement", () => {
     expect(
       screen.getByTestId("update-code-systems-button")
     ).toBeInTheDocument();
+  });
+
+  it("renders the reports dropdown button", () => {
+    render(<CodeSystemManagement />);
+
+    expect(
+      screen.getByTestId("code-system-reports-button")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Reports")).toBeInTheDocument();
   });
 
   it("calls API and shows success toast when update succeeds", async () => {
@@ -175,6 +197,7 @@ describe("CodeSystemManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGet,
+      exportCodeSystems: mockExportCodeSystems,
     });
 
     render(<CodeSystemManagement />);
@@ -230,6 +253,7 @@ describe("CodeSystemManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGet,
+      exportCodeSystems: mockExportCodeSystems,
     });
     render(<CodeSystemManagement />);
     // loading should be visible while the promise is pending
@@ -279,6 +303,7 @@ describe("CodeSystemManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGet,
+      exportCodeSystems: mockExportCodeSystems,
     });
     render(<CodeSystemManagement />);
     await waitFor(() => {
@@ -296,6 +321,7 @@ describe("CodeSystemManagement", () => {
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
       getCodeSystems: mockGet,
+      exportCodeSystems: mockExportCodeSystems,
     });
     render(<CodeSystemManagement />);
     await waitFor(() => {
@@ -391,6 +417,32 @@ describe("CodeSystemManagement", () => {
         ""
       );
     });
+  });
+
+  it("exports all code systems from the reports menu", async () => {
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("code-system-reports-button"));
+    await userEvent.click(
+      screen.getByTestId("code-system-report-all-code-systems")
+    );
+
+    await waitFor(() => {
+      expect(mockExportCodeSystems).toHaveBeenCalledWith(
+        {},
+        expect.any(AbortSignal)
+      );
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("All Code Systems report exported successfully")
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByTestId("update-vses-success-message")
+    ).toBeInTheDocument();
   });
 
   it("renders pagination controls for multiple pages", async () => {
