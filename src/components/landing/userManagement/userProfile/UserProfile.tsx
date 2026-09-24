@@ -60,7 +60,7 @@ import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
 import _ from "lodash";
-import {Measure} from "@madie/madie-models";
+import { Measure } from "@madie/madie-models";
 
 type Ownership =
   | "OWNED_MEASURE"

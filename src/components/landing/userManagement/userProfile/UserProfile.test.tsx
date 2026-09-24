@@ -2504,7 +2504,9 @@ describe("UserProfile", () => {
           callsBeforeSave
         );
       });
-      expect(screen.queryByTestId("change-version-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("change-version-dialog")
+      ).not.toBeInTheDocument();
     });
 
     it("shows danger toast and keeps dialog open when change version save fails", async () => {

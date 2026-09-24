@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
-  import {Measure} from "@madie/madie-models";
+  import { Measure } from "@madie/madie-models";
 
   export interface CodeSystem {
     id: string;
