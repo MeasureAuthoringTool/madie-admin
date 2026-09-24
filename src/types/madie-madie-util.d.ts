@@ -240,6 +240,10 @@ declare module "@madie/madie-util" {
     ): Promise<Page<CodeSystem>>;
 
     triggerUpdateCodeSystems(): Promise<void>;
+    exportCodeSystems(
+      exportRequest?: Record<string, unknown>,
+      signal?: AbortSignal
+    ): Promise<Blob>;
     deleteValueSet(id: string): Promise<Response>;
   }
   export function useTerminologyServiceApi(): TerminologyServiceApi;
