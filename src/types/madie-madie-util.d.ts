@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
-  import { Measure } from "@madie/madie-models";
+  import { CqlLibrary, Measure } from "@madie/madie-models";
 
   export interface CodeSystem {
     id: string;
@@ -349,6 +349,12 @@ declare module "@madie/madie-util" {
     getSharedAccessReportForLibraries(ids: string[]): Promise<any>[];
     unshareLibraries(libraryUserIdMap: Map<string, string[]>): Promise<any>;
     shareLibraries(libraries: Map<string, string[]>): Promise<any>;
+    correctLibraryVersion(
+      id: string,
+      inCorrectVersion: string,
+      draftVersion: string,
+      ownerHarpId: string
+    ): Promise<CqlLibrary>;
   }
 
   export function useCqlLibraryServiceApi(): CqlLibraryServiceApi;
@@ -521,6 +527,12 @@ declare module "@madie/madie-util" {
     libraries: any[];
     open: boolean;
     onClose: () => void;
+    onSubmit?: (payload: {
+      library: CqlLibrary;
+      inCorrectVersion: string;
+      draftVersion: string;
+    }) => Promise<void>;
+    isSubmitting?: boolean;
   }): JSX.Element | null;
   export function LibraryTransferAction(props: {
     libraries: any[];

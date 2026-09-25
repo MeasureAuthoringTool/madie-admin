@@ -30,6 +30,7 @@ const mockCheckUserCanEdit = jest.fn((...args: unknown[]) => false);
 const mockGetBulkUserDetails = jest.fn();
 const mockDeleteDraftLibrary = jest.fn();
 const mockDeleteLibrary = jest.fn();
+const mockCorrectLibraryVersion = jest.fn();
 
 jest.mock("@madie/madie-util", () => ({
   ...mockCmsIdStubs,
@@ -65,6 +66,8 @@ jest.mock("@madie/madie-util", () => ({
     deleteLibrary: (...args: unknown[]) => mockDeleteLibrary(...args),
     getLibrariesByLibrarySetId: (...args: unknown[]) =>
       mockGetLibrariesByLibrarySetId(...args),
+    correctLibraryVersion: (...args: unknown[]) =>
+      mockCorrectLibraryVersion(...args),
   })),
   checkUserCanEdit: (...args: unknown[]) => mockCheckUserCanEdit(...args),
   adminUserStore: {
@@ -347,6 +350,8 @@ describe("UserProfile", () => {
     mockDeleteLibrary.mockReset();
     mockDeleteDraftLibrary.mockResolvedValue({ status: 200 });
     mockDeleteLibrary.mockResolvedValue({ status: 200 });
+    mockCorrectLibraryVersion.mockReset();
+    mockCorrectLibraryVersion.mockResolvedValue({ status: 200 });
   });
 
   it("renders the user-profile card structure", async () => {
@@ -2489,7 +2494,6 @@ describe("UserProfile", () => {
         expect(mockCorrectMeasureVersion).toHaveBeenCalledWith(
           "m1",
           "1.0.000",
-          "1.0.001",
           "1.0.000",
           "test_user"
         );
@@ -2922,6 +2926,67 @@ describe("UserProfile", () => {
           screen.queryByTestId("change-version-dialog")
         ).not.toBeInTheDocument()
       );
+    });
+
+    it("saves the library version change, refreshes the list and shows a success toast", async () => {
+      await renderOwnedLibrariesTab();
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const changeVersionBtn = await screen.findByTestId(
+        "change-version-action-btn"
+      );
+      await waitFor(() => expect(changeVersionBtn).toBeEnabled());
+      await userEvent.click(changeVersionBtn);
+
+      const callsBeforeSave = mockFetchCqlLibraries.mock.calls.length;
+      await userEvent.click(screen.getByTestId("change-version-dialog-save"));
+
+      await waitFor(() =>
+        expect(mockCorrectLibraryVersion).toHaveBeenCalledWith(
+          "lib1",
+          "1.0.000",
+          "1.0.000",
+          undefined
+        )
+      );
+
+      expect(
+        await screen.findByText("Version # changed successfully")
+      ).toBeInTheDocument();
+
+      await waitFor(() =>
+        expect(mockFetchCqlLibraries.mock.calls.length).toBeGreaterThan(
+          callsBeforeSave
+        )
+      );
+      expect(
+        screen.queryByTestId("change-version-dialog")
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows a danger toast and keeps the dialog open when the version change fails", async () => {
+      mockCorrectLibraryVersion.mockRejectedValueOnce({
+        response: { data: { message: "Unable to revert version" } },
+      });
+      await renderOwnedLibrariesTab();
+
+      await userEvent.click(await screen.findByTestId("checkbox-lib1"));
+
+      const changeVersionBtn = await screen.findByTestId(
+        "change-version-action-btn"
+      );
+      await waitFor(() => expect(changeVersionBtn).toBeEnabled());
+      await userEvent.click(changeVersionBtn);
+
+      const callsBeforeSave = mockFetchCqlLibraries.mock.calls.length;
+      await userEvent.click(screen.getByTestId("change-version-dialog-save"));
+
+      expect(
+        await screen.findByText("Unable to revert version")
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("change-version-dialog")).toBeInTheDocument();
+      expect(mockFetchCqlLibraries.mock.calls.length).toBe(callsBeforeSave);
     });
 
     it("offers both actions on the Shared Libraries tab", async () => {
