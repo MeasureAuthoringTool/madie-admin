@@ -135,8 +135,7 @@ jest.mock("@madie/madie-util", () => ({
             onSubmit?.({
               measure: measures?.[0],
               inCorrectVersion: measures?.[0]?.version,
-              correctVersion: "1.0.001",
-              draftVersion: "1.0.000",
+              draftVersion: "0.5.000",
             })
           }
         >
@@ -2489,8 +2488,7 @@ describe("UserProfile", () => {
         expect(mockCorrectMeasureVersion).toHaveBeenCalledWith(
           "m1",
           "1.0.000",
-          "1.0.001",
-          "1.0.000",
+          "0.5.000",
           "test_user"
         );
       });
