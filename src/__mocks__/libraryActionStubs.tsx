@@ -43,13 +43,33 @@ export const LibraryChangeVersionAction = ({ libraries, onClick }: any) => (
   </button>
 );
 
-export const LibraryChangeVersionDialog = ({ libraries, open, onClose }: any) =>
+export const LibraryChangeVersionDialog = ({
+  libraries,
+  open,
+  onClose,
+  onSubmit,
+  isSubmitting,
+}: any) =>
   open ? (
     <div
       data-testid="change-version-dialog"
       data-library-id={libraries?.[0]?.id}
     >
       <span>Change Version #</span>
+      <button
+        type="button"
+        data-testid="change-version-dialog-save"
+        disabled={isSubmitting}
+        onClick={() =>
+          onSubmit?.({
+            library: libraries?.[0],
+            inCorrectVersion: libraries?.[0]?.version,
+            draftVersion: "0.5.000",
+          })
+        }
+      >
+        Save
+      </button>
       <button
         type="button"
         data-testid="change-version-dialog-close"

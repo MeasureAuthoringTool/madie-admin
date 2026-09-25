@@ -59,7 +59,7 @@ import {
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
-import { Measure } from "@madie/madie-models";
+import { CqlLibrary, Measure } from "@madie/madie-models";
 
 type Ownership =
   | "OWNED_MEASURE"
@@ -423,6 +423,8 @@ const UserProfile = () => {
     []
   );
   const [changeVersionSubmitting, setChangeVersionSubmitting] =
+    useState<boolean>(false);
+  const [libraryChangeVersionSubmitting, setLibraryChangeVersionSubmitting] =
     useState<boolean>(false);
   const expandedLibrarySetIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1760,6 +1762,45 @@ const UserProfile = () => {
     }
   };
 
+  const submitLibraryChangeVersion = async ({
+    library,
+    inCorrectVersion,
+    draftVersion,
+  }: {
+    library: CqlLibrary;
+    inCorrectVersion: string;
+    draftVersion: string;
+  }) => {
+    if (libraryChangeVersionSubmitting) return;
+
+    setLibraryChangeVersionSubmitting(true);
+    try {
+      await cqlLibraryServiceApi.correctLibraryVersion(
+        library.id,
+        inCorrectVersion,
+        draftVersion,
+        library?.librarySet?.owner
+      );
+
+      setLibraryChangeVersionDialogOpen(false);
+      setToastOpen(true);
+      setToastType("success");
+      setToastMessage("Version # changed successfully");
+      libraryTable.toggleAllRowsSelected(false);
+      clearLibraryExpansion();
+      setRefreshToken((t) => t + 1);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        "An error occurred, please try again. If the error persists, please contact the help desk.";
+      setToastOpen(true);
+      setToastType("danger");
+      setToastMessage(message);
+    } finally {
+      setLibraryChangeVersionSubmitting(false);
+    }
+  };
+
   return (
     <div className="user-profile" data-testid="user-profile">
       <div className="user-profile-header">
@@ -1985,6 +2026,8 @@ const UserProfile = () => {
         libraries={selectedLibraries}
         open={libraryChangeVersionDialogOpen}
         onClose={() => setLibraryChangeVersionDialogOpen(false)}
+        onSubmit={submitLibraryChangeVersion}
+        isSubmitting={libraryChangeVersionSubmitting}
       />
 
       <LibraryTransferDialog
