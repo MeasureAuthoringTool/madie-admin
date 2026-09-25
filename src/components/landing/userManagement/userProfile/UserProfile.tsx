@@ -59,7 +59,6 @@ import {
 import ActionCenter from "./actionCenter/ActionCenter";
 import "./UserProfile.scss";
 import LibraryActionCenter from "./actionCenter/LibraryActionCenter";
-import _ from "lodash";
 import { Measure } from "@madie/madie-models";
 
 type Ownership =
@@ -1725,12 +1724,10 @@ const UserProfile = () => {
   const submitChangeVersion = async ({
     measure,
     inCorrectVersion,
-    correctVersion,
     draftVersion,
   }: {
     measure: Measure;
     inCorrectVersion: string;
-    correctVersion: string;
     draftVersion: string;
   }) => {
     if (changeVersionSubmitting) return;
@@ -1740,7 +1737,6 @@ const UserProfile = () => {
       await measureServiceApi.correctMeasureVersion(
         measure.id,
         inCorrectVersion,
-        correctVersion,
         draftVersion,
         measure?.measureSet?.owner
       );

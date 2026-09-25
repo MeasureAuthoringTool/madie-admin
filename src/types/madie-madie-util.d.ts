@@ -311,7 +311,6 @@ declare module "@madie/madie-util" {
     correctMeasureVersion(
       id: string,
       inCorrectVersion: string,
-      correctVersion: string,
       draftVersion: string,
       ownerHarpId: string
     ): Promise<Measure>;
