@@ -64,7 +64,7 @@ export const LibraryChangeVersionDialog = ({
           onSubmit?.({
             library: libraries?.[0],
             inCorrectVersion: libraries?.[0]?.version,
-            draftVersion: "1.0.000",
+            draftVersion: "0.5.000",
           })
         }
       >

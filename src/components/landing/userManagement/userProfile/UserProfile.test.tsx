@@ -2945,7 +2945,7 @@ describe("UserProfile", () => {
         expect(mockCorrectLibraryVersion).toHaveBeenCalledWith(
           "lib1",
           "1.0.000",
-          "1.0.000",
+          "0.5.000",
           undefined
         )
       );
