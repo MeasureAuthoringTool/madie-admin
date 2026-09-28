@@ -1,24 +1,31 @@
 @use "sass:color";
 
 .code-system-management {
-  padding: 0 32px 24px;
+  padding: 0 24px 24px;
   display: flex;
-  gap: 24px;
+  gap: 16px;
 
   .code-system-management-table {
     flex: 1;
     min-width: 0;
   }
 
+  .cs-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
   .code-system-management-card {
     position: relative;
     z-index: 1;
     flex: 0 0 auto;
-    min-width: 250px;
+    min-width: 200px;
+    max-width: 200px;
     background: #fff;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 4%);
-    padding: 24px;
+    padding: 16px;
     display: flex;
     justify-content: flex-start;
     align-items: flex-start;
@@ -31,7 +38,7 @@
     > div {
       > p {
         margin-top: 20px;
-        width: 180px;
+        width: auto;
         font-size: 12px;
       }
     }
@@ -71,30 +78,91 @@
 
 #codeSystemTable {
   overflow: visible;
+  width: 100%;
+  min-width: 980px;
+  table-layout: fixed;
+
+  th,
+  td {
+    box-sizing: border-box;
+  }
 
   .measures-list {
     > tr {
       > td {
-        font-size: 14px;
+        font-size: 13px;
       }
     }
   }
+
   thead tr {
     border-bottom: solid 1px #8c8c8c;
     background: #f5f5f5;
-    text-align: center;
     > th {
-      padding: 12px 16px;
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: bottom;
+      font-size: 13px;
+      position: relative;
+    }
+    > th:nth-child(-n + 8) {
+      padding-right: 24px;
     }
   }
 
   .ml-tr {
     > td {
-      padding: 12px 16px;
+      padding: 12px 10px;
       text-align: left;
       vertical-align: top;
       white-space: normal;
       overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+  }
+
+  th,
+  td {
+    &:nth-child(1) {
+      width: 11%;
+    }
+    &:nth-child(2) {
+      width: 12%;
+    }
+    &:nth-child(3) {
+      width: 8%;
+    }
+    &:nth-child(4) {
+      width: 8%;
+    }
+    &:nth-child(5) {
+      width: 21%;
+      word-break: break-all;
+      padding-right: 20px;
+    }
+    &:nth-child(6) {
+      width: 13%;
+      word-break: break-all;
+    }
+    &:nth-child(7) {
+      width: 11%;
+    }
+    &:nth-child(8) {
+      width: 8%;
+      text-align: center;
+    }
+    &:nth-child(9) {
+      width: 8%;
+    }
+  }
+
+  td:nth-child(9) {
+    .MuiIconButton-root {
+      padding: 4px;
+    }
+    svg {
+      width: 20px;
+      height: 20px;
     }
   }
 
@@ -130,11 +198,31 @@
     }
   }
 
-  button > .arrowDisplay {
-    position: absolute;
-    right: -25px;
+  th > button.header-button {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    text-align: left;
   }
-  th > button {
-    position: relative;
+
+  th > button.header-button > span:not(.arrowDisplay) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .arrowDisplay {
+    position: absolute;
+    right: 2px;
+    bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 }

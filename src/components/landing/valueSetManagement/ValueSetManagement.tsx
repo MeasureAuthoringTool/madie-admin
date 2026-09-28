@@ -157,18 +157,7 @@ export default function ValueSetManagement() {
       {
         header: "URL",
         accessorKey: "url",
-        cell: (info) => (
-          <div
-            style={{
-              minWidth: "200px",
-              whiteSpace: "normal",
-              overflowWrap: "break-word",
-              wordBreak: "break-word",
-            }}
-          >
-            {info.getValue() as string}
-          </div>
-        ),
+        cell: (info) => <div>{info.getValue() as string}</div>,
       },
       {
         header: "Version",
@@ -425,11 +414,7 @@ export default function ValueSetManagement() {
           </p>
         ) : table.getRowModel().rows.length > 0 ? (
           <>
-            <div
-              style={{
-                overflow: "auto",
-              }}
-            >
+            <div className="value-set-table-wrapper">
               <MadieTable
                 table={table}
                 currentSort={currentSort}
