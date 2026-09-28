@@ -394,35 +394,13 @@ export default function CodeSystemManagement() {
       {
         header: "Full URL",
         accessorKey: "fullUrl",
-        cell: (info) => (
-          <div
-            style={{
-              minWidth: "150px",
-              maxWidth: "18vw",
-              paddingRight: "60px",
-              whiteSpace: "normal",
-              overflowWrap: "anywhere",
-              wordBreak: "break-all",
-            }}
-          >
-            {info.getValue() as string}
-          </div>
-        ),
+        cell: (info) => <div>{info.getValue() as string}</div>,
       },
       {
         header: "OID",
         accessorKey: "oid",
         cell: (info) => (
-          <div
-            data-testid="code-system-oid"
-            style={{
-              minWidth: "120px",
-              maxWidth: "12vw",
-              whiteSpace: "normal",
-              overflowWrap: "anywhere",
-              wordBreak: "break-all",
-            }}
-          >
+          <div data-testid="code-system-oid">
             {(info.getValue() as string) || "-"}
           </div>
         ),
@@ -676,11 +654,7 @@ export default function CodeSystemManagement() {
                 </div>
               </Box>
             )}
-            <div
-              style={{
-                overflow: "auto",
-              }}
-            >
+            <div className="cs-table-wrapper">
               <MadieTable
                 table={table}
                 currentSort={currentSort}
