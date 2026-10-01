@@ -170,6 +170,14 @@ declare module "@madie/madie-util" {
     lastLoginAt?: string;
   }
 
+  export interface UserExportRequest {
+    userIds?: string[];
+    ownedMeasures?: boolean;
+    sharedMeasures?: boolean;
+    ownedLibraries?: boolean;
+    sharedLibraries?: boolean;
+  }
+
   export function useFeatureFlags(): FeatureFlags;
   export function useDocumentTitle(title: string): void;
   export function useUserRoles(): { roles: string[]; isAdmin: boolean } | null;
@@ -260,7 +268,7 @@ declare module "@madie/madie-util" {
     getUser(harpId: string, signal?: AbortSignal): Promise<UserDetails>;
     getBulkUserDetails(harpIds: string[]): Promise<Record<string, UserDetails>>;
     exportUserList(
-      exportRequest?: Record<string, unknown>,
+      exportRequest?: UserExportRequest,
       signal?: AbortSignal
     ): Promise<Blob>;
   }

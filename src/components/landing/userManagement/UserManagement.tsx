@@ -27,6 +27,7 @@ import {
   Menu,
   Chip,
   Box,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -38,6 +39,7 @@ import { type UserDetails, UserStatus } from "@madie/madie-models";
 import { useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
+import ExportSelectedUsersDialog from "./ExportSelectedUsersDialog";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
 
@@ -81,7 +83,7 @@ const UserManagement = () => {
   const userServiceApi = useRef(useUserServiceApi()).current;
   const navigate = useNavigate();
 
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   // Export action state
   const [exportAnchorEl, setExportAnchorEl] = useState<HTMLElement | null>(
@@ -90,6 +92,10 @@ const UserManagement = () => {
   const exportMenuOpen = Boolean(exportAnchorEl);
   const [exporting, setExporting] = useState<boolean>(false);
   const exportAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Export selected users dialog state
+  const [selectedUsersDialogOpen, setSelectedUsersDialogOpen] =
+    useState<boolean>(false);
 
   // Toast state
   const [toastOpen, setToastOpen] = useState<boolean>(false);
@@ -107,6 +113,15 @@ const UserManagement = () => {
 
   const handleExportMenuClose = () => {
     setExportAnchorEl(null);
+  };
+
+  const handleExportSelectedUsers = () => {
+    handleExportMenuClose();
+    setSelectedUsersDialogOpen(true);
+  };
+
+  const handleCloseSelectedUsersDialog = () => {
+    setSelectedUsersDialogOpen(false);
   };
 
   const handleExportUserList = async () => {
@@ -189,6 +204,13 @@ const UserManagement = () => {
     [users]
   );
   const deactivatedCount = totalCount - activeCount;
+
+  // Users whose row checkbox is currently selected (selection is keyed by id).
+  const selectedUsers = useMemo(
+    () => users.filter((u) => u.id != null && rowSelection[u.id]),
+    [users, rowSelection]
+  );
+  const hasSelectedUsers = selectedUsers.length > 0;
 
   // Filter
   const filteredUsers = useMemo(() => {
@@ -469,6 +491,17 @@ const UserManagement = () => {
             >
               Export full user list
             </MenuItem>
+            <Tooltip title={hasSelectedUsers ? "" : "Select users to export"}>
+              <span>
+                <MenuItem
+                  data-testid="user-export-selected-users"
+                  disabled={!hasSelectedUsers}
+                  onClick={handleExportSelectedUsers}
+                >
+                  Export selected user(s)
+                </MenuItem>
+              </span>
+            </Tooltip>
           </Menu>
         </div>
       </div>
@@ -603,6 +636,12 @@ const UserManagement = () => {
           </p>
         )}
       </Box>
+
+      <ExportSelectedUsersDialog
+        open={selectedUsersDialogOpen}
+        selectedUsers={selectedUsers}
+        onClose={handleCloseSelectedUsersDialog}
+      />
 
       <Toast
         toastKey="user-management-toast"

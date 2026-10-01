@@ -1,6 +1,7 @@
 import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import UserManagement from "./UserManagement";
 // @ts-ignore
@@ -909,6 +910,128 @@ describe("UserManagement", () => {
       await waitFor(() =>
         expect(
           screen.queryByText("Full User Report exported successfully")
+        ).not.toBeInTheDocument()
+      );
+    });
+  });
+
+  describe("Export selected users", () => {
+    it("renders both export options in the dropdown", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+
+      expect(
+        screen.getByTestId("user-export-full-user-list")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("user-export-selected-users")
+      ).toBeInTheDocument();
+    });
+
+    it("disables 'Export selected user(s)' when no users are selected", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+
+      expect(screen.getByTestId("user-export-selected-users")).toHaveClass(
+        "Mui-disabled"
+      );
+    });
+
+    it("shows a 'Select users to export' tooltip on the disabled option", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+
+      const wrapper = screen.getByTestId("user-export-selected-users")
+        .parentElement as HTMLElement;
+      fireEvent.mouseOver(wrapper);
+
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "Select users to export"
+      );
+    });
+
+    it("enables the option and opens the dialog with the selected user", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      // Rows are sorted by name ascending: Bob Brown (harp3) is the first row.
+      fireEvent.click(screen.getAllByRole("checkbox")[1]);
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      const option = screen.getByTestId("user-export-selected-users");
+      expect(option).not.toHaveClass("Mui-disabled");
+
+      fireEvent.click(option);
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Export Selected Users (1)")
+        ).toBeInTheDocument()
+      );
+      expect(screen.getByText("Bob Brown (harp3)")).toBeInTheDocument();
+    });
+
+    it("opens the dialog with all users when the header checkbox selects all", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-selected-users"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Export Selected Users (3)")
+        ).toBeInTheDocument()
+      );
+    });
+
+    it("closes the dialog when Cancel is clicked", async () => {
+      mockFetchUsers.mockResolvedValue(mockUsers);
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getAllByRole("checkbox")[1]);
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      fireEvent.click(screen.getByTestId("user-export-selected-users"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Export Selected Users (1)")
+        ).toBeInTheDocument()
+      );
+
+      await userEvent.click(
+        screen.getByTestId("export-selected-users-cancel-button")
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.queryByText("Export Selected Users (1)")
         ).not.toBeInTheDocument()
       );
     });
