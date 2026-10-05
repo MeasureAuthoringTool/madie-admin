@@ -173,7 +173,6 @@
   }
 
   .export-spinner-overlay {
-    // Cover the entire component so the whole view reads as "busy" while exporting.
     position: absolute;
     top: 0;
     left: 0;
@@ -184,7 +183,6 @@
     border-radius: 4px;
     display: flex;
     justify-content: center;
-    // Anchor the spinner to the top rather than the vertical center.
     align-items: flex-start;
 
     .export-spinner {
@@ -192,7 +190,6 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      // Keep the spinner close to the top of the table and visible on scroll.
       position: sticky;
       top: 24px;
       margin-top: 24px;

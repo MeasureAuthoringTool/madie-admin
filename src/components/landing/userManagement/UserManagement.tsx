@@ -473,8 +473,6 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Full-component overlay shown while exporting; the spinner is pinned
-          near the top so it's visible without scrolling a long user list. */}
       {exporting && (
         <div
           className="export-spinner-overlay"
