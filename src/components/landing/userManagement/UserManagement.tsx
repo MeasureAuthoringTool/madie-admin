@@ -473,35 +473,19 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Table with spinner overlay */}
+      {exporting && (
+        <div
+          className="export-spinner-overlay"
+          data-testid="export-spinner-overlay"
+        >
+          <div data-testid="loading" className="export-spinner">
+            <MadieSpinner style={{ height: 50, width: 50 }} />
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       <Box position="relative">
-        {exporting && (
-          <Box
-            className="export-spinner-overlay"
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            zIndex={10}
-            data-testid="export-spinner-overlay"
-          >
-            <div
-              data-testid="loading"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <MadieSpinner style={{ height: 50, width: 50 }} />
-            </div>
-          </Box>
-        )}
         {loading ? (
           <p data-testid="loading-message" className="loading-message">
             Loading users...

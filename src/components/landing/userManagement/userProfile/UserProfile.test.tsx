@@ -1664,6 +1664,10 @@ describe("UserProfile", () => {
       expect(mockAdminSearchMeasures).toHaveBeenCalled();
     });
     mockAdminSearchMeasures.mockClear();
+    const limitSelect = screen.getByRole("combobox", {
+      name: /items per page/i,
+    });
+    userEvent.click(limitSelect);
     const limitSelect = screen
       .getAllByRole("combobox")
       .find((el) => el.id === "pagination-limit-select");
