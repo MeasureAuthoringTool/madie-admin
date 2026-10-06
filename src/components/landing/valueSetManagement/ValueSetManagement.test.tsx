@@ -11,16 +11,10 @@ jest.mock("@madie/madie-util", () => ({
   useTerminologyServiceApi: jest.fn(),
 }));
 
-jest.mock("monaco-editor", () => ({}), { virtual: true });
-
-jest.mock("@monaco-editor/react", () => {
+jest.mock("@madie/madie-editor", () => {
   return {
     __esModule: true,
-    loader: {
-      config: jest.fn(),
-      init: jest.fn().mockResolvedValue({}),
-    },
-    default: function MockMonacoEditor(props: {
+    MadieJsonEditor: function MockMadieJsonEditor(props: {
       value: string;
       onChange?: (value: string) => void;
     }) {

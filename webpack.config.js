@@ -1,7 +1,7 @@
 /** @format */
 const { mergeWithRules } = require("webpack-merge");
 const singleSpaDefaults = require("webpack-config-single-spa-react-ts");
-const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
+const webpack = require("webpack");
 
 const merge = mergeWithRules({
   module: {
@@ -73,8 +73,23 @@ module.exports = (webpackConfigEnv, argv) => {
       ],
     },
   };
-  const monacoConfig = {
-    plugins: [new MonacoWebpackPlugin({ languages: ["json"] })],
+
+  // Node polyfills required by bundled dependencies such as
+  // @madie/madie-editor. NodePolyfillPlugin v4 handles Buffer
+  // and friends, but it no longer provides the `process` global by default,
+  // so we provide it explicitly (same approach as madie-cql-library).
+  const polyfillConfig = {
+    resolve: {
+      fallback: {
+        process: require.resolve("process/browser.js"),
+      },
+    },
+    plugins: [
+      new webpack.ProvidePlugin({
+        process: "process/browser.js", // ✅ FIXED
+      }),
+    ],
   };
-  return merge(externalsConfig, defaultConfig, newCssRule, monacoConfig);
+
+  return merge(externalsConfig, defaultConfig, newCssRule, polyfillConfig);
 };
