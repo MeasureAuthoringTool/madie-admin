@@ -1666,9 +1666,7 @@ describe("UserProfile", () => {
     mockAdminSearchMeasures.mockClear();
     const limitSelect = screen
       .getAllByRole("combobox")
-      .find(
-        (el) => el.getAttribute("aria-labelledby") === "pagination-limit-select"
-      );
+      .find((el) => el.id === "pagination-limit-select");
     expect(limitSelect).toBeTruthy();
     userEvent.click(limitSelect!);
     const option25 = (await screen.findAllByTestId("limit-option")).find(
