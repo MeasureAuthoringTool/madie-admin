@@ -4,6 +4,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import AdminRoutes from "./AdminRoutes";
 import { useUserRoles } from "@madie/madie-util";
 
+jest.mock("@madie/madie-editor", () => ({
+  MadieJsonEditor: () => <div data-testid="madie-json-editor" />,
+}));
+
 jest.mock("@madie/madie-util", () => ({
   useDocumentTitle: jest.fn(),
   useUserRoles: jest
