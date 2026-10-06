@@ -78,7 +78,7 @@
   },
   "dependencies": {
     "@madie/madie-design-system": "^1.2.93",
-    "@madie/madie-editor": "^2.0.0",
+    "@madie/madie-editor": "^2.0.1",
     "@madie/madie-models": "^1.4.76",
     "@mui/icons-material": "^6.5.0",
     "@mui/material": "^6.5.0",
