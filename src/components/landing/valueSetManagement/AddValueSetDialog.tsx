@@ -3,12 +3,9 @@ import { MadieDialog, TextField } from "@madie/madie-design-system/dist/react";
 import { DialogContent, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import { useFormik } from "formik";
-import MonacoEditor, { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import { MadieJsonEditor } from "@madie/madie-editor";
 
 const REQUIRED_ASTERISK_COLOR = "rgb(174, 28, 28)";
-
-loader.config({ monaco });
 
 export interface AddValueSetFormValues {
   url: string;
@@ -172,15 +169,14 @@ export default function AddValueSetDialog({
             data-testid="add-value-set-json-editor"
             style={{ border: "1px solid #8c8f94", marginTop: "8px" }}
           >
-            <MonacoEditor
+            <MadieJsonEditor
               height="350px"
-              defaultLanguage="json"
               theme="vs-dark"
               value={formik.values.valueSet}
               onChange={(value) => {
                 formik.setFieldValue("valueSet", value ?? "");
               }}
-              onMount={(editor) => {
+              onEditorMount={(editor) => {
                 editor.onDidBlurEditorText(() => {
                   formik.setFieldTouched("valueSet", true);
                 });

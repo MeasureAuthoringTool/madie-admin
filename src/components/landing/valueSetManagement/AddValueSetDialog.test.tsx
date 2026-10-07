@@ -14,17 +14,14 @@ const mockEditorApi: {
   formatRun: jest.fn(),
 };
 
-jest.mock("monaco-editor", () => ({}), { virtual: true });
-
-jest.mock("@monaco-editor/react", () => {
+jest.mock("@madie/madie-editor", () => {
   const React = require("react");
   return {
     __esModule: true,
-    loader: { config: jest.fn() },
-    default: function MockMonacoEditor(props: {
+    MadieJsonEditor: function MockMadieJsonEditor(props: {
       value: string;
       onChange?: (value: string) => void;
-      onMount?: (editor: unknown) => void;
+      onEditorMount?: (editor: unknown) => void;
     }) {
       // Keep the shared handle in sync with the current editor content.
       mockEditorApi.value = props.value;
@@ -40,7 +37,7 @@ jest.mock("@monaco-editor/react", () => {
             mockEditorApi.blurHandler = cb;
           },
         };
-        props.onMount?.(editor);
+        props.onEditorMount?.(editor);
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
 

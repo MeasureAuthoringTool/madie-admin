@@ -1667,6 +1667,7 @@ describe("UserProfile", () => {
     const limitSelect = screen.getByRole("combobox", {
       name: /items per page/i,
     });
+    expect(limitSelect).toBeTruthy();
     userEvent.click(limitSelect);
     const option25 = (await screen.findAllByTestId("limit-option")).find(
       (el) => el.textContent === "25"
