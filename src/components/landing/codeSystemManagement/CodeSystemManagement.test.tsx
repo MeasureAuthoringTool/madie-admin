@@ -27,6 +27,7 @@ describe("CodeSystemManagement", () => {
     oid: "1.2.3",
     lastUpdated: "2025-01-01T00:00:00Z",
     isLatestVersion: true,
+    isInVsac: true,
   };
 
   beforeEach(() => {
@@ -75,12 +76,6 @@ describe("CodeSystemManagement", () => {
     expect(container).toHaveClass("code-system-management");
   });
 
-  it("renders the card wrapper", () => {
-    const { container } = render(<CodeSystemManagement />);
-    const card = container.querySelector(".code-system-management-card");
-    expect(card).toBeInTheDocument();
-  });
-
   it("renders the update button", () => {
     render(<CodeSystemManagement />);
     expect(
@@ -95,6 +90,28 @@ describe("CodeSystemManagement", () => {
       screen.getByTestId("code-system-reports-button")
     ).toBeInTheDocument();
     expect(screen.getByText("Reports")).toBeInTheDocument();
+  });
+
+  it("places the add, update, and reports actions in one row", () => {
+    render(<CodeSystemManagement />);
+
+    const actionsRow = screen
+      .getByTestId("add-code-system-button")
+      .closest(".code-system-actions-row");
+
+    const updateButton = screen.getByTestId("update-code-systems-button");
+    const updateNotice = screen.getByText(/this is a asynchronous job/i);
+
+    expect(actionsRow).toContainElement(updateButton);
+    expect(actionsRow).toContainElement(
+      screen.getByTestId("code-system-reports-button")
+    );
+    expect(updateButton.nextElementSibling).toBe(updateNotice);
+    expect(updateNotice).toHaveClass("code-system-update-notice");
+    expect(updateNotice.parentElement).toHaveClass(
+      "code-system-primary-actions"
+    );
+    expect(actionsRow?.lastElementChild).toHaveClass("code-system-reports");
   });
 
   it("calls API and shows success toast when update succeeds", async () => {
@@ -163,10 +180,10 @@ describe("CodeSystemManagement", () => {
     });
   });
 
-  it("renders informational text", () => {
+  it("renders the asynchronous update notice", () => {
     render(<CodeSystemManagement />);
 
-    expect(screen.getByText(/this is a synchronous job/i)).toBeInTheDocument();
+    expect(screen.getByText(/this is a asynchronous job/i)).toBeInTheDocument();
   });
 
   it("requests code systems with default paging and sorting", async () => {
@@ -238,6 +255,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: string;
           lastUpdated: string;
           isLatestVersion: boolean;
+          isInVsac: boolean;
         }
       ];
       totalElements: number;
@@ -269,6 +287,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: true,
+          isInVsac: true,
         },
       ],
       totalElements: 1,
@@ -292,6 +311,7 @@ describe("CodeSystemManagement", () => {
         fullUrl: "http://example.com",
         lastUpdated: new Date().toISOString(),
         isLatestVersion: true,
+        isInVsac: true,
       },
     ];
     const mockGet = jest.fn().mockResolvedValue({
@@ -299,6 +319,8 @@ describe("CodeSystemManagement", () => {
       totalPages: 1,
       totalElements: 1,
       numberOfElements: 1,
+      number: 0,
+      size: 10,
     });
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
@@ -389,6 +411,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: true,
+          isInVsac: true,
         },
       ],
       totalElements: 25,
@@ -456,6 +479,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: true,
+          isInVsac: true,
         },
       ],
       totalElements: 25,
@@ -492,6 +516,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: true,
+          isInVsac: true,
         },
       ],
       totalElements: 1,
@@ -530,6 +555,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: true,
+          isInVsac: true,
         },
       ],
       totalElements: 1,
@@ -570,6 +596,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com/2",
           lastUpdated: "2025-01-01T00:00:00Z",
           isLatestVersion: false,
+          isInVsac: false,
         },
       ],
       totalElements: 2,
@@ -668,7 +695,7 @@ describe("CodeSystemManagement", () => {
 
     await userEvent.click(screen.getByTestId("add-code-system-button"));
 
-    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+    expect(screen.getByText("Add New Code System Data")).toBeInTheDocument();
     expect(
       screen.getByTestId("add-code-system-title-input")
     ).toBeInTheDocument();
@@ -725,13 +752,13 @@ describe("CodeSystemManagement", () => {
     render(<CodeSystemManagement />);
 
     await userEvent.click(screen.getByTestId("add-code-system-button"));
-    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+    expect(screen.getByText("Add New Code System Data")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("add-code-system-cancel-button"));
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Add New Codesystem Data")
+        screen.queryByText("Add New Code System Data")
       ).not.toBeInTheDocument();
     });
   });
@@ -806,6 +833,7 @@ describe("CodeSystemManagement", () => {
         fullUrl: "http://example.com",
         oid: "1.2.3",
         isLatestVersion: true,
+        isInVsac: true,
         version: {
           fhirVersion: "4.0.1",
           vsacVersion: "2024",
@@ -856,21 +884,21 @@ describe("CodeSystemManagement", () => {
     expect(
       screen.getByText("Unable to create code system")
     ).toBeInTheDocument();
-    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+    expect(screen.getByText("Add New Code System Data")).toBeInTheDocument();
   });
 
   it("closes add code system modal on X icon click", async () => {
     render(<CodeSystemManagement />);
 
     await userEvent.click(screen.getByTestId("add-code-system-button"));
-    expect(screen.getByText("Add New Codesystem Data")).toBeInTheDocument();
+    expect(screen.getByText("Add New Code System Data")).toBeInTheDocument();
 
     const closeButton = screen.getByRole("button", { name: /close/i });
     await userEvent.click(closeButton);
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Add New Codesystem Data")
+        screen.queryByText("Add New Code System Data")
       ).not.toBeInTheDocument();
     });
   });
@@ -979,7 +1007,7 @@ describe("CodeSystemManagement", () => {
 
       await userEvent.click(screen.getByTestId("edit-code-system-cs-1"));
 
-      expect(screen.getByText("Edit Codesystem Data")).toBeInTheDocument();
+      expect(screen.getByText("Edit Code System Data")).toBeInTheDocument();
     };
 
     it("opens the edit modal populated with the selected code system's data", async () => {
@@ -1004,7 +1032,7 @@ describe("CodeSystemManagement", () => {
         "1.2.3"
       );
       expect(
-        screen.getByRole("checkbox", { name: "Add new Code System" })
+        screen.getByRole("checkbox", { name: "Available in VSAC" })
       ).toBeChecked();
     });
 
@@ -1048,7 +1076,7 @@ describe("CodeSystemManagement", () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByText("Edit Codesystem Data")
+          screen.queryByText("Edit Code System Data")
         ).not.toBeInTheDocument();
       });
 
@@ -1079,6 +1107,7 @@ describe("CodeSystemManagement", () => {
           fullUrl: "http://example.com",
           oid: "1.2.3",
           isLatestVersion: true,
+          isInVsac: true,
           version: {
             fhirVersion: "4.0.1",
             vsacVersion: "2024",
@@ -1092,7 +1121,7 @@ describe("CodeSystemManagement", () => {
       ).toBeInTheDocument();
       await waitFor(() => {
         expect(
-          screen.queryByText("Edit Codesystem Data")
+          screen.queryByText("Edit Code System Data")
         ).not.toBeInTheDocument();
       });
     });
@@ -1123,7 +1152,7 @@ describe("CodeSystemManagement", () => {
       expect(
         screen.getByText("Unable to update code system")
       ).toBeInTheDocument();
-      expect(screen.getByText("Edit Codesystem Data")).toBeInTheDocument();
+      expect(screen.getByText("Edit Code System Data")).toBeInTheDocument();
     });
   });
 });

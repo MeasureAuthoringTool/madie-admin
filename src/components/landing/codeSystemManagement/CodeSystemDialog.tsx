@@ -11,6 +11,7 @@ interface NewCodeSystemFormData {
   fullUrl: string;
   oid: string;
   isLatestVersion: boolean;
+  isInVsac: boolean;
 }
 
 interface CodeSystemDialogProps {
@@ -27,7 +28,7 @@ const CodeSystemDialog = ({
   initialCodeSystemData: initialFormData,
   onClose,
   onSave,
-  title = "Add New Codesystem Data",
+  title = "Add New Code System Data",
   saveButtonText = "Save",
 }: CodeSystemDialogProps) => {
   const formik = useFormik<NewCodeSystemFormData>({
@@ -47,8 +48,7 @@ const CodeSystemDialog = ({
         errors.fullUrl = "Full URL is required.";
       }
       if (!values.oid.trim()) {
-        errors.oid =
-          "OID is required. Enter NOT.IN.VSAC if the Code System is not in VSAC.";
+        errors.oid = "OID is required. Enter N/A if the OID is not available.";
       }
 
       return errors;
@@ -153,6 +153,24 @@ const CodeSystemDialog = ({
 
       <Box sx={formRowSx}>
         <TextField
+          {...formik.getFieldProps("fullUrl")}
+          required
+          label="Full URL"
+          id="add-code-system-full-url"
+          data-testid="add-code-system-full-url"
+          inputProps={{
+            "data-testid": "add-code-system-full-url-input",
+            "aria-required": true,
+          }}
+          placeholder="Enter Full URL"
+          size="small"
+          error={formik.touched.fullUrl && Boolean(formik.errors.fullUrl)}
+          helperText={formik.touched.fullUrl && formik.errors.fullUrl}
+        />
+      </Box>
+
+      <Box sx={formRowSx}>
+        <TextField
           {...formik.getFieldProps("fhirVersion")}
           required
           label="FHIR Version"
@@ -173,41 +191,9 @@ const CodeSystemDialog = ({
 
       <Box sx={formRowSx}>
         <TextField
-          {...formik.getFieldProps("vsacVersion")}
-          label="VSAC Version"
-          id="add-code-system-vsac-version"
-          data-testid="add-code-system-vsac-version"
-          inputProps={{
-            "data-testid": "add-code-system-vsac-version-input",
-          }}
-          placeholder="Enter VSAC Version"
-          size="small"
-        />
-      </Box>
-
-      <Box sx={formRowSx}>
-        <TextField
-          {...formik.getFieldProps("fullUrl")}
-          required
-          label="Full URL"
-          id="add-code-system-full-url"
-          data-testid="add-code-system-full-url"
-          inputProps={{
-            "data-testid": "add-code-system-full-url-input",
-            "aria-required": true,
-          }}
-          placeholder="Enter Full URL"
-          size="small"
-          error={formik.touched.fullUrl && Boolean(formik.errors.fullUrl)}
-          helperText={formik.touched.fullUrl && formik.errors.fullUrl}
-        />
-      </Box>
-
-      <Box sx={formRowSx}>
-        <TextField
           {...formik.getFieldProps("oid")}
           required
-          label="OID (If not in VSAC, enter NOT.IN.VSAC)"
+          label="OID"
           id="add-code-system-oid"
           data-testid="add-code-system-oid"
           inputProps={{
@@ -218,6 +204,41 @@ const CodeSystemDialog = ({
           size="small"
           error={formik.touched.oid && Boolean(formik.errors.oid)}
           helperText={formik.touched.oid && formik.errors.oid}
+          recommendation="Enter N/A if the OID is not available"
+        />
+      </Box>
+
+      <Box sx={formRowSx}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              data-testid="add-code-system-vsac-checkbox"
+              id="add-code-system-vsac-checkbox"
+              name="isInVsac"
+              checked={formik.values.isInVsac}
+              onChange={(e) => {
+                formik.setFieldValue("isInVsac", e.target.checked);
+              }}
+              slotProps={{
+                input: {
+                  "aria-label": "Available in VSAC",
+                },
+              }}
+            />
+          }
+          label="In VSAC?"
+        />
+        <TextField
+          {...formik.getFieldProps("vsacVersion")}
+          label="VSAC Version"
+          id="add-code-system-vsac-version"
+          data-testid="add-code-system-vsac-version"
+          inputProps={{
+            "data-testid": "add-code-system-vsac-version-input",
+          }}
+          placeholder="Enter VSAC Version"
+          size="small"
+          disabled={!formik.values.isInVsac}
         />
       </Box>
 
@@ -234,7 +255,7 @@ const CodeSystemDialog = ({
               }}
               slotProps={{
                 input: {
-                  "aria-label": "Add new Code System",
+                  "aria-label": "Latest Version",
                 },
               }}
             />
