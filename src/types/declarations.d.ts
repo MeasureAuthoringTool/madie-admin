@@ -37,3 +37,19 @@ declare module "*.svg" {
   const src: string;
   export default src;
 }
+
+// Style side-effect imports (handled by Webpack loaders at build time).
+declare module "*.scss" {
+  const classes: { [key: string]: string };
+  export default classes;
+}
+
+declare module "*.sass" {
+  const classes: { [key: string]: string };
+  export default classes;
+}
+
+declare module "*.css" {
+  const classes: { [key: string]: string };
+  export default classes;
+}

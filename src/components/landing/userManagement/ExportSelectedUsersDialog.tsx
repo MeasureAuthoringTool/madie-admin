@@ -8,7 +8,6 @@ import {
   Typography,
 } from "@mui/material";
 import { type UserDetails } from "@madie/madie-models";
-// @ts-ignore - types provided by the local madie-util declaration shim
 import { type UserExportRequest } from "@madie/madie-util";
 import "./ExportSelectedUsersDialog.scss";
 
@@ -16,8 +15,6 @@ interface ExportSelectedUsersDialogProps {
   open: boolean;
   selectedUsers: UserDetails[];
   onClose: () => void;
-  // Wiring the actual export is out of scope for this story; the callback is
-  // optional so a future story can perform the export with the chosen options.
   onExport?: (exportRequest: UserExportRequest) => void;
 }
 
@@ -122,27 +119,29 @@ const ExportSelectedUsersDialog = ({
       }}
     >
       <Box className="export-selected-users">
-        <Typography
-          className="section-label"
-          data-testid="selected-users-label"
-        >
-          Selected users:
-        </Typography>
-        <Box
-          component="ul"
-          className="selected-users-list"
-          data-testid="selected-users-list"
-        >
-          {selectedUsers.map((user, index) => (
-            <Box
-              component="li"
-              key={user.id ?? user.harpId ?? index}
-              className="selected-user"
-              data-testid={`selected-user-${user.id ?? user.harpId ?? index}`}
-            >
-              {formatUser(user)}
-            </Box>
-          ))}
+        <Box className="selected-users-container">
+          <Typography
+            className="section-label"
+            data-testid="selected-users-label"
+          >
+            Selected users:
+          </Typography>
+          <Box
+            component="ul"
+            className="selected-users-list"
+            data-testid="selected-users-list"
+          >
+            {selectedUsers.map((user, index) => (
+              <Box
+                component="li"
+                key={user.id ?? user.harpId ?? index}
+                className="selected-user"
+                data-testid={`selected-user-${user.id ?? user.harpId ?? index}`}
+              >
+                {formatUser(user)}
+              </Box>
+            ))}
+          </Box>
         </Box>
 
         <Typography
