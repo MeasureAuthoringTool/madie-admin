@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 declare module "@madie/madie-util" {
-  import { CqlLibrary, Measure } from "@madie/madie-models";
+  import {
+    CqlLibrary,
+    Measure,
+    MeasureListDTO,
+    MeasureSearchResult,
+  } from "@madie/madie-models";
+  import type { AxiosResponse } from "axios";
 
   export interface CodeSystem {
     id: string;
@@ -275,14 +281,6 @@ declare module "@madie/madie-util" {
     excludeByMeasureIds?: string[];
   }
 
-  export interface MeasurePage {
-    content: any[];
-    totalElements: number;
-    totalPages: number;
-    numberOfElements: number;
-    pageable?: { offset: number };
-  }
-
   export class MeasureServiceApi {
     constructor(baseUrl: string, getAccessToken: () => string);
     adminSearchMeasuresForUser(
@@ -294,20 +292,23 @@ declare module "@madie/madie-util" {
       direction?: string,
       searchCriteria?: MeasureSearchCriteria,
       abortController?: AbortController
-    ): Promise<MeasurePage>;
+    ): Promise<MeasureSearchResult>;
     getMeasuresByMeasureSetId(
       measureSetId: string,
       sortByLatestVersion?: boolean,
       searchCriteria?: MeasureSearchCriteria
-    ): Promise<any[]>;
-    fetchMeasure(id: string): Promise<any>;
-    deleteMeasure(id: string): Promise<Response>;
-    adminDeleteMeasure(id: string, ownerHarpId: string): Promise<Response>;
+    ): Promise<MeasureListDTO[] | undefined>;
+    fetchMeasure(id: string): Promise<Measure>;
+    deleteMeasure(id: string): Promise<AxiosResponse<Measure>>;
+    adminDeleteMeasure(
+      id: string,
+      ownerHarpId: string
+    ): Promise<AxiosResponse<Measure>>;
     transferMeasures(
       measureIds: string[],
       harpId: string,
       retainShareAccess: boolean
-    ): Promise<any>;
+    ): Promise<AxiosResponse<string[]>>;
     correctMeasureVersion(
       id: string,
       inCorrectVersion: string,
