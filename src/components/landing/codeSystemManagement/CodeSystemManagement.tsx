@@ -73,6 +73,7 @@ export default function CodeSystemManagement() {
       fullUrl: "",
       oid: "",
       isLatestVersion: false,
+      isInVsac: true,
     });
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -192,6 +193,7 @@ export default function CodeSystemManagement() {
       fullUrl: "",
       oid: "",
       isLatestVersion: false,
+      isInVsac: true,
     });
   };
 
@@ -214,6 +216,7 @@ export default function CodeSystemManagement() {
       fullUrl: codeSystem.fullUrl,
       oid: codeSystem.oid,
       isLatestVersion: codeSystem.isLatestVersion,
+      isInVsac: codeSystem.isInVsac,
     });
     setIsEditCodeSystemDialogOpen(true);
   };
@@ -269,6 +272,7 @@ export default function CodeSystemManagement() {
         fullUrl: formData.fullUrl.trim(),
         oid: formData.oid.trim(),
         isLatestVersion: formData.isLatestVersion,
+        isInVsac: formData.isInVsac,
         version: {
           fhirVersion: formData.fhirVersion.trim(),
           vsacVersion: formData.vsacVersion.trim(),
@@ -419,6 +423,11 @@ export default function CodeSystemManagement() {
         cell: (info) => (info.getValue() ? <CheckIcon /> : "-"),
       },
       {
+        header: "in VSAC?",
+        accessorKey: "isInVsac",
+        cell: (info) => (info.getValue() ? <CheckIcon /> : "-"),
+      },
+      {
         id: "actions",
         header: "Actions",
         cell: (info) => (
@@ -478,52 +487,65 @@ export default function CodeSystemManagement() {
             zIndex: 20,
           }}
         ></div>
-
-        <div
-          className="code-system-reports"
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            paddingBottom: 16,
-          }}
-        >
-          <button
-            type="button"
-            className="code-system-reports-link"
-            data-testid="code-system-reports-button"
-            aria-haspopup="menu"
-            aria-expanded={reportsMenuOpen}
-            aria-controls={
-              reportsMenuOpen ? "code-system-reports-menu" : undefined
-            }
-            disabled={exporting}
-            onClick={handleReportsMenuOpen}
-          >
-            <span>Reports</span>
-            <KeyboardArrowDownIcon fontSize="small" />
-          </button>
-          <Menu
-            id="code-system-reports-menu"
-            anchorEl={reportsAnchorEl}
-            open={reportsMenuOpen}
-            onClose={handleReportsMenuClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            slotProps={{
-              list: { "aria-labelledby": "code-system-reports-button" },
-            }}
-          >
-            <MenuItem
-              data-testid="code-system-report-all-code-systems"
-              onClick={() => {
-                handleExportAllCodeSystems();
+        <div className="code-system-actions-row">
+          <div className="code-system-primary-actions">
+            <Button
+              data-testid="add-code-system-button"
+              onClick={handleAddCodeSystem}
+            >
+              Add New Code System
+            </Button>
+            <Button
+              data-testid="update-code-systems-button"
+              onClick={handleUpdateCodeSystems}
+            >
+              Update Code Systems
+            </Button>
+            <p className="code-system-update-notice">
+              This is a asynchronous job that should only be used when we cannot
+              wait for the job to run this week. This could impact users while
+              running. Expect a 5 - 10 min runtime. Please continue to have a
+              nice day!
+            </p>
+          </div>
+          <div className="code-system-reports">
+            <button
+              type="button"
+              className="code-system-reports-link"
+              data-testid="code-system-reports-button"
+              aria-haspopup="menu"
+              aria-expanded={reportsMenuOpen}
+              aria-controls={
+                reportsMenuOpen ? "code-system-reports-menu" : undefined
+              }
+              disabled={exporting}
+              onClick={handleReportsMenuOpen}
+            >
+              <span>Reports</span>
+              <KeyboardArrowDownIcon fontSize="small" />
+            </button>
+            <Menu
+              id="code-system-reports-menu"
+              anchorEl={reportsAnchorEl}
+              open={reportsMenuOpen}
+              onClose={handleReportsMenuClose}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+              slotProps={{
+                list: { "aria-labelledby": "code-system-reports-button" },
               }}
             >
-              All Code Systems
-            </MenuItem>
-          </Menu>
+              <MenuItem
+                data-testid="code-system-report-all-code-systems"
+                onClick={() => {
+                  handleExportAllCodeSystems();
+                }}
+              >
+                All Code Systems
+              </MenuItem>
+            </Menu>
+          </div>
         </div>
-
         {/* Search / Filter row */}
         <div
           className="code-system-search-row"
@@ -705,31 +727,6 @@ export default function CodeSystemManagement() {
           autoHideDuration={6000}
         />
       </div>
-      <div
-        className="code-system-management-card"
-        data-testid="code-system-management-card"
-      >
-        <Button
-          data-testid="add-code-system-button"
-          onClick={handleAddCodeSystem}
-        >
-          Add New Code System
-        </Button>
-        <Button
-          data-testid="update-code-systems-button"
-          onClick={handleUpdateCodeSystems}
-        >
-          Update Code Systems
-        </Button>
-        <div>
-          <p>
-            This is a synchronous job that should only be used in specific
-            scenarios where we cannot wait for the job to run that evening. This
-            could potentially effect the users as it is running and it will take
-            5-10 min to run. Please continue to have a nice day!
-          </p>
-        </div>
-      </div>
 
       <CodeSystemDialog
         open={isAddCodeSystemDialogOpen}
@@ -743,7 +740,7 @@ export default function CodeSystemManagement() {
         initialCodeSystemData={newCodeSystemFormData}
         onClose={handleCloseEditCodeSystemDialog}
         onSave={handleSaveCodeSystem}
-        title="Edit Codesystem Data"
+        title="Edit Code System Data"
       />
 
       <MadieDeleteDialog
