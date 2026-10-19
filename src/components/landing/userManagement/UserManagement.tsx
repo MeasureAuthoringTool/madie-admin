@@ -35,8 +35,7 @@ import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { type UserDetails, UserStatus } from "@madie/madie-models";
-// @ts-ignore
-import { useUserServiceApi } from "@madie/madie-util";
+import { type UserExportRequest, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
 import ExportSelectedUsersDialog from "./ExportSelectedUsersDialog";
@@ -67,6 +66,17 @@ const buildExportFileName = (date: Date = new Date()): string => {
       date.getSeconds()
     )}`;
   return `UserExport_${stamp}.xlsx`;
+};
+
+const downloadExportFile = (excelBlob: Blob) => {
+  const url = window.URL.createObjectURL(excelBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", buildExportFileName());
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 };
 
 const UserManagement = () => {
@@ -124,35 +134,38 @@ const UserManagement = () => {
     setSelectedUsersDialogOpen(false);
   };
 
-  const handleExportUserList = async () => {
+  const exportUsers = async ({
+    exportRequest = {},
+    successMessage,
+    errorMessage,
+    onSuccess,
+  }: {
+    exportRequest?: UserExportRequest;
+    successMessage: string;
+    errorMessage: string;
+    onSuccess?: () => void;
+  }) => {
     handleExportMenuClose();
     setExporting(true);
     exportAbortControllerRef.current = new AbortController();
+
     try {
       const excelBlob = await userServiceApi.exportUserList(
-        {},
+        exportRequest,
         exportAbortControllerRef.current.signal
       );
-      const url = window.URL.createObjectURL(excelBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", buildExportFileName());
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      downloadExportFile(excelBlob);
+      onSuccess?.();
 
       setToastType("success");
-      setToastMessage("Full User Report exported successfully");
+      setToastMessage(successMessage);
       setToastOpen(true);
     } catch (err) {
       // Don't show error toast if the request was aborted
       if (!(err instanceof Error && err.name === "AbortError")) {
         setToastType("danger");
         setToastMessage(
-          err instanceof Error
-            ? err.message
-            : "Unable to export the full user list."
+          err instanceof Error && err.message ? err.message : errorMessage
         );
         setToastOpen(true);
       }
@@ -160,6 +173,31 @@ const UserManagement = () => {
       setExporting(false);
       exportAbortControllerRef.current = null;
     }
+  };
+
+  const handleExportUserList = async () => {
+    await exportUsers({
+      successMessage: "Full User Report exported successfully",
+      errorMessage: "Unable to export the full user list.",
+    });
+  };
+
+  const handleExportSelectedUsersRequest = async (
+    exportRequest: UserExportRequest
+  ) => {
+    if (!exportRequest.userIds?.length) {
+      setToastType("danger");
+      setToastMessage("Unable to export selected users.");
+      setToastOpen(true);
+      return;
+    }
+
+    await exportUsers({
+      exportRequest,
+      successMessage: "Selected users exported successfully",
+      errorMessage: "Unable to export selected users.",
+      onSuccess: handleCloseSelectedUsersDialog,
+    });
   };
 
   useEffect(() => {
@@ -625,6 +663,7 @@ const UserManagement = () => {
         open={selectedUsersDialogOpen}
         selectedUsers={selectedUsers}
         onClose={handleCloseSelectedUsersDialog}
+        onExport={handleExportSelectedUsersRequest}
       />
 
       <Toast
