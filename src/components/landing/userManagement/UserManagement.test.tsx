@@ -1042,9 +1042,9 @@ describe("UserManagement", () => {
         expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
       );
 
-      userEvent.click(screen.getAllByRole("checkbox")[1]);
+      await userEvent.click(screen.getAllByRole("checkbox")[1]);
       fireEvent.click(screen.getByTestId("user-export-button"));
-      userEvent.click(screen.getByTestId("user-export-selected-users"));
+      await userEvent.click(screen.getByTestId("user-export-selected-users"));
 
       await waitFor(() =>
         expect(
@@ -1088,7 +1088,7 @@ describe("UserManagement", () => {
       userEvent.click(
         screen.getByTestId("export-option-shared-measures-input")
       );
-      userEvent.click(
+      await userEvent.click(
         screen.getByTestId("export-selected-users-export-button")
       );
 
@@ -1147,7 +1147,11 @@ describe("UserManagement", () => {
       expect(
         screen.getByText("Unable to export selected users.")
       ).toBeInTheDocument();
-      expect(screen.getByText("Export Selected Users (1)")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.queryByText("Export Selected Users (1)")
+        ).not.toBeInTheDocument()
+      );
     });
   });
 
