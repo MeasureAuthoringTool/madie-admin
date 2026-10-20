@@ -23,21 +23,15 @@ import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import {
+  buildTimestampedExportFileName,
+  downloadBlobAsFile,
+} from "../../common/exportUtils";
 import CodeSystemDialog, {
   type NewCodeSystemFormData,
 } from "./CodeSystemDialog";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
-
-const buildExportFileName = (date: Date = new Date()): string => {
-  const pad = (value: number): string => String(value).padStart(2, "0");
-  const stamp =
-    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
-    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
-      date.getSeconds()
-    )}`;
-  return `CodeSystemsExport_${stamp}.xlsx`;
-};
 
 export default function CodeSystemManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
@@ -120,14 +114,10 @@ export default function CodeSystemManagement() {
     terminologyServiceApi
       .exportCodeSystems({}, exportAbortControllerRef.current.signal)
       .then((excelBlob) => {
-        const url = window.URL.createObjectURL(excelBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", buildExportFileName());
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        downloadBlobAsFile(
+          excelBlob,
+          buildTimestampedExportFileName("CodeSystemsExport")
+        );
 
         setToastType("success");
         setToastMessage("All Code Systems report exported successfully");

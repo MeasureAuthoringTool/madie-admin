@@ -14,6 +14,7 @@ jest.mock("react-router-dom", () => ({
 }));
 
 const mockExportUserList = jest.fn();
+let anchorClick: jest.Mock;
 
 const renderRouter = () =>
   render(
@@ -766,8 +767,6 @@ describe("UserManagement", () => {
   });
 
   describe("Export action", () => {
-    let anchorClick: jest.Mock;
-
     beforeEach(() => {
       anchorClick = jest.fn();
       // jsdom doesn't implement these, so assign fresh mocks (cleaned up below).
@@ -831,6 +830,10 @@ describe("UserManagement", () => {
         ).toBeInTheDocument()
       );
       expect(mockExportUserList).toHaveBeenCalledTimes(1);
+      expect(mockExportUserList).toHaveBeenCalledWith(
+        {},
+        expect.any(AbortSignal)
+      );
       expect(anchorClick).toHaveBeenCalled();
       expect(
         screen.getByText("Full User Report exported successfully")
@@ -916,6 +919,30 @@ describe("UserManagement", () => {
   });
 
   describe("Export selected users", () => {
+    beforeEach(() => {
+      anchorClick = jest.fn();
+      window.URL.createObjectURL = jest.fn().mockReturnValue("blob:url");
+      window.URL.revokeObjectURL = jest.fn();
+
+      const nativeCreateElement = document.createElement.bind(document);
+      jest
+        .spyOn(document, "createElement")
+        .mockImplementation((tagName: string) => {
+          const element = nativeCreateElement(tagName);
+          if (tagName === "a") {
+            element.click = anchorClick;
+          }
+          return element;
+        });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      const urlMethods = window.URL as unknown as Record<string, unknown>;
+      urlMethods.createObjectURL = undefined;
+      urlMethods.revokeObjectURL = undefined;
+    });
+
     it("renders both export options in the dropdown", async () => {
       mockFetchUsers.mockResolvedValue(mockUsers);
       renderRouter();
@@ -1015,6 +1042,39 @@ describe("UserManagement", () => {
         expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
       );
 
+      userEvent.click(screen.getAllByRole("checkbox")[1]);
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      userEvent.click(screen.getByTestId("user-export-selected-users"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Export Selected Users (1)")
+        ).toBeInTheDocument()
+      );
+
+      userEvent.click(
+        screen.getByTestId("export-selected-users-cancel-button")
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.queryByText("Export Selected Users (1)")
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it("exports selected users with ids and options using the same export API", async () => {
+      const blob = new Blob(["test"], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      mockExportUserList.mockResolvedValue(blob);
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
       fireEvent.click(screen.getAllByRole("checkbox")[1]);
       fireEvent.click(screen.getByTestId("user-export-button"));
       fireEvent.click(screen.getByTestId("user-export-selected-users"));
@@ -1025,15 +1085,69 @@ describe("UserManagement", () => {
         ).toBeInTheDocument()
       );
 
-      await userEvent.click(
-        screen.getByTestId("export-selected-users-cancel-button")
+      userEvent.click(
+        screen.getByTestId("export-option-shared-measures-input")
+      );
+      userEvent.click(
+        screen.getByTestId("export-selected-users-export-button")
       );
 
+      await waitFor(() =>
+        expect(mockExportUserList).toHaveBeenCalledWith(
+          {
+            userIds: ["harp3"],
+            ownedMeasures: true,
+            sharedMeasures: false,
+            ownedLibraries: true,
+            sharedLibraries: true,
+          },
+          expect.any(AbortSignal)
+        )
+      );
+
+      expect(anchorClick).toHaveBeenCalled();
       await waitFor(() =>
         expect(
           screen.queryByText("Export Selected Users (1)")
         ).not.toBeInTheDocument()
       );
+    });
+
+    it("shows a selected-user export error toast when the export fails", async () => {
+      mockExportUserList.mockRejectedValue(
+        new Error("Unable to export selected users.")
+      );
+      mockFetchUsers.mockResolvedValue(mockUsers);
+
+      renderRouter();
+      await waitFor(() =>
+        expect(screen.getByTestId("user-management-table")).toBeInTheDocument()
+      );
+
+      userEvent.click(screen.getAllByRole("checkbox")[1]);
+      fireEvent.click(screen.getByTestId("user-export-button"));
+      userEvent.click(screen.getByTestId("user-export-selected-users"));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Export Selected Users (1)")
+        ).toBeInTheDocument()
+      );
+
+      userEvent.click(
+        screen.getByTestId("export-selected-users-export-button")
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("user-export-error-message")
+        ).toBeInTheDocument()
+      );
+
+      expect(
+        screen.getByText("Unable to export selected users.")
+      ).toBeInTheDocument();
+      expect(screen.getByText("Export Selected Users (1)")).toBeInTheDocument();
     });
   });
 
