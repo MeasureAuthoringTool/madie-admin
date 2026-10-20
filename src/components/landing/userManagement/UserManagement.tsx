@@ -38,6 +38,10 @@ import { type UserDetails, UserStatus } from "@madie/madie-models";
 import { type UserExportRequest, useUserServiceApi } from "@madie/madie-util";
 import "./UserManagement.scss";
 import IndeterminateCheckbox from "../../common/IndeterminateCheckbox";
+import {
+  buildTimestampedExportFileName,
+  downloadBlobAsFile,
+} from "../../common/exportUtils";
 import ExportSelectedUsersDialog from "./ExportSelectedUsersDialog";
 
 const filterByOptions = ["Name", "Harp ID", "Email Address", "Status"];
@@ -56,28 +60,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 const getStatusLabel = (status: UserStatus): string =>
   STATUS_LABEL[status] ?? status ?? "";
-
-// Builds a filename in the format "UserExport_yyyyMMdd_HHmmss.xlsx".
-const buildExportFileName = (date: Date = new Date()): string => {
-  const pad = (value: number): string => String(value).padStart(2, "0");
-  const stamp =
-    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
-    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
-      date.getSeconds()
-    )}`;
-  return `UserExport_${stamp}.xlsx`;
-};
-
-const downloadExportFile = (excelBlob: Blob) => {
-  const url = window.URL.createObjectURL(excelBlob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", buildExportFileName());
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
-};
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserDetails[]>([]);
@@ -154,7 +136,10 @@ const UserManagement = () => {
         exportRequest,
         exportAbortControllerRef.current.signal
       );
-      downloadExportFile(excelBlob);
+      downloadBlobAsFile(
+        excelBlob,
+        buildTimestampedExportFileName("UserExport")
+      );
       onSuccess?.();
 
       setToastType("success");
