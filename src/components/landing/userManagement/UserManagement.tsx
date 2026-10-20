@@ -120,12 +120,10 @@ const UserManagement = () => {
     exportRequest = {},
     successMessage,
     errorMessage,
-    onSuccess,
   }: {
     exportRequest?: UserExportRequest;
     successMessage: string;
     errorMessage: string;
-    onSuccess?: () => void;
   }) => {
     handleExportMenuClose();
     setExporting(true);
@@ -140,8 +138,6 @@ const UserManagement = () => {
         excelBlob,
         buildTimestampedExportFileName("UserExport")
       );
-      onSuccess?.();
-
       setToastType("success");
       setToastMessage(successMessage);
       setToastOpen(true);
@@ -177,11 +173,12 @@ const UserManagement = () => {
       return;
     }
 
+    handleCloseSelectedUsersDialog();
+
     await exportUsers({
       exportRequest,
       successMessage: "Selected users exported successfully",
       errorMessage: "Unable to export selected users.",
-      onSuccess: handleCloseSelectedUsersDialog,
     });
   };
 
