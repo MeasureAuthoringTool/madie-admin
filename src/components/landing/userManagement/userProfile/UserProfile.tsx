@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import { useParams } from "react-router-dom";
+import { navigateToUrl } from "../../../../utils/navigateToUrl";
 import {
   useUserServiceApi,
   useMeasureServiceApi,
@@ -901,7 +902,9 @@ const UserProfile = () => {
               tabIndex={0}
               role="button"
               onClick={() => {
-                window.location.href = `/measures/${info.row.original.id}/edit/details/`;
+                navigateToUrl(
+                  `/measures/${info.row.original.id}/edit/details/`
+                );
               }}
             >
               {isLockedByOther && (
@@ -1122,7 +1125,9 @@ const UserProfile = () => {
               tabIndex={0}
               role="button"
               onClick={() => {
-                window.location.href = `/cql-libraries/${info.row.original.id}/edit/details`;
+                navigateToUrl(
+                  `/cql-libraries/${info.row.original.id}/edit/details`
+                );
               }}
             >
               {isLockedByOther && (

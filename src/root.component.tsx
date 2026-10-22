@@ -1,8 +1,11 @@
 import React from "react";
-import tw from "twin.macro";
+import styled from "styled-components";
 import GlobalStyles from "./styles/GlobalStyles";
 
-const Notice = tw.span`text-green-700`;
+const Notice = styled.span({
+  "--tw-text-opacity": "1",
+  color: "rgb(21 128 61 / var(--tw-text-opacity, 1))",
+});
 export default function Root(props) {
   return (
     <>
