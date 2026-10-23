@@ -13,6 +13,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import UserProfile, { ownershipForTab } from "./UserProfile";
+import { navigateToUrl } from "../../../../utils/navigateToUrl";
+
+jest.mock("../../../../utils/navigateToUrl", () => ({
+  navigateToUrl: jest.fn(),
+}));
 
 const mockGetUser = jest.fn();
 const mockUpdateUser = jest.fn();
@@ -556,10 +561,6 @@ describe("UserProfile", () => {
     });
 
     it("navigates to the measure details page in the Measures Workspace", async () => {
-      const originalLocation = window.location;
-      delete (window as any).location;
-      (window as any).location = { ...originalLocation, href: "" };
-
       mockAdminSearchMeasures.mockResolvedValue(pageWith([ownedMeasure], 1));
 
       renderAt("/admin/userProfile/test_user");
@@ -568,10 +569,10 @@ describe("UserProfile", () => {
       userEvent.click(action);
 
       await waitFor(() => {
-        expect(window.location.href).toBe("/measures/m1/edit/details/");
+        expect(navigateToUrl).toHaveBeenCalledWith(
+          "/measures/m1/edit/details/"
+        );
       });
-
-      (window as any).location = originalLocation;
     });
   });
 
@@ -640,18 +641,14 @@ describe("UserProfile", () => {
     });
 
     it("navigates to the library details page in the CQL Library Workspace", async () => {
-      const originalLocation = window.location;
-      delete (window as any).location;
-      (window as any).location = { ...originalLocation, href: "" };
-
       const action = await renderLibrariesTab();
       userEvent.click(action);
 
       await waitFor(() => {
-        expect(window.location.href).toBe("/cql-libraries/lib1/edit/details");
+        expect(navigateToUrl).toHaveBeenCalledWith(
+          "/cql-libraries/lib1/edit/details"
+        );
       });
-
-      (window as any).location = originalLocation;
     });
   });
 

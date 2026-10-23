@@ -17,8 +17,6 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import CheckIcon from "@mui/icons-material/Check";
-import "twin.macro";
-import "styled-components/macro";
 import "./ValueSetManagement.scss";
 import VSEDialog, { EditValueSetFormValues } from "./VSEDialog";
 import AddValueSetDialog, {
