@@ -20,6 +20,7 @@ module.exports = (webpackConfigEnv, argv) => {
     argv,
     disableHtmlGeneration: true,
     orgPackagesAsExternal: false,
+    outputSystemJS: true,
   });
   const externalsConfig = {
     externals: [
