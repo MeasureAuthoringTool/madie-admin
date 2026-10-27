@@ -2477,6 +2477,24 @@ describe("UserProfile", () => {
       );
     });
 
+    it("shows the Clone icon on both measure tabs but not on library tabs", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(await screen.findByTestId("clone-action-btn")).toBeInTheDocument();
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 1));
+      userEvent.click(screen.getByTestId("shared-measures-tab"));
+      expect(await screen.findByTestId("measure-owner-m2")).toBeInTheDocument();
+      expect(screen.getByTestId("clone-action-btn")).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+      expect(
+        await screen.findByTestId("library-action-lib1")
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("clone-action-btn")).not.toBeInTheDocument();
+    });
+
     it("saves change version, refreshes the list, and shows success toast", async () => {
       mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
       renderAt("/admin/userProfile/test_user");

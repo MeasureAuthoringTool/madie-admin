@@ -406,6 +406,10 @@ declare module "@madie/madie-util" {
     measures: any[];
     onClick: () => void;
   }): JSX.Element;
+  export function CloneAction(props: {
+    measures: any[];
+    onClick?: () => void;
+  }): JSX.Element;
   export function ShareAction(props: {
     measures: any[];
     onClick: (option: string) => void;

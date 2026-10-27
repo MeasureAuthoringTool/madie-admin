@@ -6,6 +6,7 @@ import {
   HistoryAction,
   CompareVersionsAction,
   ChangeVersionAction,
+  CloneAction,
   ShareAction,
   TransferAction,
 } from "@madie/madie-util";
@@ -74,6 +75,7 @@ export default function ActionCenter({
         <>
           <PipeSeparator />
           <ChangeVersionAction measures={measures} onClick={onChangeVersion} />
+          <CloneAction measures={measures} />
         </>
       )}
 
