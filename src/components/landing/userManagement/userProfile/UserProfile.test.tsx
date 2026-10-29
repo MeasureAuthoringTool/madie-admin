@@ -26,6 +26,7 @@ const mockGetMeasuresByMeasureSetId = jest.fn();
 const mockAdminDeleteMeasure = jest.fn();
 const mockDeleteMeasure = jest.fn();
 const mockCorrectMeasureVersion = jest.fn();
+const mockCloneMeasure = jest.fn();
 const mockFetchMeasure = jest.fn();
 const mockExportMeasure = jest.fn();
 const mockFetchCqlLibraries = jest.fn();
@@ -61,6 +62,7 @@ jest.mock("@madie/madie-util", () => ({
     deleteMeasure: (...args: unknown[]) => mockDeleteMeasure(...args),
     correctMeasureVersion: (...args: unknown[]) =>
       mockCorrectMeasureVersion(...args),
+    cloneMeasure: (...args: unknown[]) => mockCloneMeasure(...args),
     fetchMeasure: (...args: unknown[]) => mockFetchMeasure(...args),
   })),
   useCqlLibraryServiceApi: jest.fn(() => ({
@@ -326,6 +328,7 @@ describe("UserProfile", () => {
     mockAdminDeleteMeasure.mockReset();
     mockDeleteMeasure.mockReset();
     mockCorrectMeasureVersion.mockReset();
+    mockCloneMeasure.mockReset();
     mockFetchMeasure.mockReset();
     mockExportMeasure.mockReset();
     mockFetchCqlLibraries.mockReset();
@@ -2472,6 +2475,98 @@ describe("UserProfile", () => {
           screen.queryByTestId("change-version-dialog")
         ).not.toBeInTheDocument()
       );
+    });
+
+    it("shows the Clone icon on both measure tabs but not on library tabs", async () => {
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+      mockFetchCqlLibraries.mockResolvedValue(pageWith([ownedLibrary], 1));
+      renderAt("/admin/userProfile/test_user");
+      expect(await screen.findByTestId("clone-action-btn")).toBeInTheDocument();
+
+      mockAdminSearchMeasures.mockResolvedValue(pageWith([sharedMeasure], 1));
+      userEvent.click(screen.getByTestId("shared-measures-tab"));
+      expect(await screen.findByTestId("measure-owner-m2")).toBeInTheDocument();
+      expect(screen.getByTestId("clone-action-btn")).toBeInTheDocument();
+
+      userEvent.click(screen.getByTestId("owned-libraries-tab"));
+      expect(
+        await screen.findByTestId("library-action-lib1")
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("clone-action-btn")).not.toBeInTheDocument();
+    });
+
+    describe("cloning a measure", () => {
+      beforeEach(() => {
+        (navigateToUrl as jest.Mock).mockClear();
+      });
+
+      it("clones the selected measure and opens Owned Measures on the Measures page", async () => {
+        mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+        mockCloneMeasure.mockResolvedValue({ id: "clone-1" });
+        renderAt("/admin/userProfile/other_user");
+
+        userEvent.click(await screen.findByTestId("checkbox-m1"));
+        userEvent.click(screen.getByTestId("clone-action-btn"));
+
+        expect(
+          await screen.findByTestId("delete-measure-success-message")
+        ).toHaveTextContent(
+          "Measure successfully cloned. Redirecting to Owned Measures..."
+        );
+        expect(mockCloneMeasure).toHaveBeenCalledWith("m1");
+        // the toast is shown for 2 seconds before the redirect
+        expect(navigateToUrl).not.toHaveBeenCalled();
+        await waitFor(
+          () =>
+            expect(navigateToUrl).toHaveBeenCalledWith(
+              "/measures?tab=0&page=1"
+            ),
+          { timeout: 3000 }
+        );
+      });
+
+      it("shows a danger toast and stays on the profile when cloning fails", async () => {
+        mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+        mockCloneMeasure.mockRejectedValueOnce({
+          response: { data: { message: "Unable to clone measure" } },
+        });
+        renderAt("/admin/userProfile/other_user");
+
+        userEvent.click(await screen.findByTestId("checkbox-m1"));
+        userEvent.click(screen.getByTestId("clone-action-btn"));
+
+        expect(
+          await screen.findByTestId("delete-measure-error-message")
+        ).toHaveTextContent("Unable to clone measure");
+        expect(navigateToUrl).not.toHaveBeenCalled();
+      });
+
+      it("ignores further clicks once a clone has started", async () => {
+        let finishClone: (measure: unknown) => void = () => {};
+        mockCloneMeasure.mockReturnValue(
+          new Promise((resolve) => {
+            finishClone = resolve;
+          })
+        );
+        mockAdminSearchMeasures.mockResolvedValue(pageWith([draftMeasure], 1));
+        renderAt("/admin/userProfile/other_user");
+
+        userEvent.click(await screen.findByTestId("checkbox-m1"));
+        userEvent.click(screen.getByTestId("clone-action-btn"));
+        userEvent.click(screen.getByTestId("clone-action-btn"));
+        finishClone({ id: "clone-1" });
+
+        await waitFor(
+          () =>
+            expect(navigateToUrl).toHaveBeenCalledWith(
+              "/measures?tab=0&page=1"
+            ),
+          { timeout: 3000 }
+        );
+        // still blocked while the page unloads
+        userEvent.click(screen.getByTestId("clone-action-btn"));
+        expect(mockCloneMeasure).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("saves change version, refreshes the list, and shows success toast", async () => {

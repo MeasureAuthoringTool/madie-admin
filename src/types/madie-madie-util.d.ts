@@ -312,6 +312,7 @@ declare module "@madie/madie-util" {
       draftVersion: string,
       ownerHarpId: string
     ): Promise<Measure>;
+    cloneMeasure(id: string): Promise<Measure>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;
@@ -405,6 +406,10 @@ declare module "@madie/madie-util" {
   export function ChangeVersionAction(props: {
     measures: any[];
     onClick: () => void;
+  }): JSX.Element;
+  export function CloneAction(props: {
+    measures: any[];
+    onClick?: () => void;
   }): JSX.Element;
   export function ShareAction(props: {
     measures: any[];
