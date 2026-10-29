@@ -312,6 +312,7 @@ declare module "@madie/madie-util" {
       draftVersion: string,
       ownerHarpId: string
     ): Promise<Measure>;
+    cloneMeasure(id: string): Promise<Measure>;
   }
 
   export function useMeasureServiceApi(): MeasureServiceApi;

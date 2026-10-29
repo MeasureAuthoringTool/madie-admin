@@ -35,7 +35,11 @@ jest.mock("@madie/madie-util", () => ({
       Change Version #
     </button>
   ),
-  CloneAction: () => <button data-testid="clone-action">Clone</button>,
+  CloneAction: (props: any) => (
+    <button data-testid="clone-action" onClick={() => props.onClick?.()}>
+      Clone
+    </button>
+  ),
   ShareAction: (props: any) => (
     <button
       data-testid="share-action"
@@ -97,6 +101,15 @@ describe("ActionCenter", () => {
     expect(screen.getByTestId("change-version-action")).toBeInTheDocument();
     expect(screen.getByTestId("clone-action")).toBeInTheDocument();
     expect(screen.getAllByText("|")).toHaveLength(2);
+  });
+
+  it("calls onClone when the Clone action is clicked", () => {
+    const onClone = jest.fn();
+    render(<ActionCenter {...baseProps} onClone={onClone} />);
+
+    screen.getByTestId("clone-action").click();
+
+    expect(onClone).toHaveBeenCalledTimes(1);
   });
 });
 

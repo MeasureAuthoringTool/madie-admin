@@ -24,6 +24,7 @@ interface PropTypes {
   onViewHistory: () => void;
   onCompareVersions: () => void;
   onChangeVersion?: () => void;
+  onClone?: () => void;
   onShare: (option: string) => void;
   disabledReason?: string;
   target?: string;
@@ -40,6 +41,7 @@ export default function ActionCenter({
   onViewHistory,
   onCompareVersions,
   onChangeVersion,
+  onClone,
   onShare,
   onTransfer,
   disabledReason,
@@ -75,7 +77,7 @@ export default function ActionCenter({
         <>
           <PipeSeparator />
           <ChangeVersionAction measures={measures} onClick={onChangeVersion} />
-          <CloneAction measures={measures} />
+          <CloneAction measures={measures} onClick={onClone} />
         </>
       )}
 
