@@ -2496,15 +2496,8 @@ describe("UserProfile", () => {
     });
 
     describe("cloning a measure", () => {
-      const originalLocation = window.location;
-
       beforeEach(() => {
-        delete (window as any).location;
-        (window as any).location = { ...originalLocation, href: "" };
-      });
-
-      afterEach(() => {
-        (window as any).location = originalLocation;
+        (navigateToUrl as jest.Mock).mockClear();
       });
 
       it("clones the selected measure and opens Owned Measures on the Measures page", async () => {
@@ -2522,9 +2515,12 @@ describe("UserProfile", () => {
         );
         expect(mockCloneMeasure).toHaveBeenCalledWith("m1");
         // the toast is shown for 2 seconds before the redirect
-        expect(window.location.href).toBe("");
+        expect(navigateToUrl).not.toHaveBeenCalled();
         await waitFor(
-          () => expect(window.location.href).toBe("/measures?tab=0&page=1"),
+          () =>
+            expect(navigateToUrl).toHaveBeenCalledWith(
+              "/measures?tab=0&page=1"
+            ),
           { timeout: 3000 }
         );
       });
@@ -2542,7 +2538,7 @@ describe("UserProfile", () => {
         expect(
           await screen.findByTestId("delete-measure-error-message")
         ).toHaveTextContent("Unable to clone measure");
-        expect(window.location.href).toBe("");
+        expect(navigateToUrl).not.toHaveBeenCalled();
       });
 
       it("ignores further clicks once a clone has started", async () => {
@@ -2561,7 +2557,10 @@ describe("UserProfile", () => {
         finishClone({ id: "clone-1" });
 
         await waitFor(
-          () => expect(window.location.href).toBe("/measures?tab=0&page=1"),
+          () =>
+            expect(navigateToUrl).toHaveBeenCalledWith(
+              "/measures?tab=0&page=1"
+            ),
           { timeout: 3000 }
         );
         // still blocked while the page unloads

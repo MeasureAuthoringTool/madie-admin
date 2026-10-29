@@ -1742,7 +1742,7 @@ const UserProfile = () => {
       setToastOpen(true);
 
       setTimeout(() => {
-        window.location.href = "/measures?tab=0&page=1";
+        navigateToUrl("/measures?tab=0&page=1");
       }, 2000);
     } catch (error: any) {
       setCloneSubmitting(false);
