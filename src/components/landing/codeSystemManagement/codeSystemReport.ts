@@ -1,7 +1,11 @@
 import type { CodeSystem, TerminologyServiceApi } from "@madie/madie-util";
 
+// prettier-ignore
 export const generateMissingVsacVersionReport = async (
-  terminologyServiceApi: Pick<TerminologyServiceApi, "getCodeSystems">,
+  terminologyServiceApi: Pick<
+    TerminologyServiceApi,
+    "getCodeSystems"
+  >,
   signal: AbortSignal
 ): Promise<Blob> => {
   const { Workbook } = await import("exceljs");
