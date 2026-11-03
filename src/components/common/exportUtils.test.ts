@@ -23,6 +23,14 @@ describe("exportUtils", () => {
         "Report_20261020_153045.csv"
       );
     });
+
+    it("uses UTC for reports requesting a UTC export timestamp", () => {
+      const date = new Date("2026-01-02T23:04:05-08:00");
+
+      expect(
+        buildTimestampedExportFileName("Report", date, "xlsx", "UTC")
+      ).toBe("Report_20260103_070405.xlsx");
+    });
   });
 
   describe("downloadBlobAsFile", () => {
