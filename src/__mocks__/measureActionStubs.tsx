@@ -44,6 +44,15 @@ export const ChangeVersionAction = ({ measures, onClick }: any) => (
     Change Version #
   </button>
 );
+export const CloneAction = ({ measures, onClick }: any) => (
+  <button
+    data-testid="clone-action-btn"
+    disabled={measures?.length !== 1}
+    onClick={() => onClick && onClick()}
+  >
+    Clone Measure
+  </button>
+);
 export const ShareAction = ({ measures, activeTab, onClick }: any) => {
   const options = activeTab === 1 ? ["Unshare"] : ["Share With", "Unshare"];
   return (

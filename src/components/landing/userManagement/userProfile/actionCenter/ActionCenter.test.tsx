@@ -35,6 +35,11 @@ jest.mock("@madie/madie-util", () => ({
       Change Version #
     </button>
   ),
+  CloneAction: (props: any) => (
+    <button data-testid="clone-action" onClick={() => props.onClick?.()}>
+      Clone
+    </button>
+  ),
   ShareAction: (props: any) => (
     <button
       data-testid="share-action"
@@ -94,7 +99,17 @@ describe("ActionCenter", () => {
     expect(screen.getByTestId("history-action")).toBeInTheDocument();
     expect(screen.getByTestId("compare-action")).toBeInTheDocument();
     expect(screen.getByTestId("change-version-action")).toBeInTheDocument();
+    expect(screen.getByTestId("clone-action")).toBeInTheDocument();
     expect(screen.getAllByText("|")).toHaveLength(2);
+  });
+
+  it("calls onClone when the Clone action is clicked", () => {
+    const onClone = jest.fn();
+    render(<ActionCenter {...baseProps} onClone={onClone} />);
+
+    screen.getByTestId("clone-action").click();
+
+    expect(onClone).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -123,5 +138,6 @@ it("omits optional actions and separator when handlers are missing", () => {
   expect(screen.queryByTestId("history-action")).not.toBeInTheDocument();
   expect(screen.queryByTestId("compare-action")).not.toBeInTheDocument();
   expect(screen.queryByTestId("change-version-action")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("clone-action")).not.toBeInTheDocument();
   expect(screen.queryByText("|")).not.toBeInTheDocument();
 });

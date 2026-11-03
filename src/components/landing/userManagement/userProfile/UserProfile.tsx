@@ -423,6 +423,7 @@ const UserProfile = () => {
   const [expandedLibraryRows, setExpandedLibraryRows] = useState<LibraryRow[]>(
     []
   );
+  const [cloneSubmitting, setCloneSubmitting] = useState<boolean>(false);
   const [changeVersionSubmitting, setChangeVersionSubmitting] =
     useState<boolean>(false);
   const [libraryChangeVersionSubmitting, setLibraryChangeVersionSubmitting] =
@@ -1728,6 +1729,32 @@ const UserProfile = () => {
     [libraryTable, clearLibraryExpansion]
   );
 
+  const handleClone = async () => {
+    if (cloneSubmitting) return;
+
+    setCloneSubmitting(true);
+    try {
+      await measureServiceApi.cloneMeasure(selectedMeasures[0].id);
+      setToastType("success");
+      setToastMessage(
+        "Measure successfully cloned. Redirecting to Owned Measures..."
+      );
+      setToastOpen(true);
+
+      setTimeout(() => {
+        navigateToUrl("/measures?tab=0&page=1");
+      }, 2000);
+    } catch (error: any) {
+      setCloneSubmitting(false);
+      setToastType("danger");
+      setToastMessage(
+        error?.response?.data?.message ||
+          "An error occurred, please try again. If the error persists, please contact the help desk."
+      );
+      setToastOpen(true);
+    }
+  };
+
   const submitChangeVersion = async ({
     measure,
     inCorrectVersion,
@@ -1858,6 +1885,7 @@ const UserProfile = () => {
                 onViewHistory={handleViewHistory}
                 onCompareVersions={handleCompareVersions}
                 onChangeVersion={handleChangeVersion}
+                onClone={handleClone}
                 onShare={handleShare}
                 onTransfer={handleTransfer}
                 disabledReason={deleteDisabledReason}
