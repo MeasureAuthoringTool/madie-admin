@@ -5,6 +5,14 @@ import CodeSystemManagement from "./CodeSystemManagement";
 // @ts-ignore
 import { useTerminologyServiceApi } from "@madie/madie-util";
 import userEvent from "@testing-library/user-event";
+import { generateMissingVsacVersionReport } from "./codeSystemReport";
+import { downloadBlobAsFile } from "../../common/exportUtils";
+
+jest.mock("./codeSystemReport");
+jest.mock("../../common/exportUtils", () => ({
+  ...jest.requireActual("../../common/exportUtils"),
+  downloadBlobAsFile: jest.fn(),
+}));
 
 jest.mock("@madie/madie-util", () => ({
   useTerminologyServiceApi: jest.fn(),
@@ -17,6 +25,7 @@ describe("CodeSystemManagement", () => {
   const mockCreateCodeSystem = jest.fn();
   const mockUpdateCodeSystem = jest.fn();
   const mockDeleteCodeSystem = jest.fn();
+  const mockGenerateReport = generateMissingVsacVersionReport as jest.Mock;
 
   const existingCodeSystem = {
     id: "cs-1",
@@ -54,6 +63,7 @@ describe("CodeSystemManagement", () => {
     mockUpdateCodeSystem.mockResolvedValue({});
     mockDeleteCodeSystem.mockResolvedValue({});
     mockExportCodeSystems.mockResolvedValue(new Blob(["code systems"]));
+    mockGenerateReport.mockResolvedValue(new Blob(["missing VSAC versions"]));
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
@@ -466,7 +476,98 @@ describe("CodeSystemManagement", () => {
     expect(
       screen.getByTestId("update-vses-success-message")
     ).toBeInTheDocument();
+    expect(mockGenerateReport).not.toHaveBeenCalled();
   });
+
+  it("places the missing VSAC version report below All Code Systems", async () => {
+    render(<CodeSystemManagement />);
+    await userEvent.click(screen.getByTestId("code-system-reports-button"));
+
+    expect(
+      screen.getAllByRole("menuitem").map((item) => item.textContent)
+    ).toEqual(["All Code Systems", "Code Systems Missing VSAC Version"]);
+  });
+
+  it("downloads the missing VSAC version report with the required filename", async () => {
+    const blob = new Blob(["missing VSAC versions"]);
+    mockGenerateReport.mockResolvedValueOnce(blob);
+    render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("code-system-reports-button"));
+    await userEvent.click(
+      screen.getByRole("menuitem", {
+        name: "Code Systems Missing VSAC Version",
+      })
+    );
+
+    await waitFor(() => {
+      expect(downloadBlobAsFile).toHaveBeenCalledWith(
+        blob,
+        expect.stringMatching(
+          /^Code_Systems_Missing_VSAC_Version_In_MADiE_\d{8}_\d{6}\.xlsx$/
+        )
+      );
+    });
+    expect(mockGenerateReport).toHaveBeenCalledWith(
+      expect.objectContaining({ getCodeSystems: mockGetCodeSystems }),
+      expect.any(AbortSignal)
+    );
+    expect(mockExportCodeSystems).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Code Systems Missing VSAC Version report exported successfully"
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+  });
+
+  it("disables Reports during generation and aborts the export on unmount", async () => {
+    mockGenerateReport.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = render(<CodeSystemManagement />);
+
+    await userEvent.click(screen.getByTestId("code-system-reports-button"));
+    await userEvent.click(
+      screen.getByRole("menuitem", {
+        name: "Code Systems Missing VSAC Version",
+      })
+    );
+
+    expect(screen.getByTestId("code-system-reports-button")).toBeDisabled();
+    const signal = mockGenerateReport.mock.calls[0][1] as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    unmount();
+    expect(signal.aborted).toBe(true);
+    expect(downloadBlobAsFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new Error("Report generation failed"), "Report generation failed"],
+    [null, "Unable to export code systems."],
+  ])(
+    "shows export errors without downloading a report",
+    async (error, message) => {
+      mockGenerateReport.mockRejectedValueOnce(error);
+      render(<CodeSystemManagement />);
+
+      await userEvent.click(screen.getByTestId("code-system-reports-button"));
+      await userEvent.click(
+        screen.getByRole("menuitem", {
+          name: "Code Systems Missing VSAC Version",
+        })
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(message)).toBeInTheDocument();
+      });
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("code-system-reports-button")
+      ).not.toBeDisabled();
+      expect(downloadBlobAsFile).not.toHaveBeenCalled();
+    }
+  );
 
   it("renders pagination controls for multiple pages", async () => {
     mockGetCodeSystems.mockResolvedValue({

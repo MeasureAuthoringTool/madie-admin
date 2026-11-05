@@ -30,6 +30,7 @@ import {
 import CodeSystemDialog, {
   type NewCodeSystemFormData,
 } from "./CodeSystemDialog";
+import { generateMissingVsacVersionReport } from "./codeSystemReport";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
 
@@ -106,21 +107,41 @@ export default function CodeSystemManagement() {
     setReportsAnchorEl(null);
   };
 
-  const handleExportAllCodeSystems = (): void => {
+  const handleExportCodeSystems = (missingVsacVersion = false): void => {
     handleReportsMenuClose();
     setExporting(true);
     exportAbortControllerRef.current = new AbortController();
 
-    terminologyServiceApi
-      .exportCodeSystems({}, exportAbortControllerRef.current.signal)
+    const exportPromise = missingVsacVersion
+      ? generateMissingVsacVersionReport(
+          terminologyServiceApi,
+          exportAbortControllerRef.current.signal
+        )
+      : terminologyServiceApi.exportCodeSystems(
+          {},
+          exportAbortControllerRef.current.signal
+        );
+
+    exportPromise
       .then((excelBlob) => {
         downloadBlobAsFile(
           excelBlob,
-          buildTimestampedExportFileName("CodeSystemsExport")
+          missingVsacVersion
+            ? buildTimestampedExportFileName(
+                "Code_Systems_Missing_VSAC_Version_In_MADiE",
+                new Date(),
+                "xlsx",
+                "UTC"
+              )
+            : buildTimestampedExportFileName("CodeSystemsExport")
         );
 
         setToastType("success");
-        setToastMessage("All Code Systems report exported successfully");
+        setToastMessage(
+          missingVsacVersion
+            ? "Code Systems Missing VSAC Version report exported successfully"
+            : "All Code Systems report exported successfully"
+        );
         setToastOpen(true);
       })
       .catch((err) => {
@@ -502,6 +523,7 @@ export default function CodeSystemManagement() {
             <button
               type="button"
               className="code-system-reports-link"
+              id="code-system-reports-button"
               data-testid="code-system-reports-button"
               aria-haspopup="menu"
               aria-expanded={reportsMenuOpen}
@@ -528,10 +550,16 @@ export default function CodeSystemManagement() {
               <MenuItem
                 data-testid="code-system-report-all-code-systems"
                 onClick={() => {
-                  handleExportAllCodeSystems();
+                  handleExportCodeSystems();
                 }}
               >
                 All Code Systems
+              </MenuItem>
+              <MenuItem
+                data-testid="code-system-report-missing-vsac-version"
+                onClick={() => handleExportCodeSystems(true)}
+              >
+                Code Systems Missing VSAC Version
               </MenuItem>
             </Menu>
           </div>

@@ -4,14 +4,19 @@
 export const buildTimestampedExportFileName = (
   prefix: string,
   date: Date = new Date(),
-  extension = "xlsx"
+  extension = "xlsx",
+  timeZone: "local" | "UTC" = "local"
 ): string => {
   const pad = (value: number): string => String(value).padStart(2, "0");
   const stamp =
-    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
-    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
-      date.getSeconds()
-    )}`;
+    timeZone === "UTC"
+      ? date.toISOString().replace(/[-:]/g, "").slice(0, 15).replace("T", "_")
+      : `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(
+          date.getDate()
+        )}` +
+        `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(
+          date.getSeconds()
+        )}`;
   const normalizedExtension = extension.startsWith(".")
     ? extension.slice(1)
     : extension;
