@@ -22,8 +22,14 @@ declare module "@madie/madie-util" {
     isInVsac: boolean;
   }
 
-  export interface CodeSystemJobStatus {
-    status: "RUNNING" | "COMPLETED" | "FAILED";
+  export enum CodeSystemJobStatus {
+    RUNNING = "RUNNING",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED",
+  }
+
+  export interface CodeSystemJobState {
+    status: CodeSystemJobStatus;
     completedAt?: string;
   }
 
@@ -248,7 +254,7 @@ declare module "@madie/madie-util" {
     ): Promise<Page<CodeSystem>>;
 
     triggerUpdateCodeSystems(): Promise<void>;
-    getCodeSystemJobStatus(): Promise<CodeSystemJobStatus | undefined>;
+    getCodeSystemJobStatus(): Promise<CodeSystemJobState | undefined>;
     exportCodeSystems(
       exportRequest?: Record<string, unknown>,
       signal?: AbortSignal

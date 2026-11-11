@@ -13,7 +13,8 @@ import "./CodeSystemManagement.scss";
 import {
   useTerminologyServiceApi,
   type CodeSystem,
-  type CodeSystemJobStatus,
+  CodeSystemJobStatus,
+  type CodeSystemJobState,
 } from "@madie/madie-util";
 import {
   ColumnDef,
@@ -47,8 +48,8 @@ export default function CodeSystemManagement() {
   const [toastOpen, setToastOpen] = useState<boolean>(false);
   const [toastType, setToastType] = useState<string>("success");
   const [toastMessage, setToastMessage] = useState<string>("");
-  const [codeSystemJobStatus, setCodeSystemJobStatus] =
-    useState<CodeSystemJobStatus>();
+  const [codeSystemJobState, setCodeSystemJobState] =
+    useState<CodeSystemJobState>();
   const [isAddCodeSystemDialogOpen, setIsAddCodeSystemDialogOpen] =
     useState<boolean>(false);
   const [isEditCodeSystemDialogOpen, setIsEditCodeSystemDialogOpen] =
@@ -96,7 +97,7 @@ export default function CodeSystemManagement() {
       setToastType("success");
       setToastMessage("Update Code Systems job has been started");
       setToastOpen(true);
-      setCodeSystemJobStatus({ status: "RUNNING" });
+      setCodeSystemJobState({ status: CodeSystemJobStatus.RUNNING });
     } catch (err: any) {
       setToastType("danger");
       setToastMessage(err.message);
@@ -353,7 +354,7 @@ export default function CodeSystemManagement() {
   useEffect(() => {
     terminologyServiceApi
       .getCodeSystemJobStatus()
-      .then(setCodeSystemJobStatus)
+      .then(setCodeSystemJobState)
       .catch(() => {
         setToastType("danger");
         setToastMessage("Unable to load the code system update status.");
@@ -531,12 +532,12 @@ export default function CodeSystemManagement() {
               >
                 Update Code Systems
               </Button>
-              {codeSystemJobStatus && (
+              {codeSystemJobState && (
                 <p
                   className="code-system-update-status"
                   data-testid="code-system-update-status"
                 >
-                  {codeSystemJobStatusMessage(codeSystemJobStatus)}
+                  {codeSystemJobStatusMessage(codeSystemJobState)}
                 </p>
               )}
             </div>
@@ -828,12 +829,12 @@ export default function CodeSystemManagement() {
 function codeSystemJobStatusMessage({
   status,
   completedAt,
-}: CodeSystemJobStatus): string {
-  if (status === "RUNNING") {
+}: CodeSystemJobState): string {
+  if (status === CodeSystemJobStatus.RUNNING) {
     return "Code System Update Running...";
   }
   const completed = new Date(completedAt).toLocaleString();
-  return status === "FAILED"
+  return status === CodeSystemJobStatus.FAILED
     ? `Most recent Code System update Failed: ${completed}`
     : `Last Updated: ${completed}`;
 }

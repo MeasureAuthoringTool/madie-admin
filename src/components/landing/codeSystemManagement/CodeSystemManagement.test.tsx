@@ -3,7 +3,10 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
 // @ts-ignore
-import { useTerminologyServiceApi } from "@madie/madie-util";
+import {
+  CodeSystemJobStatus,
+  useTerminologyServiceApi,
+} from "@madie/madie-util";
 import userEvent from "@testing-library/user-event";
 import { generateMissingVsacVersionReport } from "./codeSystemReport";
 import { downloadBlobAsFile } from "../../common/exportUtils";
@@ -16,6 +19,11 @@ jest.mock("../../common/exportUtils", () => ({
 
 jest.mock("@madie/madie-util", () => ({
   useTerminologyServiceApi: jest.fn(),
+  CodeSystemJobStatus: {
+    RUNNING: "RUNNING",
+    COMPLETED: "COMPLETED",
+    FAILED: "FAILED",
+  },
 }));
 
 describe("CodeSystemManagement", () => {
@@ -208,7 +216,9 @@ describe("CodeSystemManagement", () => {
     const completedAt = "2026-11-09T15:04:05Z";
 
     it("shows the running message beneath the update button", async () => {
-      mockGetCodeSystemJobStatus.mockResolvedValue({ status: "RUNNING" });
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.RUNNING,
+      });
 
       render(<CodeSystemManagement />);
 
@@ -222,7 +232,7 @@ describe("CodeSystemManagement", () => {
 
     it("shows the last updated date of the latest completed job", async () => {
       mockGetCodeSystemJobStatus.mockResolvedValue({
-        status: "COMPLETED",
+        status: CodeSystemJobStatus.COMPLETED,
         completedAt,
       });
 
@@ -237,7 +247,7 @@ describe("CodeSystemManagement", () => {
 
     it("shows the failed date when the latest job failed", async () => {
       mockGetCodeSystemJobStatus.mockResolvedValue({
-        status: "FAILED",
+        status: CodeSystemJobStatus.FAILED,
         completedAt,
       });
 
@@ -281,7 +291,7 @@ describe("CodeSystemManagement", () => {
 
     it("shows the running message once the update job is started", async () => {
       mockGetCodeSystemJobStatus.mockResolvedValue({
-        status: "COMPLETED",
+        status: CodeSystemJobStatus.COMPLETED,
         completedAt,
       });
       mockTrigger.mockResolvedValueOnce({});
@@ -304,7 +314,7 @@ describe("CodeSystemManagement", () => {
 
     it("keeps the current status when the update job fails to start", async () => {
       mockGetCodeSystemJobStatus.mockResolvedValue({
-        status: "COMPLETED",
+        status: CodeSystemJobStatus.COMPLETED,
         completedAt,
       });
       mockTrigger.mockRejectedValueOnce(new Error("already running"));
