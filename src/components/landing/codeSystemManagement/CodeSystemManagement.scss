@@ -27,9 +27,20 @@
   .code-system-primary-actions {
     display: flex;
     flex: 1;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     min-width: 0;
+  }
+
+  .code-system-update-action {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .code-system-update-status {
+    margin: 0;
+    font-size: 12px;
   }
 
   .code-system-update-notice {

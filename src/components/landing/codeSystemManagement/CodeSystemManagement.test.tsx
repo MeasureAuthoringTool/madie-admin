@@ -3,7 +3,10 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
 // @ts-ignore
-import { useTerminologyServiceApi } from "@madie/madie-util";
+import {
+  CodeSystemJobStatus,
+  useTerminologyServiceApi,
+} from "@madie/madie-util";
 import userEvent from "@testing-library/user-event";
 import { generateMissingVsacVersionReport } from "./codeSystemReport";
 import { downloadBlobAsFile } from "../../common/exportUtils";
@@ -16,10 +19,16 @@ jest.mock("../../common/exportUtils", () => ({
 
 jest.mock("@madie/madie-util", () => ({
   useTerminologyServiceApi: jest.fn(),
+  CodeSystemJobStatus: {
+    RUNNING: "RUNNING",
+    COMPLETED: "COMPLETED",
+    FAILED: "FAILED",
+  },
 }));
 
 describe("CodeSystemManagement", () => {
   const mockTrigger = jest.fn();
+  const mockGetCodeSystemJobStatus = jest.fn();
   const mockGetCodeSystems = jest.fn();
   const mockExportCodeSystems = jest.fn();
   const mockCreateCodeSystem = jest.fn();
@@ -59,6 +68,7 @@ describe("CodeSystemManagement", () => {
       size: 25,
       numberOfElements: 0,
     });
+    mockGetCodeSystemJobStatus.mockResolvedValue(undefined);
     mockCreateCodeSystem.mockResolvedValue({});
     mockUpdateCodeSystem.mockResolvedValue({});
     mockDeleteCodeSystem.mockResolvedValue({});
@@ -67,6 +77,7 @@ describe("CodeSystemManagement", () => {
 
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGetCodeSystems,
       exportCodeSystems: mockExportCodeSystems,
       createCodeSystem: mockCreateCodeSystem,
@@ -110,13 +121,14 @@ describe("CodeSystemManagement", () => {
       .closest(".code-system-actions-row");
 
     const updateButton = screen.getByTestId("update-code-systems-button");
-    const updateNotice = screen.getByText(/this is a asynchronous job/i);
+    const updateNotice = screen.getByText(/this is an asynchronous job/i);
 
     expect(actionsRow).toContainElement(updateButton);
     expect(actionsRow).toContainElement(
       screen.getByTestId("code-system-reports-button")
     );
-    expect(updateButton.nextElementSibling).toBe(updateNotice);
+    expect(updateButton.parentElement).toHaveClass("code-system-update-action");
+    expect(updateButton.parentElement.nextElementSibling).toBe(updateNotice);
     expect(updateNotice).toHaveClass("code-system-update-notice");
     expect(updateNotice.parentElement).toHaveClass(
       "code-system-primary-actions"
@@ -193,7 +205,133 @@ describe("CodeSystemManagement", () => {
   it("renders the asynchronous update notice", () => {
     render(<CodeSystemManagement />);
 
-    expect(screen.getByText(/this is a asynchronous job/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This is an asynchronous job to be executed as part of the release process. Avoid running outside of a release, unless we cannot wait to run the job during the next release. This could impact users while running. Expect a 5 - 10 min runtime. Please continue to have a nice day!"
+      )
+    ).toBeInTheDocument();
+  });
+
+  describe("code system update status", () => {
+    const completedAt = "2026-11-09T15:04:05Z";
+
+    it("shows the running message beneath the update button", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.RUNNING,
+      });
+
+      render(<CodeSystemManagement />);
+
+      const status = await screen.findByTestId("code-system-update-status");
+      expect(status).toHaveTextContent("Code System Update Running...");
+      expect(status).not.toHaveTextContent("Last Updated");
+      expect(
+        screen.getByTestId("update-code-systems-button").nextElementSibling
+      ).toBe(status);
+    });
+
+    it("shows the last updated date of the latest completed job", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.COMPLETED,
+        completedAt,
+      });
+
+      render(<CodeSystemManagement />);
+
+      expect(
+        await screen.findByTestId("code-system-update-status")
+      ).toHaveTextContent(
+        `Last Updated: ${new Date(completedAt).toLocaleString()}`
+      );
+    });
+
+    it("shows the failed date when the latest job failed", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.FAILED,
+        completedAt,
+      });
+
+      render(<CodeSystemManagement />);
+
+      expect(
+        await screen.findByTestId("code-system-update-status")
+      ).toHaveTextContent(
+        `Most recent Code System update Failed: ${new Date(
+          completedAt
+        ).toLocaleString()}`
+      );
+    });
+
+    it("shows no status when no job has run yet", async () => {
+      render(<CodeSystemManagement />);
+
+      await waitFor(() => {
+        expect(mockGetCodeSystemJobStatus).toHaveBeenCalled();
+      });
+      expect(
+        screen.queryByTestId("code-system-update-status")
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows an error toast when the status request fails", async () => {
+      mockGetCodeSystemJobStatus.mockRejectedValue(new Error("fail"));
+
+      render(<CodeSystemManagement />);
+
+      expect(
+        await screen.findByText("Unable to load the code system update status.")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("code-system-update-status")
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the running message once the update job is started", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.COMPLETED,
+        completedAt,
+      });
+      mockTrigger.mockResolvedValueOnce({});
+
+      render(<CodeSystemManagement />);
+
+      expect(
+        await screen.findByTestId("code-system-update-status")
+      ).toHaveTextContent("Last Updated:");
+
+      fireEvent.click(screen.getByTestId("update-code-systems-button"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("code-system-update-status")
+        ).toHaveTextContent("Code System Update Running...");
+      });
+      expect(mockGetCodeSystemJobStatus).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the current status when the update job fails to start", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.COMPLETED,
+        completedAt,
+      });
+      mockTrigger.mockRejectedValueOnce(new Error("already running"));
+
+      render(<CodeSystemManagement />);
+
+      expect(
+        await screen.findByTestId("code-system-update-status")
+      ).toHaveTextContent("Last Updated:");
+
+      fireEvent.click(screen.getByTestId("update-code-systems-button"));
+
+      expect(await screen.findByText("already running")).toBeInTheDocument();
+      expect(screen.getByTestId("code-system-update-status")).toHaveTextContent(
+        "Last Updated:"
+      );
+    });
   });
 
   it("requests code systems with default paging and sorting", async () => {
@@ -205,6 +343,7 @@ describe("CodeSystemManagement", () => {
     });
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGet,
     });
     render(<CodeSystemManagement />);
@@ -223,6 +362,7 @@ describe("CodeSystemManagement", () => {
     });
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGet,
       exportCodeSystems: mockExportCodeSystems,
     });
@@ -280,6 +420,7 @@ describe("CodeSystemManagement", () => {
     const mockGet = jest.fn().mockReturnValue(pendingPromise);
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGet,
       exportCodeSystems: mockExportCodeSystems,
     });
@@ -334,6 +475,7 @@ describe("CodeSystemManagement", () => {
     });
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGet,
       exportCodeSystems: mockExportCodeSystems,
     });
@@ -352,6 +494,7 @@ describe("CodeSystemManagement", () => {
       .mockRejectedValue(new Error("Failed to load code systems"));
     (useTerminologyServiceApi as jest.Mock).mockReturnValue({
       triggerUpdateCodeSystems: mockTrigger,
+      getCodeSystemJobStatus: mockGetCodeSystemJobStatus,
       getCodeSystems: mockGet,
       exportCodeSystems: mockExportCodeSystems,
     });

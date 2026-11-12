@@ -10,7 +10,12 @@ import {
   TextField,
 } from "@madie/madie-design-system/dist/react";
 import "./CodeSystemManagement.scss";
-import { useTerminologyServiceApi, type CodeSystem } from "@madie/madie-util";
+import {
+  useTerminologyServiceApi,
+  type CodeSystem,
+  CodeSystemJobStatus,
+  type CodeSystemJobState,
+} from "@madie/madie-util";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -43,6 +48,8 @@ export default function CodeSystemManagement() {
   const [toastOpen, setToastOpen] = useState<boolean>(false);
   const [toastType, setToastType] = useState<string>("success");
   const [toastMessage, setToastMessage] = useState<string>("");
+  const [codeSystemJobState, setCodeSystemJobState] =
+    useState<CodeSystemJobState>();
   const [isAddCodeSystemDialogOpen, setIsAddCodeSystemDialogOpen] =
     useState<boolean>(false);
   const [isEditCodeSystemDialogOpen, setIsEditCodeSystemDialogOpen] =
@@ -90,6 +97,7 @@ export default function CodeSystemManagement() {
       setToastType("success");
       setToastMessage("Update Code Systems job has been started");
       setToastOpen(true);
+      setCodeSystemJobState({ status: CodeSystemJobStatus.RUNNING });
     } catch (err: any) {
       setToastType("danger");
       setToastMessage(err.message);
@@ -344,6 +352,17 @@ export default function CodeSystemManagement() {
   ]);
 
   useEffect(() => {
+    terminologyServiceApi
+      .getCodeSystemJobStatus()
+      .then(setCodeSystemJobState)
+      .catch(() => {
+        setToastType("danger");
+        setToastMessage("Unable to load the code system update status.");
+        setToastOpen(true);
+      });
+  }, [terminologyServiceApi]);
+
+  useEffect(() => {
     return () => {
       if (exportAbortControllerRef.current) {
         exportAbortControllerRef.current.abort();
@@ -506,17 +525,28 @@ export default function CodeSystemManagement() {
             >
               Add New Code System
             </Button>
-            <Button
-              data-testid="update-code-systems-button"
-              onClick={handleUpdateCodeSystems}
-            >
-              Update Code Systems
-            </Button>
+            <div className="code-system-update-action">
+              <Button
+                data-testid="update-code-systems-button"
+                onClick={handleUpdateCodeSystems}
+              >
+                Update Code Systems
+              </Button>
+              {codeSystemJobState && (
+                <p
+                  className="code-system-update-status"
+                  data-testid="code-system-update-status"
+                >
+                  {codeSystemJobStatusMessage(codeSystemJobState)}
+                </p>
+              )}
+            </div>
             <p className="code-system-update-notice">
-              This is a asynchronous job that should only be used when we cannot
-              wait for the job to run this week. This could impact users while
-              running. Expect a 5 - 10 min runtime. Please continue to have a
-              nice day!
+              This is an asynchronous job to be executed as part of the release
+              process. Avoid running outside of a release, unless we cannot wait
+              to run the job during the next release. This could impact users
+              while running. Expect a 5 - 10 min runtime. Please continue to
+              have a nice day!
             </p>
           </div>
           <div className="code-system-reports">
@@ -794,4 +824,17 @@ export default function CodeSystemManagement() {
       />
     </div>
   );
+}
+
+function codeSystemJobStatusMessage({
+  status,
+  completedAt,
+}: CodeSystemJobState): string {
+  if (status === CodeSystemJobStatus.RUNNING) {
+    return "Code System Update Running...";
+  }
+  const completed = new Date(completedAt).toLocaleString();
+  return status === CodeSystemJobStatus.FAILED
+    ? `Most recent Code System update Failed: ${completed}`
+    : `Last Updated: ${completed}`;
 }
