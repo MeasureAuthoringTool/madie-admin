@@ -38,6 +38,8 @@ import CodeSystemDialog, {
 import { generateMissingVsacVersionReport } from "./codeSystemReport";
 
 const filterByOptions = ["Title", "Name", "Version", "Full URL"];
+const CODE_SYSTEM_JOB_ALREADY_RUNNING =
+  "Code System update Job already running.";
 
 export default function CodeSystemManagement() {
   const terminologyServiceApi = useRef(useTerminologyServiceApi()).current;
@@ -50,6 +52,8 @@ export default function CodeSystemManagement() {
   const [toastMessage, setToastMessage] = useState<string>("");
   const [codeSystemJobState, setCodeSystemJobState] =
     useState<CodeSystemJobState>();
+  const codeSystemJobRunning =
+    codeSystemJobState?.status === CodeSystemJobStatus.RUNNING;
   const [isAddCodeSystemDialogOpen, setIsAddCodeSystemDialogOpen] =
     useState<boolean>(false);
   const [isEditCodeSystemDialogOpen, setIsEditCodeSystemDialogOpen] =
@@ -93,6 +97,13 @@ export default function CodeSystemManagement() {
 
   const handleUpdateCodeSystems = async () => {
     try {
+      const latestJobState =
+        await terminologyServiceApi.getCodeSystemJobStatus();
+      if (latestJobState?.status === CodeSystemJobStatus.RUNNING) {
+        setCodeSystemJobState(latestJobState);
+        throw new Error(CODE_SYSTEM_JOB_ALREADY_RUNNING);
+      }
+
       await terminologyServiceApi.triggerUpdateCodeSystems();
       setToastType("success");
       setToastMessage("Update Code Systems job has been started");
@@ -529,6 +540,7 @@ export default function CodeSystemManagement() {
               <Button
                 data-testid="update-code-systems-button"
                 onClick={handleUpdateCodeSystems}
+                disabled={codeSystemJobRunning}
               >
                 Update Code Systems
               </Button>
