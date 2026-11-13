@@ -158,9 +158,7 @@ describe("CodeSystemManagement", () => {
 
   it("shows error toast when API call fails", async () => {
     mockTrigger.mockRejectedValueOnce(
-      new Error(
-        "Update Code System is already running. We have NOT started the job again"
-      )
+      new Error("Code System update Job already running.")
     );
 
     render(<CodeSystemManagement />);
@@ -172,9 +170,7 @@ describe("CodeSystemManagement", () => {
     });
 
     expect(
-      screen.getByText(
-        "Update Code System is already running. We have NOT started the job again"
-      )
+      screen.getByText("Code System update Job already running.")
     ).toBeInTheDocument();
 
     expect(screen.getByTestId("update-vses-error-message")).toBeInTheDocument();
@@ -309,7 +305,7 @@ describe("CodeSystemManagement", () => {
           screen.getByTestId("code-system-update-status")
         ).toHaveTextContent("Code System Update Running...");
       });
-      expect(mockGetCodeSystemJobStatus).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("update-code-systems-button")).toBeDisabled();
     });
 
     it("keeps the current status when the update job fails to start", async () => {
@@ -331,6 +327,89 @@ describe("CodeSystemManagement", () => {
       expect(screen.getByTestId("code-system-update-status")).toHaveTextContent(
         "Last Updated:"
       );
+    });
+  });
+
+  describe("preventing concurrent code system update jobs", () => {
+    const alreadyRunningMessage = "Code System update Job already running.";
+
+    it("disables the update button when a job is running on page load", async () => {
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.RUNNING,
+      });
+
+      render(<CodeSystemManagement />);
+
+      await screen.findByTestId("code-system-update-status");
+      expect(screen.getByTestId("update-code-systems-button")).toBeDisabled();
+    });
+
+    it.each([
+      [
+        "the last job completed",
+        {
+          status: CodeSystemJobStatus.COMPLETED,
+          completedAt: "2026-11-09T15:04:05Z",
+        },
+      ],
+      [
+        "the last job failed",
+        {
+          status: CodeSystemJobStatus.FAILED,
+          completedAt: "2026-11-09T15:04:05Z",
+        },
+      ],
+    ])("enables the update button when %s", async (_, jobState) => {
+      mockGetCodeSystemJobStatus.mockResolvedValue(jobState);
+
+      render(<CodeSystemManagement />);
+
+      await screen.findByTestId("code-system-update-status");
+      expect(screen.getByTestId("update-code-systems-button")).toBeEnabled();
+    });
+
+    it("enables the update button when no job has run yet", async () => {
+      render(<CodeSystemManagement />);
+
+      await waitFor(() => {
+        expect(mockGetCodeSystemJobStatus).toHaveBeenCalled();
+      });
+      expect(screen.getByTestId("update-code-systems-button")).toBeEnabled();
+    });
+
+    it("does not start a job when one started after the page loaded", async () => {
+      mockGetCodeSystemJobStatus
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ status: CodeSystemJobStatus.RUNNING });
+
+      render(<CodeSystemManagement />);
+
+      fireEvent.click(screen.getByTestId("update-code-systems-button"));
+
+      expect(
+        await screen.findByText(alreadyRunningMessage)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("update-vses-error-message")
+      ).toBeInTheDocument();
+      expect(mockTrigger).not.toHaveBeenCalled();
+      expect(screen.getByTestId("update-code-systems-button")).toBeDisabled();
+      expect(screen.getByTestId("code-system-update-status")).toHaveTextContent(
+        "Code System Update Running..."
+      );
+    });
+
+    it("does not send the request when the status check before it fails", async () => {
+      mockGetCodeSystemJobStatus
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("status unavailable"));
+
+      render(<CodeSystemManagement />);
+
+      fireEvent.click(screen.getByTestId("update-code-systems-button"));
+
+      expect(await screen.findByText("status unavailable")).toBeInTheDocument();
+      expect(mockTrigger).not.toHaveBeenCalled();
     });
   });
 
