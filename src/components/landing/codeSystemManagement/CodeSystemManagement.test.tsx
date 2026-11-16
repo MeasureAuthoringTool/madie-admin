@@ -1,4 +1,4 @@
-import * as React from "react";
+ import * as React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CodeSystemManagement from "./CodeSystemManagement";
@@ -22,6 +22,7 @@ jest.mock("@madie/madie-util", () => ({
   CodeSystemJobStatus: {
     RUNNING: "RUNNING",
     COMPLETED: "COMPLETED",
+    COMPLETED_WITH_FAILURES: "COMPLETED_WITH_FAILURES",
     FAILED: "FAILED",
   },
 }));
@@ -214,6 +215,30 @@ describe("CodeSystemManagement", () => {
 
   describe("code system update status", () => {
     const completedAt = "2026-11-09T15:04:05Z";
+
+    it("shows partial completion with the date and Failed Code System Report guidance", async () => {
+      //given
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.COMPLETED_WITH_FAILURES,
+        completedAt,
+      });
+
+      //when
+      render(<CodeSystemManagement />);
+      const status = await screen.findByTestId("code-system-update-status");
+
+      //then
+      expect(status).toHaveTextContent(
+        `Completed with failures: ${new Date(completedAt).toLocaleString()}. Review the Failed Code System Report for details.`
+      );
+      expect(status).not.toHaveTextContent("Last Updated:");
+      expect(status).not.toHaveTextContent("Most recent Code System update Failed:");
+      expect(
+        screen.getByTestId("update-code-systems-button").nextElementSibling
+      ).toBe(status);
+      expect(mockExportCodeSystems).not.toHaveBeenCalled();
+      expect(downloadBlobAsFile).not.toHaveBeenCalled();
+    });
 
     it("shows the running message beneath the update button", async () => {
       mockGetCodeSystemJobStatus.mockResolvedValue({

@@ -834,6 +834,9 @@ function codeSystemJobStatusMessage({
     return "Code System Update Running...";
   }
   const completed = new Date(completedAt).toLocaleString();
+  if (status === CodeSystemJobStatus.COMPLETED_WITH_FAILURES) {
+    return `Completed with failures: ${completed}. Review the Failed Code System Report for details.`;
+  }
   return status === CodeSystemJobStatus.FAILED
     ? `Most recent Code System update Failed: ${completed}`
     : `Last Updated: ${completed}`;
