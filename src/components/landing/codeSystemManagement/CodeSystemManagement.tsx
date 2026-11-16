@@ -532,14 +532,16 @@ export default function CodeSystemManagement() {
               >
                 Update Code Systems
               </Button>
-              {codeSystemJobState && (
-                <p
-                  className="code-system-update-status"
-                  data-testid="code-system-update-status"
-                >
-                  {codeSystemJobStatusMessage(codeSystemJobState)}
-                </p>
-              )}
+              <div className="code-system-update-status-column">
+                {codeSystemJobState && (
+                  <p
+                    className="code-system-update-status"
+                    data-testid="code-system-update-status"
+                  >
+                    {codeSystemJobStatusMessage(codeSystemJobState)}
+                  </p>
+                )}
+              </div>
             </div>
             <p className="code-system-update-notice">
               This is an asynchronous job to be executed as part of the release
