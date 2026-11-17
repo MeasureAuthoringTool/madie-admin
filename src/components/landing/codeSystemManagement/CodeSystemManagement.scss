@@ -34,13 +34,24 @@
 
   .code-system-update-action {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    min-width: 0;
+    gap: 12px;
+
+    > button {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+
+  .code-system-update-status-column {
+    flex: 0 0 25vw;
   }
 
   .code-system-update-status {
     margin: 0;
     font-size: 12px;
+    overflow-wrap: anywhere;
   }
 
   .code-system-update-notice {
