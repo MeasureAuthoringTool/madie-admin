@@ -22,6 +22,7 @@ jest.mock("@madie/madie-util", () => ({
   CodeSystemJobStatus: {
     RUNNING: "RUNNING",
     COMPLETED: "COMPLETED",
+    COMPLETED_WITH_FAILURES: "COMPLETED_WITH_FAILURES",
     FAILED: "FAILED",
   },
 }));
@@ -211,19 +212,83 @@ describe("CodeSystemManagement", () => {
   describe("code system update status", () => {
     const completedAt = "2026-11-09T15:04:05Z";
 
-    it("shows the running message beneath the update button", async () => {
+    it("reserves the status column while the status loads and after it arrives", async () => {
+      //given
+      let resolveStatus: (value: unknown) => void;
+      mockGetCodeSystemJobStatus.mockReturnValue(
+        new Promise((resolve) => {
+          resolveStatus = resolve;
+        })
+      );
+
+      //when
+      render(<CodeSystemManagement />);
+      const column = screen.getByTestId(
+        "update-code-systems-button"
+      ).nextElementSibling;
+
+      //then
+      expect(column).toHaveClass("code-system-update-status-column");
+      expect(column).toBeEmptyDOMElement();
+
+      //when
+      resolveStatus({
+        status: CodeSystemJobStatus.COMPLETED_WITH_FAILURES,
+        completedAt,
+      });
+      const status = await screen.findByTestId("code-system-update-status");
+
+      //then
+      expect(column).toContainElement(status);
+      expect(
+        screen.getByTestId("update-code-systems-button").nextElementSibling
+      ).toBe(column);
+    });
+
+    it("shows partial completion with the date and Failed Code System Report guidance", async () => {
+      //given
+      mockGetCodeSystemJobStatus.mockResolvedValue({
+        status: CodeSystemJobStatus.COMPLETED_WITH_FAILURES,
+        completedAt,
+      });
+
+      //when
+      render(<CodeSystemManagement />);
+      const status = await screen.findByTestId("code-system-update-status");
+
+      //then
+      expect(status).toHaveTextContent(
+        `Completed with failures: ${new Date(
+          completedAt
+        ).toLocaleString()}. Review the Failed Code System Report for details.`
+      );
+      expect(status).not.toHaveTextContent("Last Updated:");
+      expect(status).not.toHaveTextContent(
+        "Most recent Code System update Failed:"
+      );
+      expect(
+        screen.getByTestId("update-code-systems-button").nextElementSibling
+      ).toContainElement(status);
+      expect(mockExportCodeSystems).not.toHaveBeenCalled();
+      expect(downloadBlobAsFile).not.toHaveBeenCalled();
+    });
+
+    it("shows the running message next to the update button", async () => {
+      //given
       mockGetCodeSystemJobStatus.mockResolvedValue({
         status: CodeSystemJobStatus.RUNNING,
       });
 
+      //when
       render(<CodeSystemManagement />);
 
       const status = await screen.findByTestId("code-system-update-status");
+      //then
       expect(status).toHaveTextContent("Code System Update Running...");
       expect(status).not.toHaveTextContent("Last Updated");
       expect(
         screen.getByTestId("update-code-systems-button").nextElementSibling
-      ).toBe(status);
+      ).toContainElement(status);
     });
 
     it("shows the last updated date of the latest completed job", async () => {

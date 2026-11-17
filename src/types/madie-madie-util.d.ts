@@ -25,6 +25,7 @@ declare module "@madie/madie-util" {
   export enum CodeSystemJobStatus {
     RUNNING = "RUNNING",
     COMPLETED = "COMPLETED",
+    COMPLETED_WITH_FAILURES = "COMPLETED_WITH_FAILURES",
     FAILED = "FAILED",
   }
 
