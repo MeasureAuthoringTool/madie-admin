@@ -231,6 +231,56 @@ describe("ValueSetManagement", () => {
     });
   });
 
+  it("renders unavailable icon when value set is unavailable", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T12:00:00Z",
+          manuallyModified: false,
+          unavailable: true,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("unavailable-check")).toBeInTheDocument();
+    });
+  });
+
+  it("renders no unavailable icon when value set is available", async () => {
+    mockGetValueSets.mockResolvedValueOnce({
+      content: [
+        {
+          id: "1",
+          url: "http://example.com/vs",
+          lastUpdated: "2025-01-01T12:00:00Z",
+          manuallyModified: false,
+          unavailable: false,
+        },
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      numberOfElements: 1,
+    });
+
+    render(<ValueSetManagement />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("unavailable-check")).not.toBeInTheDocument();
+    });
+  });
+
   it("shows the success toast after a successful update", async () => {
     mockUpdateValueSets.mockResolvedValueOnce(undefined);
 

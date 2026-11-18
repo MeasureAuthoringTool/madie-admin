@@ -53,6 +53,7 @@ declare module "@madie/madie-util" {
     version?: string;
     lastUpdated: string;
     manuallyModified: boolean;
+    unavailable: boolean;
     valueSet: string;
   }
 
@@ -144,6 +145,7 @@ declare module "@madie/madie-util" {
     version?: string;
     lastUpdated: string;
     manuallyModified: boolean;
+    unavailable: boolean;
     valueSet: string;
   }
   export function padCmsId(cmsId: number | string | null | undefined): string;
