@@ -185,6 +185,12 @@ export default function ValueSetManagement() {
           ),
       },
       {
+        header: "Unavailable",
+        accessorKey: "unavailable",
+        cell: (info) =>
+          info.getValue() ? <CheckIcon data-testid="unavailable-check" /> : "-",
+      },
+      {
         header: "Action",
         accessorKey: "action",
         enableSorting: false,
