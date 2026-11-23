@@ -34,6 +34,13 @@ export default function VSEDialog(props: ModalProps) {
     }
   }, [targetValueSet]);
 
+  const unavailableMessage = targetValueSet?.unavailable
+    ? {
+        TOO_COSTLY: "Unavailable - Valueset Too Costly",
+        NOT_SUPPORTED: "Unavailable - Valueset Not Supported",
+      }[targetValueSet.error ?? ""]
+    : undefined;
+
   const initialValues: EditValueSetFormValues = useMemo(
     () => ({
       id: targetValueSet?.id ?? "",
@@ -162,7 +169,7 @@ export default function VSEDialog(props: ModalProps) {
               fontSize: 14,
               fontWeight: 500,
               fontFamily: "Rubik",
-              color: "#333",
+              color: unavailableMessage ? REQUIRED_ASTERISK_COLOR : "#333",
             }}
           >
             <span style={{ color: REQUIRED_ASTERISK_COLOR, marginRight: 2 }}>
@@ -170,6 +177,20 @@ export default function VSEDialog(props: ModalProps) {
             </span>
             Expansion
           </Typography>
+          {unavailableMessage && (
+            <div
+              role="alert"
+              data-testid="value-set-unavailable-alert"
+              style={{
+                color: REQUIRED_ASTERISK_COLOR,
+                fontSize: 14,
+                fontFamily: "Rubik",
+                marginTop: "8px",
+              }}
+            >
+              {unavailableMessage}
+            </div>
+          )}
           <div
             id="edit-value-set-json-editor"
             data-testid="edit-value-set-json-editor"
