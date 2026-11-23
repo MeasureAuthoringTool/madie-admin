@@ -47,6 +47,13 @@ declare module "@madie/madie-util" {
     errorMsg: string;
   }
 
+  export type ValueSetError =
+    | "TOO_COSTLY"
+    | "BUSINESS_RULE"
+    | "NOT_SUPPORTED"
+    | "CODE_INVALID"
+    | "NOT_FOUND";
+
   export interface ValueSetDisplayForAdmin {
     id: string;
     url: string;
@@ -54,6 +61,7 @@ declare module "@madie/madie-util" {
     lastUpdated: string;
     manuallyModified: boolean;
     unavailable: boolean;
+    error?: ValueSetError | null;
     valueSet: string;
   }
 
@@ -146,6 +154,7 @@ declare module "@madie/madie-util" {
     lastUpdated: string;
     manuallyModified: boolean;
     unavailable: boolean;
+    error?: ValueSetError | null;
     valueSet: string;
   }
   export function padCmsId(cmsId: number | string | null | undefined): string;

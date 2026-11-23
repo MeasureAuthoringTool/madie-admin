@@ -145,6 +145,43 @@ describe("VSEDialog", () => {
     });
   });
 
+  it.each([
+    ["TOO_COSTLY", "Unavailable - Valueset Too Costly"],
+    ["NOT_SUPPORTED", "Unavailable - Valueset Not Supported"],
+  ])("shows the unavailable message for %s", (error, message) => {
+    renderDialog({
+      targetValueSet: {
+        ...selectedValueSet,
+        unavailable: true,
+        error,
+      },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByText("Expansion")).toHaveStyle({
+      color: "rgb(174, 28, 28)",
+    });
+  });
+
+  it.each([
+    [true, "NOT_FOUND"],
+    [false, "TOO_COSTLY"],
+    [true, undefined],
+  ])(
+    "does not show the unavailable message for unavailable=%s and error=%s",
+    (unavailable, error) => {
+      renderDialog({
+        targetValueSet: {
+          ...selectedValueSet,
+          unavailable,
+          error,
+        },
+      });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    }
+  );
+
   it("allows an empty version", () => {
     renderDialog({
       targetValueSet: {
